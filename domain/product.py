@@ -1,8 +1,8 @@
 from enum import StrEnum
 
-class DeliveryType(StrEnum):
-    AUTO = "auto"     # Мгновенная выдача ключа
-    MANUAL = "manual" # Нужно участие продавца (услуга)
+#class DeliveryType(StrEnum):
+#    AUTO = "auto"     # Мгновенная выдача ключа
+#    MANUAL = "manual" # Нужно участие продавца (услуга)
 
 class Product:
     def __init__(
@@ -13,7 +13,7 @@ class Product:
         id: int | None = None,
         description: str = "",
         quantity: int = 0,
-        delivery_type: DeliveryType = DeliveryType.AUTO,
+        #delivery_type: DeliveryType = DeliveryType.AUTO,
         is_active: bool = True
     ):
         self.id = id
@@ -22,8 +22,8 @@ class Product:
         self.description = description
         self.price = price
         self.quantity = quantity
-        self.delivery_type = delivery_type
-        self.is_active = is_active
+        #self.delivery_type = delivery_type
+        #self.is_active = is_active
 
         self._validate()
 
@@ -37,12 +37,12 @@ class Product:
             raise ValueError("Количество не может быть отрицательным")
 
 
-    def can_be_sold(self, requested_quantity: int = 1) -> bool:
-        """Проверяет, готов ли товар к сделке."""
-        return (
-            self.is_active and 
-            self.quantity >= requested_quantity
-        )
+    # def can_be_sold(self, requested_quantity: int = 1) -> bool:
+    #     """Проверяет, готов ли товар к сделке."""
+    #     return (
+    #         self.is_active and
+    #         self.quantity >= requested_quantity
+    #     )
 
     def change_price(self, new_price: int):
         """Безопасное изменение цены."""
@@ -52,8 +52,8 @@ class Product:
 
     def decrease_stock(self, amount: int = 1):
         """Уменьшение остатков при покупке."""
-        if not self.can_be_sold(amount):
-            raise ValueError("Недостаточно товара на складе")
+        #if not self.can_be_sold(amount):
+        #    raise ValueError("Недостаточно товара на складе")
         self.quantity -= amount
 
     def __repr__(self):
