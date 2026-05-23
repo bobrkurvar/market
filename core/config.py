@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     db_user: str
     db_password: str
     db_name: str
+    is_test: bool = False
 
     @property
     def db_url(self):

@@ -3,8 +3,8 @@ from sqlalchemy import inspect
 import domain
 
 
-def map_salesperson_to_orm(d_obj: domain.Salesperson) -> models.Salesperson:
-    return models.Salesperson(
+def map_salesperson_to_orm(d_obj: domain.Seller) -> models.Seller:
+    return models.Seller(
         id=d_obj.id,
         username=d_obj.username
     )
@@ -23,13 +23,14 @@ def map_product_to_orm(d_obj: domain.Product) -> models.Product:
         salesperson_id=d_obj.salesperson_id,
         title=d_obj.title,
         description=d_obj.description,
-        price=d_obj.price
+        price=d_obj.price,
+        version=d_obj.version
     )
 
 
 
-def map_salesperson_to_domain(orm_obj: models.Salesperson) -> domain.Salesperson:
-    return domain.Salesperson(
+def map_salesperson_to_domain(orm_obj: models.Seller) -> domain.Seller:
+    return domain.Seller(
         id=orm_obj.id,
         username=orm_obj.username,
         rating=orm_obj.rating,
@@ -39,7 +40,7 @@ def map_salesperson_to_domain(orm_obj: models.Salesperson) -> domain.Salesperson
 
 def map_client_to_domain(orm_obj: models.Client) -> domain.Client:
     return domain.Client(
-        id=orm_obj.id,
+        client_id=orm_obj.id,
         username=orm_obj.username,
         balance=orm_obj.balance,
         is_blocked=orm_obj.is_blocked
@@ -49,12 +50,13 @@ def map_client_to_domain(orm_obj: models.Client) -> domain.Client:
 def map_product_to_domain(orm_obj: models.Product) -> domain.Product:
     calculated_quantity = 0 if "stock" in inspect(orm_obj).unloaded else len([unit for unit in orm_obj.stock if not unit.is_sold])
     return domain.Product(
-        id=orm_obj.id,
+        product_id=orm_obj.id,
         salesperson_id=orm_obj.salesperson_id,
         title=orm_obj.title,
         description=orm_obj.description,
         price=orm_obj.price,
         quantity=calculated_quantity,
+        version=orm_obj.version
     )
 
 

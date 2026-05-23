@@ -1,27 +1,31 @@
-from enum import StrEnum
+#from enum import StrEnum
 
 #class DeliveryType(StrEnum):
 #    AUTO = "auto"     # Мгновенная выдача ключа
 #    MANUAL = "manual" # Нужно участие продавца (услуга)
+
+from .user import Seller
 
 class Product:
     def __init__(
         self,
         title: str,
         price: float,
-        salesperson_id: int,
-        id: int | None = None,
+        seller: Seller,
+        product_id: int | None = None,
         description: str = "",
         quantity: int = 0,
+        version: int = 1
         #delivery_type: DeliveryType = DeliveryType.AUTO,
-        is_active: bool = True
+        #is_active: bool = True
     ):
-        self.id = id
-        self.salesperson_id = salesperson_id
+        self.id = product_id
+        self.seller = seller
         self.title = title
         self.description = description
         self.price = price
         self.quantity = quantity
+        self.version = version
         #self.delivery_type = delivery_type
         #self.is_active = is_active
 
@@ -37,12 +41,12 @@ class Product:
             raise ValueError("Количество не может быть отрицательным")
 
 
-    # def can_be_sold(self, requested_quantity: int = 1) -> bool:
-    #     """Проверяет, готов ли товар к сделке."""
-    #     return (
-    #         self.is_active and
-    #         self.quantity >= requested_quantity
-    #     )
+    def can_be_sold(self, requested_quantity: int = 1) -> bool:
+        """Проверяет, готов ли товар к сделке."""
+        return (
+            #self.is_active and
+            self.quantity >= requested_quantity
+        )
 
     def change_price(self, new_price: int):
         """Безопасное изменение цены."""
@@ -52,8 +56,8 @@ class Product:
 
     def decrease_stock(self, amount: int = 1):
         """Уменьшение остатков при покупке."""
-        #if not self.can_be_sold(amount):
-        #    raise ValueError("Недостаточно товара на складе")
+        if not self.can_be_sold(amount):
+           raise ValueError("Недостаточно товара")
         self.quantity -= amount
 
     def __repr__(self):

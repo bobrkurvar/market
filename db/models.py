@@ -14,14 +14,19 @@ class Product(Base):
     __tablename__ = "products"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    salesperson_id: Mapped[int] = mapped_column(ForeignKey("salespersons.id"))
+    salesperson_id: Mapped[int] = mapped_column(ForeignKey("seller.id"))
 
     title: Mapped[str] = mapped_column(String(255))
+    version: Mapped[int] = mapped_column(default=1, nullable=False)
     description: Mapped[str] = mapped_column(Text)
     price: Mapped[float]
 
     stock: Mapped[list["ProductUnit"]] = relationship("ProductUnit", back_populates="product")
-    salesperson: Mapped["Salesperson"] = relationship("Salesperson", back_populates="products")
+    salesperson: Mapped["Seller"] = relationship("seller", back_populates="products")
+
+    __mapper_args__ = {
+        "version_id_col": version
+    }
 
 
 class ProductUnit(Base):
@@ -35,22 +40,49 @@ class ProductUnit(Base):
     product: Mapped["Product"] = relationship("Product", back_populates="stock")
 
 
+from sqlalchemy import ForeignKey, String
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-class Salesperson(Base):
-    __tablename__ = "salespersons"
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    username: Mapped[str] = mapped_column(unique=True)
+
+class Base(DeclarativeBase):
+    pass
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    username: Mapped[str] = mapped_column(String(50), unique=True, index=True)
+    password: Mapped[str] = mapped_column(String(255))
+    type: Mapped[str]
+
+    __mapper_args__ = {
+        "polymorphic_on": "type",  # Указываем, что наследование полиморфно по этому полю
+    }
+
+
+class Seller(User):
+    __tablename__ = "sellers"
+    #id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    #username: Mapped[str] = mapped_column(unique=True)
     rating: Mapped[Decimal | None] = mapped_column(DECIMAL(2,1), server_default=None, default=None, nullable=True)
-    products: Mapped[list["Product"]] = relationship("Product", back_populates="salesperson")
-
+    products: Mapped[list["Product"]] = relationship("Product", back_populates="seller")
+    __mapper_args__ = {
+        "polymorphic_identity": "seller",  # Значение для колонки users.type
+    }
 
 class Client(Base):
     __tablename__ = "clients"
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    #id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
     username: Mapped[str] = mapped_column(unique=True)
     balance: Mapped[float]
     is_blocked: Mapped[bool] = mapped_column(default=False, server_default="false")
     cart: Mapped["Cart"] = relationship("Cart", back_populates="client")
+    __mapper_args__ = {
+        "polymorphic_identity": "client",  # Значение для колонки users.type
+    }
 
 
 class Cart(Base):
