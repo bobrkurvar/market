@@ -1,13 +1,16 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
-from core.logger import setup_logging
+
 from adapters.db_provider import DbProvider
 from app.endpoints import main_router
 from core import conf
-import logging
-
+from core.logger import setup_logging
+from infra.event_bus import EventBus
+from domain import OrderCreatedEvent
+from tasks.handlers import generate_payment_link
 
 setup_logging()
 
@@ -15,6 +18,10 @@ setup_logging()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.db_provider = DbProvider(conf.db_url)
+    event_bus = EventBus()
+    event_bus.subscribe(OrderCreatedEvent, generate_payment_link)
+    app.state.event_bus = event_bus
+
     try:
         yield
     finally:
@@ -49,4 +56,3 @@ async def catch_all(full_path: str):
 # )
 # app.add_exception_handler(InvalidAccessTokenError, invalid_tokens_or_not_exists_handler)
 # app.add_exception_handler(CredentialsValidateError, invalid_credentials_error_handler)
-

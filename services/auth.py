@@ -4,9 +4,8 @@ from datetime import datetime, timedelta, timezone
 from domain import (CredentialsValidateError, RefreshTokenFamilyExpiredError,
                     RefreshTokenMissingError,
                     RefreshTokenReusedCompromisedError,
-                    RefreshTokenRotationRaceConditionError,
-                    UserLoginNotFoundError, User)
-
+                    RefreshTokenRotationRaceConditionError, User,
+                    UserLoginNotFoundError)
 from infra.auth import check_refresh_token, data_encode_to_jwt
 from infra.security import create_token_family_id, create_token_jti  # vefiry
 

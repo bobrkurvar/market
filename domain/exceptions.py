@@ -1,6 +1,3 @@
-
-
-
 class RepositoryError(Exception):
     """Базовое исключение репозитория"""
 

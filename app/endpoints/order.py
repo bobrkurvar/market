@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException
+
 from adapters.deps import UowDep
 from domain import Order
 
 router = APIRouter()
-
 
 
 @router.get("/orders")

@@ -1,17 +1,16 @@
 import logging
 from typing import Annotated
 
-from fastapi import Depends, Request, Response, HTTPException
+from fastapi import Depends, HTTPException, Request, Response
 
 from adapters.deps import RedisDep, UowDep
 from core import conf
-from infra.auth import check_access_token
-from services.auth import create_tokens_from_refresh
-from infra.auth import  get_data_from_token
 from domain import Client, Seller
-
+from infra.auth import check_access_token, get_data_from_token
+from services.auth import create_tokens_from_refresh
 
 log = logging.getLogger(__name__)
+
 
 class AuthCookies:
     def __init__(self):
@@ -56,7 +55,9 @@ class AuthCookies:
 authCookiesDep = Annotated[AuthCookies, Depends()]
 
 
-async def get_user(request: Request, response: Response, cookies: authCookiesDep, redis: RedisDep):
+async def get_user(
+    request: Request, response: Response, cookies: authCookiesDep, redis: RedisDep
+):
     access_token = cookies.get_access_token(request)
     if access_token:
         log.debug("access token exists")
@@ -69,12 +70,11 @@ async def get_user(request: Request, response: Response, cookies: authCookiesDep
         cookies.set_refresh_token(response, new_refresh)
         return get_data_from_token(new_access)
 
+
 GetUserDep = Annotated[dict, Depends(get_user)]
 
-async def get_client(
-    payload: GetUserDep,
-    uow: UowDep
-) -> Client:
+
+async def get_client(payload: GetUserDep, uow: UowDep) -> Client:
     role = payload.get("role")
     user_id = payload.get("sub")
 
@@ -86,10 +86,7 @@ async def get_client(
         return client
 
 
-async def get_seller(
-    payload: GetUserDep,
-    uow: UowDep
-) -> Seller:
+async def get_seller(payload: GetUserDep, uow: UowDep) -> Seller:
     role = payload.get("role")
     user_id = payload.get("sub")
 
@@ -100,5 +97,6 @@ async def get_seller(
         seller = await uow.db.read_one(Seller, id=user_id, with_raise=True)
         return seller
 
-GetClientDep = Annotated[dict, Depends(get_client)]
-GetSellerDep = Annotated[dict, Depends(get_seller)]
+
+GetClientDep = Annotated[Client, Depends(get_client)]
+GetSellerDep = Annotated[Seller, Depends(get_seller)]

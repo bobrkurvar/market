@@ -1,9 +1,9 @@
-
-from sqlalchemy import ForeignKey, ForeignKeyConstraint, UniqueConstraint, BigInteger, String, Text, DECIMAL
-from sqlalchemy.ext.asyncio import AsyncAttrs
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from decimal import Decimal
 
+from sqlalchemy import (DECIMAL, BigInteger, ForeignKey, ForeignKeyConstraint,
+                        String, Text, UniqueConstraint)
+from sqlalchemy.ext.asyncio import AsyncAttrs
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 class Base(AsyncAttrs, DeclarativeBase):
@@ -14,19 +14,16 @@ class Product(Base):
     __tablename__ = "products"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    salesperson_id: Mapped[int] = mapped_column(ForeignKey("seller.id"))
+    seller_id: Mapped[int] = mapped_column(ForeignKey("seller.id"))
 
     title: Mapped[str] = mapped_column(String(255))
-    version: Mapped[int] = mapped_column(default=1, nullable=False)
     description: Mapped[str] = mapped_column(Text)
     price: Mapped[float]
 
-    stock: Mapped[list["ProductUnit"]] = relationship("ProductUnit", back_populates="product")
-    salesperson: Mapped["Seller"] = relationship("seller", back_populates="products")
-
-    __mapper_args__ = {
-        "version_id_col": version
-    }
+    stock: Mapped[list["ProductUnit"]] = relationship(
+        "ProductUnit", back_populates="product"
+    )
+    seller: Mapped["Seller"] = relationship("Seller", back_populates="products")
 
 
 class ProductUnit(Base):
@@ -38,14 +35,6 @@ class ProductUnit(Base):
     is_sold: Mapped[bool] = mapped_column(default=False)
 
     product: Mapped["Product"] = relationship("Product", back_populates="stock")
-
-
-from sqlalchemy import ForeignKey, String
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-
-
-class Base(DeclarativeBase):
-    pass
 
 
 class User(Base):
@@ -63,18 +52,21 @@ class User(Base):
 
 class Seller(User):
     __tablename__ = "sellers"
-    #id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    # id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
-    #username: Mapped[str] = mapped_column(unique=True)
-    rating: Mapped[Decimal | None] = mapped_column(DECIMAL(2,1), server_default=None, default=None, nullable=True)
+    # username: Mapped[str] = mapped_column(unique=True)
+    rating: Mapped[Decimal | None] = mapped_column(
+        DECIMAL(2, 1), server_default=None, default=None, nullable=True
+    )
     products: Mapped[list["Product"]] = relationship("Product", back_populates="seller")
     __mapper_args__ = {
         "polymorphic_identity": "seller",  # Значение для колонки users.type
     }
 
+
 class Client(Base):
     __tablename__ = "clients"
-    #id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    # id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
     username: Mapped[str] = mapped_column(unique=True)
     balance: Mapped[float]
@@ -106,12 +98,13 @@ class Order(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     client_id: Mapped[int] = mapped_column(ForeignKey("clients.id"))
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"))
+    payment_link: Mapped[str] = mapped_column(default=None, server_default="Null")
 
     status_name: Mapped[str] = mapped_column(
-        String(20),
+        # String(20),
         ForeignKey("order_statuses.name"),
         default="NEW",
-        server_default="NEW"
+        server_default="NEW",
     )
 
     status: Mapped["OrderStatus"] = relationship("OrderStatus")

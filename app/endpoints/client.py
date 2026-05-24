@@ -1,15 +1,43 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter
+
+from adapters.deps import GetClientDep, UowDep, EventBus
+from sse_starlette.sse import EventSourceResponse
 from services.order import make_order
-from adapters.deps import UowDep, GetClientDep
+from domain import Order
+import asyncio
 
 router = APIRouter()
 
 
 @router.post("/order")
-async def checkout(client: GetClientDep, product_id: int, uow: UowDep):
-    await make_order(uow=uow, product_id=product_id, client=client, payment_service=None)
+async def checkout(client: GetClientDep, product_id: int, uow: UowDep, event_bus: EventBus):
+    await make_order(
+        uow=uow,
+        product_id=product_id,
+        client=client,
+        event_bus=event_bus
+    )
 
 
-# @router.get("/orders")
-# async def checkout(client: GetClientDep, product_id: int, uow: UowDep):
-#     await make_order(uow=uow, product_id=product_id, client=client, payment_service=None)
+@router.get("/orders/{order_id}/stream")
+async def stream_order_status(order_id: int, uow: UowDep):
+    async def event_generator():
+        while True:
+            async with uow:
+                order = await uow.db.read_one(Order, id=order_id)
+
+                if order.payment_link:
+                    yield {
+                        "event": "payment_ready",
+                        "data": order.payment_link
+                    }
+                    break
+
+                yield {
+                    "event": "processing",
+                    "data": "Генерируем ссылку в банке..."
+                }
+
+            await asyncio.sleep(1)
+
+    return EventSourceResponse(event_generator())

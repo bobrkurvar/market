@@ -1,4 +1,5 @@
 import json
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 COLLECTIONS_PER_PAGE = 20

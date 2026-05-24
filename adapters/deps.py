@@ -1,17 +1,27 @@
 from typing import Annotated
+
 from fastapi import Depends, Request
 
-from db.mapper import MapperRegistry
+from db.mapper import registry
+
 from .uow import UnitOfWork
 from .web import GetClientDep, GetSellerDep
-#from .message_broker import RedisService
+from infra.event_bus import EventBus
+
 
 
 def get_uow(request: Request):
     db_provider = request.app.state.db_provider
     if db_provider is None:
         raise RuntimeError("db connection is not initialized")
-    return UnitOfWork(provider=db_provider, registry=MapperRegistry())
+    return UnitOfWork(provider=db_provider, registry=registry)
+
+
+def get_event_bus(request: Request):
+    event_bus = request.app.state.event_bus
+    if get_event_bus is None:
+        raise RuntimeError("Event bus is not initialized")
+    return event_bus
 
 # def get_db_manager(request: Request):
 #     db_provider = request.app.state.db_provider
@@ -27,4 +37,5 @@ def get_uow(request: Request):
 
 
 UowDep = Annotated[UnitOfWork, Depends(get_uow)]
-#RedisDep = Annotated[RedisService, Depends(get_redis)]
+EventBusDep = Annotated[EventBus, Depends(get_event_bus)]
+# RedisDep = Annotated[RedisService, Depends(get_redis)]

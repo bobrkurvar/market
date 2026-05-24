@@ -1,7 +1,9 @@
-from decimal import Decimal
 from collections.abc import Collection
-from .order import Order
+from decimal import Decimal
 from enum import StrEnum
+
+from .order import Order
+
 
 class UserRole(StrEnum):
     CLIENT = "client"
@@ -21,12 +23,17 @@ class Seller(User):
     def __init__(
         self,
         username: str,
-        password: str,
+        password: str | None = None,
         seller_id: int | None = None,
         rating: Decimal | None = None,
-        is_active: bool = True
+        is_active: bool = True,
     ):
-        super().__init__(user_id=seller_id, username=username, password=password, role=UserRole.SELLER)
+        super().__init__(
+            user_id=seller_id,
+            username=username,
+            password=password,
+            role=UserRole.SELLER,
+        )
         self.rating = rating
         self.is_active = is_active
         self._validate()
@@ -43,15 +50,19 @@ class Client(User):
     def __init__(
         self,
         username: str,
-        password: str,
+        password: str | None = None,
         orders: Collection[Order] | None = None,
         client_id: int | None = None,
-        is_blocked: bool = False
+        is_blocked: bool = False,
     ):
-        super().__init__(user_id=client_id, username=username, password=password, role=UserRole.CLIENT)
+        super().__init__(
+            user_id=client_id,
+            username=username,
+            password=password,
+            role=UserRole.CLIENT,
+        )
         self.is_blocked = is_blocked
         self.orders = list(orders) if orders else []
-
 
     def __repr__(self):
         return f"<Client(username={self.username})>"

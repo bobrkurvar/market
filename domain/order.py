@@ -1,5 +1,7 @@
 from enum import StrEnum
-from . import Product, Client
+
+from . import Client, Product
+
 
 class OrderStatuses(StrEnum):
     pending_payments = "pending_payments"
@@ -8,17 +10,26 @@ class OrderStatuses(StrEnum):
 
 
 class Order:
-    def __init__(self, client: Client, product: Product, amount: int = 1, order_id: int | None = None):
-        self.id = order_id
+    def __init__(
+        self,
+        client: Client,
+        product: Product,
+        amount: int = 1,
+        order_id: int | None = None,
+        payment_link: str | None = None,
+    ):
+        self._id = order_id
         self.client = client
         self.product = product
         self.status = OrderStatuses.pending_payments
         self.amount = amount
+        self.payment_link = payment_link
 
     def cancel(self):
         if self.is_paid():
             raise ValueError("Заказ уже оплачен")
         self.status = OrderStatuses.cancelled
+        self.product.increase_stock(amount=self.amount)
 
     def pay(self):
         if self.is_paid:
@@ -29,8 +40,14 @@ class Order:
         self.status = OrderStatuses.paid
 
     @property
-    def total_cost(self):
+    def total_cost(self) -> float:
         return self.product.price * self.amount
+
+    @property
+    def id(self) -> int:
+        if self._id is None:
+            raise ValueError("Идентификатор не подгружен")
+        return self._id
 
     def is_paid(self):
         return self.status == OrderStatuses.paid
