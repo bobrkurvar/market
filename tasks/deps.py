@@ -4,6 +4,7 @@ from adapters.message_broker import RedisService
 from adapters.uow import UnitOfWork
 from db.mapper import registry
 
+
 def get_uow(context: Context = TaskiqDepends()):
     """Зависимость для извлечения DB Manager внутри фоновых задач."""
     db_provider = context.state.db_provider

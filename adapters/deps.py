@@ -3,11 +3,10 @@ from typing import Annotated
 from fastapi import Depends, Request
 
 from db.mapper import registry
+from infra.event_bus import EventBus
 
 from .uow import UnitOfWork
 from .web import GetClientDep, GetSellerDep
-from infra.event_bus import EventBus
-
 
 
 def get_uow(request: Request):
@@ -22,6 +21,7 @@ def get_event_bus(request: Request):
     if get_event_bus is None:
         raise RuntimeError("Event bus is not initialized")
     return event_bus
+
 
 # def get_db_manager(request: Request):
 #     db_provider = request.app.state.db_provider

@@ -1,4 +1,5 @@
 import logging
+
 import httpx
 
 log = logging.getLogger(__name__)
@@ -13,39 +14,34 @@ class PaymentService:
         # Передаем туда Basic-авторизацию, которую требуют платежные шлюзы
         self.client = httpx.AsyncClient(
             auth=(str(self.shop_id), self.secret_key),
-            timeout=httpx.Timeout(10.0)  # Защита от вечно зависшего банка
+            timeout=httpx.Timeout(10.0),  # Защита от вечно зависшего банка
         )
 
-    async def create_payment_intent(self, order_id: int, amount: int, description: str) -> str:
+    async def create_payment_intent(
+        self, order_id: int, amount: int, description: str
+    ) -> str:
         log.debug("Запрос к API банка для заказа #%s на сумму %s", order_id, amount)
 
         # Формируем тело запроса по спецификации платежного шлюза
         payload = {
-            "amount": {
-                "value": f"{amount}.00",
-                "currency": "RUB"
-            },
+            "amount": {"value": f"{amount}.00", "currency": "RUB"},
             "capture": True,  # Деньги списываются сразу (а не замораживаются)
             "confirmation": {
                 "type": "redirect",
-                "return_url": f"https://mystore.ru/orders/{order_id}/success"  # Куда вернуть юзера после оплаты
+                "return_url": f"https://mystore.ru/orders/{order_id}/success",  # Куда вернуть юзера после оплаты
             },
             "description": description,
             "metadata": {
                 "order_id": str(order_id)  # Передаем ID заказа в метаданных шлюза
-            }
+            },
         }
 
         # ЮKassa требует уникальный ключ для защиты от повторных списаний (Idempotence-Key)
-        headers = {
-            "Idempotence-Key": f"order-{order_id}"
-        }
+        headers = {"Idempotence-Key": f"order-{order_id}"}
 
         try:
             response = await self.client.post(
-                self.base_url,
-                json=payload,
-                headers=headers
+                self.base_url, json=payload, headers=headers
             )
 
             # Если банк ответил ошибкой (например, 401 или 400) — выбрасываем исключение

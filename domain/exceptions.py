@@ -15,6 +15,8 @@ class NotFoundError(RepositoryError):
         else:
             super().__init__(f"{entity_name} not found")
 
+class ConcurrentModificationError(RepositoryError):
+    pass
 
 class AlreadyExistsError(RepositoryError):
     """Запись с таким атрибутом уже существует в базе"""

@@ -30,4 +30,3 @@ async def change_product(
     )
     async with uow:
         await uow.db.save(updated_domain_product)
-

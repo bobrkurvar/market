@@ -1,8 +1,11 @@
 from dataclasses import dataclass
 
+
 class Event:
     """Базовый класс для всех событий"""
+
     pass
+
 
 @dataclass
 class OrderCreatedEvent(Event):

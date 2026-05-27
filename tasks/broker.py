@@ -1,18 +1,18 @@
-from taskiq import TaskiqState
-from taskiq_redis import ListQueueBroker
-from taskiq import TaskiqScheduler
+from taskiq import TaskiqScheduler, TaskiqState
 from taskiq.schedule_sources import LabelScheduleSource
-from adapters.message_broker import RedisProvider
+from taskiq_redis import ListQueueBroker
 
+from adapters.message_broker import RedisProvider
 from core import conf
 
 broker = ListQueueBroker("redis://localhost:6379/0")
 
 
-
 scheduler = TaskiqScheduler(
     broker=broker,
-    sources=[LabelScheduleSource(broker)], # Позволяет задавать расписание прямо в декораторе
+    sources=[
+        LabelScheduleSource(broker)
+    ],  # Позволяет задавать расписание прямо в декораторе
 )
 
 

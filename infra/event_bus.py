@@ -1,7 +1,8 @@
-from typing import Callable, Dict, List, Type
-import logging
-from domain import Event
 import asyncio
+import logging
+from typing import Callable, Dict, List, Type
+
+from domain import Event
 
 log = logging.getLogger(__name__)
 
@@ -15,7 +16,9 @@ class EventBus:
         if event_type not in self._subscribers:
             self._subscribers[event_type] = []
         self._subscribers[event_type].append(handler)
-        log.debug(f"Подписан обработчик {handler.__name__} на событие {event_type.__name__}")
+        log.debug(
+            f"Подписан обработчик {handler.__name__} на событие {event_type.__name__}"
+        )
 
     def publish(self, event: Event):
         """Публикуем событие всем подписчикам"""

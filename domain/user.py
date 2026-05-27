@@ -1,22 +1,23 @@
-from collections.abc import Collection
 from decimal import Decimal
 from enum import StrEnum
 
-from .order import Order
-
 
 class UserRole(StrEnum):
-    CLIENT = "client"
-    SELLER = "seller"
-    ADMIN = "admin"
+    client = "client"
+    seller = "seller"
+    admin = "admin"
 
 
 class User:
-    def __init__(self, user_id: int, username: str, password: str, role: UserRole):
+    def __init__(self, username: str,role: UserRole, user_id: int | None = None, password: str | None = None):
         self.id = user_id
         self.username = username
         self.password = password
         self.role = role
+
+    def _validate(self):
+        if self.id is None and self.password is None:
+            raise ValueError("Для создания нового пользователя придумайте для него пароль")
 
 
 class Seller(User):
@@ -32,7 +33,7 @@ class Seller(User):
             user_id=seller_id,
             username=username,
             password=password,
-            role=UserRole.SELLER,
+            role=UserRole.seller,
         )
         self.rating = rating
         self.is_active = is_active
@@ -51,7 +52,6 @@ class Client(User):
         self,
         username: str,
         password: str | None = None,
-        orders: Collection[Order] | None = None,
         client_id: int | None = None,
         is_blocked: bool = False,
     ):
@@ -59,10 +59,9 @@ class Client(User):
             user_id=client_id,
             username=username,
             password=password,
-            role=UserRole.CLIENT,
+            role=UserRole.client,
         )
         self.is_blocked = is_blocked
-        self.orders = list(orders) if orders else []
 
     def __repr__(self):
         return f"<Client(username={self.username})>"

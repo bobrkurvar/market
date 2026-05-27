@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Request
 import logging
+
+from fastapi import APIRouter, Request
 
 from adapters.deps import UowDep
 from services.order import confirm_order_payment
@@ -9,10 +10,7 @@ router = APIRouter()
 
 
 @router.post("/webhooks/bank")
-async def payment_webhook(
-    request: Request,
-    uow: UowDep
-):
+async def payment_webhook(request: Request, uow: UowDep):
     # 1. Секьюрити: проверяем IP-адреса или подпись
     # (В ЮKassa можно сверять IP с белым списком или проверять базовую авторизацию)
     # await verify_bank_security(request)

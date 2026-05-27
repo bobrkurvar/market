@@ -8,8 +8,8 @@ from adapters.db_provider import DbProvider
 from app.endpoints import main_router
 from core import conf
 from core.logger import setup_logging
-from infra.event_bus import EventBus
 from domain import OrderCreatedEvent
+from infra.event_bus import EventBus
 from tasks.handlers import generate_payment_link
 
 setup_logging()
