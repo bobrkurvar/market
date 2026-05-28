@@ -2,13 +2,13 @@ from pydantic import BaseModel
 
 
 class ProductUnitCreate(BaseModel):
-    content: str  # Сам ключ или ссылка
+    content: str
 
 
 class ProductUnitResponse(BaseModel):
     id: int
     is_sold: bool
-    content: str | None = None  # Скрываем, если не оплачено (логика в роуте)
+    content: str | None = None
 
 
 class ProductCreate(BaseModel):
