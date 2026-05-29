@@ -1,3 +1,5 @@
+from .user import User
+
 class RepositoryError(Exception):
     """Базовое исключение репозитория"""
 
@@ -57,7 +59,7 @@ class UserLoginNotFoundError(NotFoundError):
     """Наследуется от NotFoundError, так как это ошибка поиска в БД при логине"""
 
     def __init__(self, username: str):
-        super().__init__(Admin, username=username)
+        super().__init__(User, username=username)
 
 
 # БАЗОВЫЕ ОШИБКИ ТОКЕНОВ

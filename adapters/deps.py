@@ -4,9 +4,9 @@ from fastapi import Depends, Request
 
 from db.mapper import registry
 from infra.event_bus import EventBus
+from adapters.redis import RedisService
 
 from .uow import UnitOfWork
-from .web import GetClientDep, GetSellerDep
 
 
 def get_uow(request: Request):
@@ -23,19 +23,13 @@ def get_event_bus(request: Request):
     return event_bus
 
 
-# def get_db_manager(request: Request):
-#     db_provider = request.app.state.db_provider
-#     if db_provider is None:
-#         raise RuntimeError("db connection is not initialized")
-#     return build_crud(db_provider.session_factory)
-
-# def get_redis(request: Request) -> RedisService:
-#     provider = request.app.state.redis
-#     if provider is None:
-#         raise RuntimeError("Redis connection is not initialized")
-#     return RedisService(redis=provider.client)
+def get_redis(request: Request) -> RedisService:
+    provider = request.app.state.redis
+    if provider is None:
+        raise RuntimeError("Redis connection is not initialized")
+    return RedisService(redis=provider.client)
 
 
 UowDep = Annotated[UnitOfWork, Depends(get_uow)]
 EventBusDep = Annotated[EventBus, Depends(get_event_bus)]
-# RedisDep = Annotated[RedisService, Depends(get_redis)]
+RedisDep = Annotated[RedisService, Depends(get_redis)]

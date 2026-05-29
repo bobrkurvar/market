@@ -141,6 +141,10 @@ class GenericRepository:
 
     def _apply_conditions(self, query, base_orm_model, filters: dict):
         """Применяет стандартные WHERE-условия с поддержкой объектов Operation"""
+
+        def is_iterable_not_string(obj) -> bool:
+            return isinstance(obj, Collection) and not isinstance(obj, (str, bytes, bytearray))
+
         conditions = []
         operators_map = {
             "exact": operator.eq,
@@ -158,7 +162,7 @@ class GenericRepository:
                 op = filter_data.op
             else:
                 value = filter_data
-                op = "in" if isinstance(value, Collection) else "exact"
+                op = "in" if is_iterable_not_string(value) else "exact"
 
             if op not in operators_map:
                 raise ValueError(f"Неизвестный оператор для фильтрации: {op}")

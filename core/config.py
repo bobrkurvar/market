@@ -1,5 +1,3 @@
-import json
-
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,6 +11,9 @@ class Settings(BaseSettings):
     redis_host: str
     test_db_name: str
     is_test: bool = False
+    secret_key: str
+    algorithm: str
+    pepper: str
 
     @property
     def db_url(self):

@@ -5,9 +5,9 @@ from domain import (CredentialsValidateError, RefreshTokenFamilyExpiredError,
                     RefreshTokenMissingError,
                     RefreshTokenReusedCompromisedError,
                     RefreshTokenRotationRaceConditionError, User,
-                    UserLoginNotFoundError)
+                    UserLoginNotFoundError, UserRole, Client, Seller)
 from infra.auth import check_refresh_token, data_encode_to_jwt
-from infra.security import create_token_family_id, create_token_jti  # vefiry
+from infra.security import create_token_family_id, create_token_jti, get_hash
 
 log = logging.getLogger(__name__)
 
@@ -52,11 +52,18 @@ async def check_rotate(payload: dict, redis):
     return new_jti, family_id
 
 
-async def create_tokens_from_refresh(refresh_token: str | None, redis):
+async def check_role(uow, token_data: dict):
+    if token_data["role"] == UserRole.seller:
+        await uow.db.read(User, type=token_data["role"], id=token_data["id"], with_raise=True)
+
+
+async def create_tokens_from_refresh(refresh_token: str | None, redis, uow):
     if refresh_token is None:
         raise RefreshTokenMissingError
     sub = check_refresh_token(refresh_token)
     jti, family_id = await check_rotate(sub, redis)
+    async with uow:
+        await check_role(uow, sub)
     tokens_data = {
         k: v for k, v in sub.items() if k not in {"jti", "family_id", "exp", "type"}
     }
@@ -68,23 +75,18 @@ async def create_tokens_from_refresh(refresh_token: str | None, redis):
     }
 
 
-async def check_user(manager, verify, username: str, password: str):
-    user = await manager.read_one(User, username=username)
+async def check_user(uow, verify, username: str, password: str):
+    user = await uow.db.read_one(User, username=username)
     if not user:
         log.debug("user with username: %s not found", username)
         raise UserLoginNotFoundError(username)
     if not verify(password, user.password):
         log.debug("wrong password")
         raise CredentialsValidateError
+    return user
 
 
-async def create_tokens_from_login(
-    manager, redis, username: str, password: str, verify, **data
-):
-    log.debug("check user")
-    await check_user(manager, verify, username, password)
-    log.debug("user approve")
-    data.update(username=username)
+async def create_tokens(redis, **data):
     jti, family_id = create_token_jti(), create_token_family_id()
     await redis.set(f"rtfam:{family_id}", value=1, ttl=86400 * 7)
     await redis.set(f"rt:{jti}", value=-1, ttl=86400 * 7)
@@ -92,3 +94,38 @@ async def create_tokens_from_login(
         "access_token": create_access_token(data),
         "refresh_token": create_refresh_token(data, jti=jti, family_id=family_id),
     }
+
+
+async def create_tokens_from_login(
+    uow, redis, username: str, password: str, verify, **data
+):
+    log.debug("check user")
+    async with uow:
+        user = await check_user(uow, verify, username, password)
+    log.debug("user approve")
+    user_data = dict(id=user.id, role=user.role, username=user.username)
+    data.update(user_data)
+    tokens = await create_tokens(redis=redis, **data)
+    # jti, family_id = create_token_jti(), create_token_family_id()
+    # await redis.set(f"rtfam:{family_id}", value=1, ttl=86400 * 7)
+    # await redis.set(f"rt:{jti}", value=-1, ttl=86400 * 7)
+    # return {
+    #     "access_token": create_access_token(data),
+    #     "refresh_token": create_refresh_token(data, jti=jti, family_id=family_id),
+    # }, user_data
+    return tokens, user_data
+
+
+async def user_register(redis, uow, username: str, password: str, role: UserRole):
+    hash_password = get_hash(password)
+    if role == UserRole.seller:
+        new_account = Seller(username=username, password=hash_password)
+    elif role == UserRole.client:
+        new_account = Client(username=username, password=hash_password)
+    else:
+        raise ValueError("Неизвестная роль")
+    async with uow:
+        user = await uow.db.create(new_account)
+    user_data = dict(id=user.id, role=user.role, username=user.username)
+    tokens = await create_tokens(redis=redis, uow=uow, **user_data)
+    return tokens, user_data

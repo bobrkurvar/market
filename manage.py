@@ -7,7 +7,7 @@ def run(cmd: list[str]) -> int:
     return subprocess.call(cmd)
 
 def bootstrap_frontend():
-    command = 'docker run -it --rm -v "${PWD}/frontend:/app" -w /app node:22-alpine npx nuxi@latest init . --force --packageManager npm --gitInit false'
+    command = 'docker run -it --rm -v "${PWD}/frontend:/api" -v /api/node_modules -w /api node:22-alpine npx nuxi@latest init . --force'
     return run(command.split())
 
 if __name__ == "__main__":

@@ -5,22 +5,23 @@ COPY req.txt .
 RUN pip install --no-cache-dir -r req.txt
 COPY core ./core
 
-FROM base AS main_app
+FROM base AS main
 COPY main.py .
-COPY app ./app
+COPY api ./api
 COPY db ./db
 COPY domain ./domain
 COPY infra ./infra
 COPY adapters adapters
 COPY services ./services
-CMD ["uvicorn", "main_app:app", "--host", "0.0.0.0", "--port", "8000"]
+COPY tasks ./tasks
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 
 FROM node:22-alpine AS frontend_builder
 WORKDIR /app
 COPY frontend/package*.json .
 RUN npm install
-COPY frontend/ .
+COPY frontend .
 RUN npm run build
 
 FROM node:22-alpine AS frontend

@@ -1,18 +1,18 @@
 """initial
 
-Revision ID: 6b8e79a754c3
+Revision ID: 093f8141779c
 Revises: 
-Create Date: 2026-05-27 14:03:24.725659
+Create Date: 2026-05-29 12:40:43.947841
 
 """
 from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-
+from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '6b8e79a754c3'
+revision: str = '093f8141779c'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -61,12 +61,15 @@ def upgrade() -> None:
     op.create_table('orders',
     sa.Column('id', sa.BigInteger(), nullable=False),
     sa.Column('client_id', sa.Integer(), nullable=False),
-    sa.Column('product_id', sa.BigInteger(), nullable=False),
+    sa.Column('product_id', sa.BigInteger(), nullable=True),
     sa.Column('payment_link', sa.String(), nullable=True),
     sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('status_name', sa.String(length=20), nullable=False),
+    sa.Column('price', sa.Float(), nullable=False),
+    sa.Column('amount', sa.Integer(), nullable=False),
+    sa.Column('product_snapshot', postgresql.JSONB(astext_type=sa.Text()), server_default='{}', nullable=False),
     sa.ForeignKeyConstraint(['client_id'], ['clients.id'], ),
-    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
+    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ondelete='SET NULL'),
     sa.ForeignKeyConstraint(['status_name'], ['order_statuses.name'], ),
     sa.PrimaryKeyConstraint('id')
     )

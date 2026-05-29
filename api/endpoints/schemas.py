@@ -1,4 +1,17 @@
 from pydantic import BaseModel
+from domain import UserRole
+
+class RefreshToken(BaseModel):
+    value: str
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+
+class UserRegister(BaseModel):
+    username: str
+    password: str
+    role: UserRole
 
 
 class ProductUnitCreate(BaseModel):

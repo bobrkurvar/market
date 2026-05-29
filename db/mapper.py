@@ -3,6 +3,12 @@ from sqlalchemy import inspect
 import domain
 from db import models
 
+def map_user_to_orm(d_obj: domain.User) -> models.User:
+    return models.User(username=d_obj.username, password=d_obj.password, type=d_obj.role)
+
+def map_user_to_domain(orm_obj: models.User) -> domain.User:
+    return domain.User(username=orm_obj.username, password=orm_obj.password, user_id=orm_obj.id, role=domain.UserRole(orm_obj.type))
+
 def map_order_to_orm(d_obj: domain.Order) -> models.Order:
     return models.Order(
         client_id=d_obj.client_id,
@@ -199,4 +205,9 @@ registry.register(
     to_orm=map_order_to_orm,
     to_domain=map_order_to_domain
 )
-
+registry.register(
+    domain.User,
+    models.User,
+    to_orm=map_user_to_orm,
+    to_domain=map_user_to_domain,
+)

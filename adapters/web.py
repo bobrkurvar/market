@@ -51,6 +51,10 @@ class AuthCookies:
             secure=self.cookie_secret,
         )
 
+    def set_tokens(self, tokens: dict, response: Response):
+        self.set_access_token(value=tokens["access_token"], response=response)
+        self.set_refresh_token(value=tokens["refresh_token"], response=response)
+
 
 authCookiesDep = Annotated[AuthCookies, Depends()]
 

@@ -3,16 +3,17 @@ import asyncio
 from fastapi import APIRouter
 from sse_starlette.sse import EventSourceResponse
 
-from adapters.deps import EventBus, GetClientDep, UowDep
+from adapters.deps import EventBusDep, UowDep
+from adapters.web import GetClientDep
 from domain import Order
 from services.order import make_order
 
-router = APIRouter()
+router = APIRouter(prefix="/client")
 
 
 @router.post("/order")
 async def checkout(
-    client: GetClientDep, product_id: int, uow: UowDep, event_bus: EventBus
+    client: GetClientDep, product_id: int, uow: UowDep, event_bus: EventBusDep
 ):
     await make_order(uow=uow, product_id=product_id, client=client, event_bus=event_bus)
 

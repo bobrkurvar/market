@@ -4,7 +4,7 @@ export default defineNuxtConfig({
     '@nuxt/eslint',
     '@nuxt/ui'
   ],
-
+  ssr: false,
   devtools: {
     enabled: true
   },
@@ -13,6 +13,17 @@ export default defineNuxtConfig({
 
   routeRules: {
     '/': { prerender: true }
+  },
+  runtimeConfig: {
+    public: {
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000'
+    }
+  },
+  // ЭТО ПРАВИЛЬНЫЙ СПОСОБ ВКЛЮЧИТЬ ТЕМНУЮ ТЕМУ
+  colorMode: {
+    preference: 'dark', // Жестко ставим темную
+    fallback: 'dark',
+    classSuffix: ''     // Важно для совместимости с Tailwind
   },
 
   compatibilityDate: '2025-01-15',

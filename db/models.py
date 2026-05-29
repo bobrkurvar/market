@@ -11,6 +11,56 @@ class Base(AsyncAttrs, DeclarativeBase):
     pass
 
 
+# class Product(Base):
+#     __tablename__ = "products"
+#
+#     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+#     seller_id: Mapped[int] = mapped_column(ForeignKey("sellers.id"))
+#
+#     title: Mapped[str] = mapped_column(String(255))
+#     description: Mapped[str] = mapped_column(Text)
+#
+#     # Связь с вариантами ("1 месяц", "1 год")
+#     variants: Mapped[List["ProductVariant"]] = relationship(
+#         "ProductVariant",
+#         cascade="all, delete-orphan",
+#         back_populates="product"
+#     )
+#     seller: Mapped["Seller"] = relationship("Seller", back_populates="products")
+#
+#
+# class ProductVariant(Base):
+#     __tablename__ = "product_variants"
+#
+#     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+#     product_id: Mapped[int] = mapped_column(ForeignKey("products.id", ondelete="CASCADE"))
+#
+#     price: Mapped[float]
+#     # Сюда пишем всё, что отличает варианты: {"duration": "1 month", "region": "Global"}
+#     attributes: Mapped[dict] = mapped_column(JSONB, nullable=True, default=dict)
+#
+#     product: Mapped["Product"] = relationship("Product", back_populates="variants")
+#
+#     # Связь с конкретными ключами на складе
+#     items: Mapped[List["ProductItem"]] = relationship(
+#         "ProductItem",
+#         cascade="all, delete-orphan",
+#         back_populates="variant"
+#     )
+#
+#
+# class ProductItem(Base):
+#     __tablename__ = "product_items"
+#
+#     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+#     variant_id: Mapped[int] = mapped_column(ForeignKey("product_variants.id", ondelete="CASCADE"))
+#     order_id: Mapped[int] = mapped_column(ForeignKey("orders.id"), nullable=True)
+#
+#     content: Mapped[str] = mapped_column(Text)
+#     status_name: Mapped[str] = mapped_column(ForeignKey("product_item_statuses.name"))
+#
+#     variant: Mapped["ProductVariant"] = relationship("ProductVariant", back_populates="items")
+
 class Product(Base):
     __tablename__ = "products"
 

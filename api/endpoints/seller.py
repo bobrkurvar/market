@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 
-from adapters.deps import GetSellerDep, UowDep
+from adapters.deps import UowDep
+from adapters.web import GetSellerDep
 from domain import Product
 
 from .schemas import ProductCreate
