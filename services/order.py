@@ -1,6 +1,6 @@
 import logging
 
-from domain import Client, Order, OrderCreatedEvent, Product
+from domain import Client, Order, OrderCreatedEvent, ProductVariant
 from infra.event_bus import EventBus
 
 log = logging.getLogger(__name__)
@@ -8,35 +8,41 @@ log = logging.getLogger(__name__)
 
 async def make_order(
     uow,
-    product_id: int,
+    product_variant_id: int,
     client: Client,
     event_bus: EventBus,
     amount: int = 1,
 ):
     async with uow:
-        product = await uow.db.read_one(Product, id=product_id)
-
+        product_variant = await uow.db.read_one(ProductVariant, id=product_variant_id, loaded="product")
+        product = product_variant.product
         # Внутри read_available_items лежит подзапрос SKIP LOCKED.
         items = await uow.product.read_available_items(
-            product_id=product.id, amount=amount
+            variant_id=product_variant.id, amount=amount
         )
 
         if len(items) < amount:
             raise ValueError("Недостаточно товара в наличии")
 
+        snapshot = {
+            "title": product.title,
+            "description": product.description,
+            "attributes": product_variant.attributes
+        }
+
         order = Order(
             client=client,
             amount=amount,
-            price=product.price,
-            product_id=product.id,
-            product_snapshot={"title": product.title, "description": product.description}
+            price=product_variant.price,
+            product_variant_id=product_variant.id,
+            product_snapshot=snapshot
         )
         order = await uow.db.create(order)
         order.reserve_items(items)
         for item in items:
             await uow.db.save(item)
 
-        order.product = product
+        #order.product = product
         event_bus.publish(
             OrderCreatedEvent(
                 order_id=order.id,

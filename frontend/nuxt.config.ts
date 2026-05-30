@@ -4,7 +4,6 @@ export default defineNuxtConfig({
     '@nuxt/eslint',
     '@nuxt/ui'
   ],
-  ssr: false,
   devtools: {
     enabled: true
   },
@@ -19,7 +18,7 @@ export default defineNuxtConfig({
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000'
     }
   },
-  // ЭТО ПРАВИЛЬНЫЙ СПОСОБ ВКЛЮЧИТЬ ТЕМНУЮ ТЕМУ
+
   colorMode: {
     preference: 'dark', // Жестко ставим темную
     fallback: 'dark',

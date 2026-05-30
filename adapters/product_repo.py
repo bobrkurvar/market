@@ -13,11 +13,11 @@ class ProductRepository:
         self.session = session
         self._registry = registry
 
-    async def read_available_items(self, product_id: int, amount: int):
+    async def read_available_items(self, variant_id: int, amount: int):
         query = (
             select(ProductItem)
             .where(
-                ProductItem.product_id == product_id,
+                ProductItem.product_variant_id == variant_id,
                 ProductItem.status_name == ProductItemStatuses.available,
             )
             .limit(amount)

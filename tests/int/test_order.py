@@ -1,22 +1,27 @@
 import pytest
 from services.order import make_order, cancel_unpaid_order
-from domain import Client, Product, Seller, ProductItem, Order, ProductItemStatuses
+from domain import Client, Product, Seller, ProductItem, Order, ProductItemStatuses, ProductVariant
 from infra.event_bus import EventBus
+import logging
+
+log = logging.getLogger(__name__)
 
 @pytest.mark.asyncio
 async def test_make_order(uow):
+    product_variant = ProductVariant(price=7, items=ProductItem(content="content"))
     async with uow:
         client = await uow.db.create(Client(username="client", password="password"))
         seller = await uow.db.create(Seller(username="seller", password="password"))
-        product = await uow.db.create(
-            Product(
-                title="title",
-                price=7,
-                seller=seller,
-                items=ProductItem(content="content")
-            )
-        )
-    order = await make_order(uow=uow, client=client, product_id=product.id, event_bus=EventBus())
+        product = Product(title="title", seller=seller, variants=product_variant)
+        product = await uow.db.create(product)
+        product = await uow.db.read_one(Product, id=product.id, loaded="variants")
+        target_variant = product.variants[0]
+    order = await make_order(uow=uow, client=client, product_variant_id=target_variant.id, event_bus=EventBus())
+    async with uow:
+        items = await uow.db.read(ProductItem, product_variant_id=target_variant.id)
+    assert items
+    for item in items:
+        assert item.product_variant_id == target_variant.id
     assert order is not None
     assert order.price == 7
     assert order.total_cost == 7
@@ -25,23 +30,21 @@ async def test_make_order(uow):
     assert len(order.items) == 1
     assert order.items[0].status == "reserved"
     assert order.client_id == client.id
-    assert order.product_id == product.id
+    assert order.product_variant_id == target_variant.id
 
 
 @pytest.mark.asyncio
 async def test_cancel_unpaid_order(uow):
+    product_variant = ProductVariant(price=7, items=ProductItem(content="content"))
     async with uow:
         client = await uow.db.create(Client(username="client", password="password"))
         seller = await uow.db.create(Seller(username="seller", password="password"))
-        product = await uow.db.create(
-            Product(
-                title="title",
-                price=7,
-                seller=seller,
-                items=ProductItem(content="content")
-            )
-        )
-    order = await make_order(uow=uow, client=client, product_id=product.id, event_bus=EventBus())
+        product = Product(title="title", seller=seller, variants=product_variant)
+        product.add_variants(product_variant)
+        product = await uow.db.create(product)
+        product = await uow.db.read_one(Product, id=product.id, loaded="variants")
+        target_variant = product.variants[0]
+    order = await make_order(uow=uow, client=client, product_variant_id=target_variant.id, event_bus=EventBus())
     cancelled_order: Order = await cancel_unpaid_order(uow, order.id)
     assert cancelled_order.is_cancelled()
     item = cancelled_order.items[0]

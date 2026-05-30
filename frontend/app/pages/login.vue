@@ -11,13 +11,13 @@
 
         <template #login>
           <form @submit.prevent="handleLogin" class="space-y-4 mt-4">
-            <UFormGroup label="Логин">
+            <UFormField label="Логин" name="username">
               <UInput v-model="loginForm.username" type="text" placeholder="Введите логин" icon="i-heroicons-user" />
-            </UFormGroup>
+            </UFormField>
 
-            <UFormGroup label="Пароль">
+            <UFormField label="Пароль" name="password">
               <UInput v-model="loginForm.password" type="password" placeholder="••••••••" icon="i-heroicons-lock-closed" />
-            </UFormGroup>
+            </UFormField>
 
             <UButton type="submit" color="primary" block>Войти</UButton>
           </form>
@@ -25,17 +25,22 @@
 
         <template #register>
           <form @submit.prevent="handleRegister" class="space-y-4 mt-4">
-            <UFormGroup label="Я хочу:">
-              <URadioGroup v-model="registerForm.role" :options="roleOptions" />
-            </UFormGroup>
 
-            <UFormGroup label="Логин">
+            <UFormField label="Тип аккаунта" name="role">
+              <URadioGroup
+                v-model="registerForm.role"
+                :items="roleOptions"
+                class="mt-2"
+              />
+            </UFormField>
+
+            <UFormField label="Логин" name="username">
               <UInput v-model="registerForm.username" type="text" placeholder="Придумайте логин" icon="i-heroicons-user" />
-            </UFormGroup>
+            </UFormField>
 
-            <UFormGroup label="Пароль">
+            <UFormField label="Пароль" name="password">
               <UInput v-model="registerForm.password" type="password" placeholder="••••••••" icon="i-heroicons-lock-closed" />
-            </UFormGroup>
+            </UFormField>
 
             <UButton type="submit" color="primary" block>Зарегистрироваться</UButton>
           </form>
@@ -53,6 +58,7 @@ import { useRouter } from 'vue-router'
 const config = useRuntimeConfig()
 const router = useRouter()
 const toast = useToast()
+const { $api } = useNuxtApp()
 
 const currentUser = useState('user', () => null)
 
@@ -77,10 +83,9 @@ const onAuthSuccess = (user, successMessage) => {
 
 const handleLogin = async () => {
   try {
-    const authResponse = await $fetch(`${config.public.apiBase}/api/login`, {
+    const authResponse = await $api('/api/login', {
       method: 'POST',
-      body: loginForm.value,
-      credentials: 'include'
+      body: loginForm.value
     })
 
     if (authResponse.user) {
@@ -94,10 +99,9 @@ const handleLogin = async () => {
 
 const handleRegister = async () => {
   try {
-    const authResponse = await $fetch(`${config.public.apiBase}/api/register`, {
+    const authResponse = await $api('/api/register', {
       method: 'POST',
-      body: registerForm.value,
-      credentials: 'include'
+      body: registerForm.value
     })
 
     if (authResponse.user) {

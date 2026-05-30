@@ -22,6 +22,7 @@ WORKDIR /app
 COPY frontend/package*.json .
 RUN npm install
 COPY frontend .
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npm run build
 
 FROM node:22-alpine AS frontend

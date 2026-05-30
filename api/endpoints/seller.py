@@ -11,7 +11,7 @@ router = APIRouter(prefix="/seller")
 
 @router.post("/product")
 async def create_product(seller: GetSellerDep, product: ProductCreate, uow: UowDep):
-    product = Product(**product.model_dump(), seller=seller)
+    product = product.to_domain(seller)
     async with uow:
         return await uow.db.create(product)
 
@@ -22,12 +22,12 @@ async def get_seller_products(seller: GetSellerDep, uow: UowDep):
         return await uow.db.read(Product, seller_id=seller.id)
 
 
-@router.patch("/product/{product_id}")
-async def change_product(
-    product_id: int, updated_product, seller: GetSellerDep, uow: UowDep
-):
-    updated_domain_product = Product(
-        **updated_product.dump_model(), product_id=product_id
-    )
-    async with uow:
-        await uow.db.save(updated_domain_product)
+# @router.patch("/product/{product_id}")
+# async def change_product(
+#     product_id: int, updated_product, seller: GetSellerDep, uow: UowDep
+# ):
+#     updated_domain_product = Product(
+#         **updated_product.dump_model(), product_id=product_id
+#     )
+#     async with uow:
+#         await uow.db.save(updated_domain_product)

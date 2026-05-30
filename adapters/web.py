@@ -60,7 +60,7 @@ authCookiesDep = Annotated[AuthCookies, Depends()]
 
 
 async def get_user(
-    request: Request, response: Response, cookies: authCookiesDep, redis: RedisDep
+    request: Request, response: Response, cookies: authCookiesDep, redis: RedisDep, uow: UowDep
 ):
     access_token = cookies.get_access_token(request)
     if access_token:
@@ -69,13 +69,14 @@ async def get_user(
         log.debug("access token approve")
     else:
         refresh_token = cookies.get_refresh_token(request)
-        new_access, new_refresh = await create_tokens_from_refresh(refresh_token, redis)
+        new_access, new_refresh = await create_tokens_from_refresh(refresh_token=refresh_token, redis=redis, uow=uow)
         cookies.set_access_token(response, new_access)
         cookies.set_refresh_token(response, new_refresh)
         return get_data_from_token(new_access)
 
 
 GetUserDep = Annotated[dict, Depends(get_user)]
+
 
 
 async def get_client(payload: GetUserDep, uow: UowDep) -> Client:

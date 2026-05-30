@@ -11,56 +11,6 @@ class Base(AsyncAttrs, DeclarativeBase):
     pass
 
 
-# class Product(Base):
-#     __tablename__ = "products"
-#
-#     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-#     seller_id: Mapped[int] = mapped_column(ForeignKey("sellers.id"))
-#
-#     title: Mapped[str] = mapped_column(String(255))
-#     description: Mapped[str] = mapped_column(Text)
-#
-#     # Связь с вариантами ("1 месяц", "1 год")
-#     variants: Mapped[List["ProductVariant"]] = relationship(
-#         "ProductVariant",
-#         cascade="all, delete-orphan",
-#         back_populates="product"
-#     )
-#     seller: Mapped["Seller"] = relationship("Seller", back_populates="products")
-#
-#
-# class ProductVariant(Base):
-#     __tablename__ = "product_variants"
-#
-#     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-#     product_id: Mapped[int] = mapped_column(ForeignKey("products.id", ondelete="CASCADE"))
-#
-#     price: Mapped[float]
-#     # Сюда пишем всё, что отличает варианты: {"duration": "1 month", "region": "Global"}
-#     attributes: Mapped[dict] = mapped_column(JSONB, nullable=True, default=dict)
-#
-#     product: Mapped["Product"] = relationship("Product", back_populates="variants")
-#
-#     # Связь с конкретными ключами на складе
-#     items: Mapped[List["ProductItem"]] = relationship(
-#         "ProductItem",
-#         cascade="all, delete-orphan",
-#         back_populates="variant"
-#     )
-#
-#
-# class ProductItem(Base):
-#     __tablename__ = "product_items"
-#
-#     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-#     variant_id: Mapped[int] = mapped_column(ForeignKey("product_variants.id", ondelete="CASCADE"))
-#     order_id: Mapped[int] = mapped_column(ForeignKey("orders.id"), nullable=True)
-#
-#     content: Mapped[str] = mapped_column(Text)
-#     status_name: Mapped[str] = mapped_column(ForeignKey("product_item_statuses.name"))
-#
-#     variant: Mapped["ProductVariant"] = relationship("ProductVariant", back_populates="items")
-
 class Product(Base):
     __tablename__ = "products"
 
@@ -69,14 +19,27 @@ class Product(Base):
 
     title: Mapped[str] = mapped_column(String(255))
     description: Mapped[str] = mapped_column(Text)
-    price: Mapped[float]
+    variants: Mapped[list["ProductVariant"]] = relationship(
+        "ProductVariant",
+        cascade="all, delete-orphan",
+        back_populates="product"
+    )
+    seller: Mapped["Seller"] = relationship("Seller", back_populates="products")
 
+
+class ProductVariant(Base):
+    __tablename__ = "product_variants"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id", ondelete="CASCADE"))
+    price: Mapped[float]
+    attributes: Mapped[dict] = mapped_column(JSONB, nullable=True, default=dict)
+    product: Mapped["Product"] = relationship("Product", back_populates="variants")
     items: Mapped[list["ProductItem"]] = relationship(
         "ProductItem",
         cascade="all, delete-orphan",
-        passive_deletes=True,
+        back_populates="variant"
     )
-    seller: Mapped["Seller"] = relationship("Seller", back_populates="products")
 
 
 class ProductItemStatuses(Base):
@@ -88,12 +51,15 @@ class ProductItem(Base):
     __tablename__ = "product_items"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"))
+    product_variant_id: Mapped[int] = mapped_column(ForeignKey("product_variants.id", ondelete="CASCADE"))
     order_id: Mapped[int] = mapped_column(ForeignKey("orders.id"), nullable=True)
+
     content: Mapped[str] = mapped_column(Text)
     status_name: Mapped[str] = mapped_column(ForeignKey("product_item_statuses.name"))
 
-    # product: Mapped["Product"] = relationship("Product", back_populates="stock")
+    variant: Mapped["ProductVariant"] = relationship("ProductVariant", back_populates="items")
+
+
 
 
 class User(Base):
@@ -151,8 +117,8 @@ class Order(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     client_id: Mapped[int] = mapped_column(ForeignKey("clients.id"))
-    product_id: Mapped[int | None] = mapped_column(
-        ForeignKey("products.id", ondelete="SET NULL")
+    product_variant_id: Mapped[int | None] = mapped_column(
+        ForeignKey("product_variants.id", ondelete="SET NULL")
     )
     payment_link: Mapped[str | None] = mapped_column(default=None, nullable=True)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())

@@ -1,7 +1,7 @@
 from collections.abc import Collection
 from enum import StrEnum
 from datetime import datetime
-from .product import Product, ProductItem
+from .product import ProductVariant, ProductItem
 from .user import Client
 
 
@@ -18,8 +18,8 @@ class Order:
         product_snapshot: dict | None = None,
         client: Client | None = None,
         client_id: int | None = None,
-        product: Product | None = None,
-        product_id: int | None = None,
+        product_variant: ProductVariant | None = None,
+        product_variant_id: int | None = None,
         status: OrderStatuses = OrderStatuses.pending_payments,
         amount: int = 1,
         items: Collection[ProductItem] | ProductItem = None,
@@ -28,11 +28,11 @@ class Order:
     ):
         self.product_snapshot = product_snapshot or {}
         self.price = price
-        self._id = order_id
+        self.id = order_id
         self.client = client
         self.client_id = client.id if client else client_id
-        self.product = product
-        self.product_id = product.id if product else product_id
+        self.product_variant = product_variant
+        self.product_variant_id = product_variant.id if product_variant else product_variant_id
         self.status = status
         self.amount = amount
         self._items = [items] if isinstance(items, ProductItem) else items
@@ -44,11 +44,11 @@ class Order:
             raise ValueError(
                 "Заказ не может существовать без клиента (передайте либо объект client, либо client_id)"
             )
-        if self.product_id is None:
+        if self.product_variant_id is None:
             raise ValueError(
                 "Заказ не может существовать без товара (передайте либо существующий объект product, либо product_id)"
             )
-        if self._items and self._id is None:
+        if self._items and self.id is None:
             raise ValueError(
                 "Нельзя передавать товарные позиции при инициализации нового заказа"
             )
@@ -86,7 +86,13 @@ class Order:
         self.status = OrderStatuses.paid
 
     def reserve_items(self, items: Collection[ProductItem] | ProductItem):
+        if self.id is None:
+            raise ValueError(
+                "Нельзя зарезервировать ключи: заказ еще не сохранен (отсутствует ID)"
+            )
         new_items = [items] if isinstance(items, ProductItem) else list(items)
+        if not new_items:
+            return
         self._items = list(self._items) if self._items else []
         for item in new_items:
             item.reserve(self.id)
@@ -96,11 +102,6 @@ class Order:
     def total_cost(self) -> float:
         return self.price * self.amount
 
-    @property
-    def id(self) -> int:
-        if self._id is None:
-            raise ValueError("Идентификатор не подгружен")
-        return self._id
 
     def is_paid(self):
         return self.status == OrderStatuses.paid

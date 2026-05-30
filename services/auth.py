@@ -32,6 +32,10 @@ def create_refresh_token(
     data.update(family_id=family_id, jti=jti)
     return create_token(data, expire, "refresh")
 
+async def delete_redis_keys(redis, jti: str, family_id: str):
+    await redis.delete(f"rtfam:{family_id}")
+    await redis.delete(f"rt:{jti}")
+
 
 async def check_rotate(payload: dict, redis):
     jti, family_id = payload["jti"], payload["family_id"]
@@ -39,10 +43,13 @@ async def check_rotate(payload: dict, redis):
         raise RefreshTokenFamilyExpiredError
 
     if await redis.incr(f"rt:{jti}") != 0:
-        await redis.delete(f"rtfam:{family_id}")
+        # await redis.delete(f"rtfam:{family_id}")
+        # await redis.delete(f"rt:{jti}")
+        await delete_redis_keys(redis, jti, family_id)
         raise RefreshTokenReusedCompromisedError
 
     if not await redis.exists(f"rtfam:{family_id}"):
+        await redis.delete(f"rtfam:{family_id}")
         raise RefreshTokenRotationRaceConditionError
 
     new_jti = create_token_jti()
@@ -106,18 +113,12 @@ async def create_tokens_from_login(
     user_data = dict(id=user.id, role=user.role, username=user.username)
     data.update(user_data)
     tokens = await create_tokens(redis=redis, **data)
-    # jti, family_id = create_token_jti(), create_token_family_id()
-    # await redis.set(f"rtfam:{family_id}", value=1, ttl=86400 * 7)
-    # await redis.set(f"rt:{jti}", value=-1, ttl=86400 * 7)
-    # return {
-    #     "access_token": create_access_token(data),
-    #     "refresh_token": create_refresh_token(data, jti=jti, family_id=family_id),
-    # }, user_data
     return tokens, user_data
 
 
 async def user_register(redis, uow, username: str, password: str, role: UserRole):
     hash_password = get_hash(password)
+    log.debug("user role: %s", role)
     if role == UserRole.seller:
         new_account = Seller(username=username, password=hash_password)
     elif role == UserRole.client:
@@ -127,5 +128,5 @@ async def user_register(redis, uow, username: str, password: str, role: UserRole
     async with uow:
         user = await uow.db.create(new_account)
     user_data = dict(id=user.id, role=user.role, username=user.username)
-    tokens = await create_tokens(redis=redis, uow=uow, **user_data)
+    tokens = await create_tokens(redis=redis, **user_data)
     return tokens, user_data

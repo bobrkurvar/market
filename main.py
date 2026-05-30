@@ -8,7 +8,8 @@ from adapters.db_provider import DbProvider
 from api.endpoints import main_router
 from core import conf
 from core.logger import setup_logging
-from domain import OrderCreatedEvent
+from domain import *
+from api.err_handlers import *
 from infra.event_bus import EventBus
 from tasks.handlers import generate_payment_link
 from adapters.redis import RedisProvider
@@ -62,15 +63,9 @@ async def catch_all(full_path: str):
     return RedirectResponse("/", status_code=303)
 
 
-# api.add_exception_handler(UserLoginNotFoundError, user_login_not_found_error_handler)
-# api.add_exception_handler(NotFoundError, not_found_handler)
-# api.add_exception_handler(AlreadyExistsError, already_exists_handler)
-# api.add_exception_handler(ForeignKeyViolationError, foreign_key_handler)
-# api.add_exception_handler(
-#     RefreshTokenNotExistsError, invalid_tokens_or_not_exists_handler
-# )
-# api.add_exception_handler(
-#     InvalidRefreshTokenError, invalid_tokens_or_not_exists_handler
-# )
-# api.add_exception_handler(InvalidAccessTokenError, invalid_tokens_or_not_exists_handler)
-# api.add_exception_handler(CredentialsValidateError, invalid_credentials_error_handler)
+app.add_exception_handler(UserLoginNotFoundError, user_login_not_found_error_handler)
+app.add_exception_handler(NotFoundError, not_found_handler)
+app.add_exception_handler(AlreadyExistsError, already_exists_handler)
+app.add_exception_handler(ForeignKeyViolationError, foreign_key_handler)
+app.add_exception_handler(UnauthorizedError, invalid_tokens_or_not_exists_handler)
+app.add_exception_handler(CredentialsValidateError, invalid_credentials_error_handler)

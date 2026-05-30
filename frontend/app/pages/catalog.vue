@@ -65,13 +65,11 @@ const fetchProducts = async (currentPage, limit) => {
   const offset = (currentPage - 1) * limit
 
   try {
-    // ВАЖНО: Используем $fetch (с долларом), а не useFetch!
-    const response = await $fetch(`${config.public.apiBase}/api/products`, {
-      query: { limit, offset }
-    })
+    const response = await $api('/api/products', {
+          query: { limit, offset }
+        })
 
     if (response) {
-      // Поэтому мы берем response.products, а не data.value.items
       products.value = response.items || []
       totalItems.value = response.total || 0
     }

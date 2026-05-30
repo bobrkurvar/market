@@ -14,12 +14,12 @@ class ProductItem:
     def __init__(
         self,
         content,
-        product_id: int | None = None,
+        product_variant_id: int | None = None,
         status: ProductItemStatuses = ProductItemStatuses.available,
         item_id: int | None = None,
         order_id: int | None = None,
     ):
-        self.product_id = product_id
+        self.product_variant_id = product_variant_id
         self.status = status
         self.id = item_id
         self.content = content
@@ -47,42 +47,34 @@ class ProductItem:
             raise ValueError("Можно скомпрометировать только проданный товар")
         self.status = ProductItemStatuses.compromised
 
+
     def __repr__(self):
         return f"<ProductItem(id={self.id}, status='{self.status}', order_id={self.order_id})>"
 
 
-class Product:
+class ProductVariant:
     def __init__(
         self,
-        title: str,
         price: float,
-        items: Collection[ProductItem] | ProductItem = None,
-        seller: Seller | None = None,
-        seller_id: int | None = None,
         product_id: int | None = None,
-        description: str = "",
+        product: "Product" = None,
+        product_variant_id: int | None = None,
+        items: Collection[ProductItem] | ProductItem = None,
+        attributes: dict | None = None
     ):
-        self.id = product_id
-        self.seller = seller
-        self.title = title
-        self.description = description
+        self.product = product
+        self.product_id = product.id if product else product_id
         self.price = price
+        self.id = product_variant_id
         self._items = [items] if isinstance(items, ProductItem) else items
-
-        self.seller_id = seller.id if seller and seller.id else seller_id
-
+        self.attributes = attributes
         self._validate()
 
     def _validate(self):
-        if self.seller_id is None and self.seller is None:
-            raise ValueError(
-                "Товар не может существовать без продавца (передайте объект seller или seller_id)"
-            )
-        if len(self.title) < 3:
-            raise ValueError("Заголовок товара слишком короткий")
         if self.price < 0:
             raise ValueError("Цена не может быть отрицательной")
-
+        # if self.product_id is None and self.product is None:
+        #     raise ValueError("Не может существовать вариант товара без самого товара")
 
     @property
     def items(self):
@@ -90,10 +82,52 @@ class Product:
             raise ValueError("Товар без товарных позиций")
         return self._items
 
+
     def change_price(self, new_price: int):
         if new_price < 0:
             raise ValueError("Новая цена не может быть отрицательной")
         self.price = new_price
+
+
+class Product:
+    def __init__(
+        self,
+        title: str,
+        seller: Seller | None = None,
+        seller_id: int | None = None,
+        product_id: int | None = None,
+        variants: Collection[ProductVariant] | ProductVariant | None = None,
+        description: str = "",
+    ):
+        self.id = product_id
+        self.seller = seller
+        self.title = title
+        self.description = description
+        #self._variants = [variants] if isinstance(variants, ProductVariant) else variants
+        self.seller_id = seller.id if seller else seller_id
+        self._variants = None
+        if variants is not None:
+            self.add_variants(variants)
+        self._validate()
+
+    def _validate(self):
+        if self.seller_id is None:
+            raise ValueError(
+                "Товар не может существовать без продавца (передайте объект seller или seller_id)"
+            )
+        if len(self.title) < 3:
+            raise ValueError("Заголовок товара слишком короткий")
+
+    def add_variants(self, variants: Collection[ProductVariant] | ProductVariant):
+        new_variants = [variants] if isinstance(variants, ProductVariant) else list(variants)
+        self._variants = list(self._variants) if self._variants else []
+        self._variants += new_variants
+
+    @property
+    def variants(self):
+        if self._variants is None:
+            raise ValueError("Товар без товарных позиций")
+        return self._variants
 
     def __repr__(self):
         return f"<Product(id={self.id}, title='{self.title}')>"
