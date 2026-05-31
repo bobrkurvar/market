@@ -24,13 +24,13 @@ async def logout(request: Request, redis: RedisDep):
 
 @router.get("/me")
 async def get_user_profile(user: GetUserDep):
-    return user
+    return {"user": user}
 
 @router.post("/refresh")
 async def refresh_tokens(request: Request, redis: RedisDep, uow: UowDep):
     cookie_manager = AuthCookies()
     refresh_token = cookie_manager.get_refresh_token(request=request)
-    tokens = await create_tokens_from_refresh(redis=redis, uow=uow, refresh_token=refresh_token.value)
+    tokens = await create_tokens_from_refresh(redis=redis, uow=uow, refresh_token=refresh_token)
     cookie_manager = AuthCookies()
     response = JSONResponse(content="success")
     cookie_manager.set_tokens(tokens=tokens, response=response)

@@ -12,9 +12,10 @@
         </NuxtLink>
       </nav>
 
-      <div>
+      <div class="flex items-center gap-3">
+
         <UButton
-          :icon="colorMode.value === 'dark' ? 'i-heroicons-moon-20-solid' : 'i-heroicons-sun-20-solid'"
+          :icon="colorMode.value === 'dark' ? 'i-heroicons-sun-20-solid' : 'i-heroicons-moon-20-solid'"
           color="neutral"
           variant="ghost"
           aria-label="Theme"

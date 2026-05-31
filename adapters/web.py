@@ -26,7 +26,7 @@ class AuthCookies:
 
     def clear_tokens(self, response: Response):
         response.delete_cookie("access_token")
-        response.delete_cookie("refresh_token", path="/admin")
+        response.delete_cookie("refresh_token", path="/refresh")
 
     def set_refresh_token(self, response: Response, value: str):
         ttl = 86400 * 7
@@ -37,7 +37,7 @@ class AuthCookies:
             max_age=ttl,
             samesite="strict",
             secure=self.cookie_secret,
-            path="/admin",
+            path="/refresh",
         )
 
     def set_access_token(self, response: Response, value: str):
@@ -67,6 +67,7 @@ async def get_user(
         log.debug("access token exists")
         check_access_token(access_token)
         log.debug("access token approve")
+        return get_data_from_token(access_token)
     else:
         refresh_token = cookies.get_refresh_token(request)
         new_access, new_refresh = await create_tokens_from_refresh(refresh_token=refresh_token, redis=redis, uow=uow)

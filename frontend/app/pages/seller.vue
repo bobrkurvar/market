@@ -155,9 +155,24 @@ import { useRouter } from 'vue-router'
 
 definePageMeta({
   middleware: [
-    function (to, from) {
-      const currentUser = useState('user').value
-      if (!currentUser || currentUser.role !== 'seller') {
+    async function (to, from) { // <-- 1. Делаем функцию асинхронной
+      if (import.meta.server) return // На сервере пропускаем
+
+      const currentUser = useState('user')
+      const { $api } = useNuxtApp()
+
+      // 2. Если стейт пустой (например, после F5), запрашиваем юзера ПРЯМО ЗДЕСЬ
+      if (!currentUser.value) {
+        try {
+          const data = await $api('/api/me')
+          currentUser.value = data?.user || data
+        } catch (error) {
+          currentUser.value = null
+        }
+      }
+
+      // 3. Роутер дождался ответа. Теперь мы ТОЧНО знаем, кто перед нами
+      if (!currentUser.value || currentUser.value.role !== 'seller') {
         return navigateTo('/')
       }
     }
