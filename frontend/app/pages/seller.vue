@@ -48,7 +48,7 @@
                 <td class="p-4 text-gray-600">{{ product.variants_count }} опций</td>
                 <td class="p-4">
                   <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">
-                    {{ product.items_available }} шт.
+                    {{ product.items_count }} шт.
                   </span>
                 </td>
                 <td class="p-4 text-right space-x-3">
@@ -93,7 +93,7 @@
               <div class="flex justify-between items-center mb-4 border-b pb-2">
                 <h3 class="text-lg font-semibold">Опции и ключи</h3>
                 <button type="button" @click="addVariant" class="text-indigo-600 hover:underline text-sm font-medium flex items-center">
-                  <span>+ Добавить опцию</span>
+                  <span>+ Добавить вариант товара</span>
                 </button>
               </div>
 
@@ -104,16 +104,48 @@
                     ✕
                   </button>
 
-                  <h4 class="font-medium text-gray-700 mb-4">Опция #{{ index + 1 }}</h4>
+                  <h4 class="font-medium text-gray-700 mb-4">Вариант #{{ index + 1 }}</h4>
 
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <label class="block text-sm font-medium mb-1">Цена (₽) <span class="text-red-500">*</span></label>
-                      <input v-model.number="variant.price" type="number" min="0" required class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+                  <div class="mb-5">
+                    <label class="block text-sm font-medium mb-1">Цена (₽) <span class="text-red-500">*</span></label>
+                    <input v-model.number="variant.price" type="number" min="0" required class="w-full md:w-1/2 border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+                  </div>
+
+                  <div class="mb-5">
+                    <div class="flex justify-between items-center mb-2">
+                      <label class="block text-sm font-medium text-gray-700">Характеристики варианта</label>
+                      <button type="button" @click="addAttribute(variant)" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium bg-indigo-50 px-2 py-1 rounded transition">
+                        + Добавить свойство
+                      </button>
                     </div>
-                    <div>
-                      <label class="block text-sm font-medium mb-1">Характеристика (напр. 1 месяц)</label>
-                      <input v-model="variant.durationAttr" type="text" placeholder="Укажите длительность или тип" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+
+                    <div class="space-y-2">
+                      <div v-if="variant.attributes.length === 0" class="text-sm text-gray-400 italic bg-white p-3 rounded border border-dashed">
+                        Без характеристик (базовый товар)
+                      </div>
+
+                      <div v-for="(attr, attrIdx) in variant.attributes" :key="attrIdx" class="flex gap-2 items-center">
+                        <input
+                          v-model="attr.key"
+                          type="text"
+                          placeholder="Название (напр. Регион)"
+                          class="w-1/2 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        />
+                        <input
+                          v-model="attr.value"
+                          type="text"
+                          placeholder="Значение (напр. Global)"
+                          class="w-1/2 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          @click="removeAttribute(variant, attrIdx)"
+                          class="text-gray-400 hover:text-red-500 p-2"
+                          title="Удалить"
+                        >
+                          ✕
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -151,107 +183,101 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 
 definePageMeta({
   middleware: [
-    async function (to, from) { // <-- 1. Делаем функцию асинхронной
-      if (import.meta.server) return // На сервере пропускаем
-
+    async function () {
       const currentUser = useState('user')
       const { $api } = useNuxtApp()
 
-      // 2. Если стейт пустой (например, после F5), запрашиваем юзера ПРЯМО ЗДЕСЬ
       if (!currentUser.value) {
         try {
-          const data = await $api('/api/me')
-          currentUser.value = data?.user || data
-        } catch (error) {
+          const res = await $api('/api/me')
+          currentUser.value = res?.user || res
+        } catch {
           currentUser.value = null
         }
       }
 
-      // 3. Роутер дождался ответа. Теперь мы ТОЧНО знаем, кто перед нами
-      if (!currentUser.value || currentUser.value.role !== 'seller') {
+      if (currentUser.value?.role !== 'seller') {
         return navigateTo('/')
       }
     }
   ]
 })
 
-const config = useRuntimeConfig()
-const router = useRouter()
 const toast = useToast()
 const { $api } = useNuxtApp()
 
-const currentUser = useState('user')
 const currentView = ref('list')
 const products = ref([])
 
 const fetchProducts = async () => {
   try {
-    // В реальности: await $api('/api/seller/products')
-    products.value = [
-      { id: 1, title: 'Подписка Netflix Premium 4K', variants_count: 2, items_available: 45 },
-      { id: 2, title: 'Ключ Windows 11 Pro', variants_count: 1, items_available: 12 },
-    ]
+    // Реальный запрос за товарами продавца
+    products.value = await $api('/api/seller/products')
   } catch (error) {
-    console.error('Ошибка загрузки товаров', error)
+    toast.add({ title: 'Ошибка', description: 'Не удалось загрузить товары', color: 'red' })
   }
 }
 
-onMounted(() => {
-  fetchProducts()
+onMounted(fetchProducts)
+
+const resetForm = () => ({
+  title: '',
+  description: '',
+  variants: [{ price: null, attributes: [{ key: '', value: '' }], rawKeys: '' }]
 })
-
-const resetForm = () => {
-  return {
-    title: '',
-    description: '',
-    variants: [ { price: null, durationAttr: '', rawKeys: '' } ]
-  }
-}
 
 const form = ref(resetForm())
 
-const addVariant = () => form.value.variants.push({ price: null, durationAttr: '', rawKeys: '' })
+// Функции для вариантов и атрибутов стали однострочными
+const addVariant = () => form.value.variants.push({ price: null, attributes: [{ key: '', value: '' }], rawKeys: '' })
 const removeVariant = (index) => form.value.variants.splice(index, 1)
 
-const countKeys = (rawText) => {
-  if (!rawText) return 0
-  return rawText.split('\n').filter(line => line.trim() !== '').length
-}
+const addAttribute = (variant) => variant.attributes.push({ key: '', value: '' })
+const removeAttribute = (variant, index) => variant.attributes.splice(index, 1)
+
+// Упрощенный подсчет строк
+const countKeys = (rawText) => rawText ? rawText.split('\n').filter(k => k.trim()).length : 0
 
 const submitProduct = async () => {
   try {
     const payload = {
       title: form.value.title,
       description: form.value.description,
-      variants: form.value.variants.map(v => ({
-        price: v.price,
-        attributes: v.durationAttr ? { duration: v.durationAttr } : {},
-        items: v.rawKeys
-          .split('\n')
-          .map(k => k.trim())
-          .filter(k => k !== '')
-          .map(k => ({ content: k }))
-      }))
+      variants: form.value.variants.map(v => {
+        // Отфильтровываем пустые атрибуты заранее
+        const validAttrs = v.attributes.filter(a => a.key.trim() && a.value.trim())
+
+        return {
+          price: v.price,
+          // Object.fromEntries делает из массива [[key, value]] готовый словарь гораздо изящнее, чем reduce
+          attributes: validAttrs.length
+            ? Object.fromEntries(validAttrs.map(a => [a.key.trim(), a.value.trim()]))
+            : null,
+          // Boolean в filter автоматически удаляет пустые строки
+          items: v.rawKeys
+            .split('\n')
+            .map(k => k.trim())
+            .filter(Boolean)
+            .map(content => ({ content }))
+        }
+      })
     }
 
-    // В реальности:
-    // await $api('/api/product', {
-    //   method: 'POST',
-    //   body: payload
-    // })
+    // Реальный POST запрос для публикации
+    await $api('/api/product', { method: 'POST', body: payload })
 
     toast.add({ title: 'Успешно', description: 'Товар сохранен и опубликован', color: 'green' })
 
     currentView.value = 'list'
     form.value = resetForm()
-    fetchProducts()
+    fetchProducts() // Сразу обновляем список после публикации
 
   } catch (error) {
-    const errorMsg = error.response?._data?.detail || 'Ошибка сохранения'
+    // ofetch в Nuxt 3 обычно хранит ответ об ошибке в error.data
+    const errorMsg = error.data?.detail || error.response?._data?.detail || 'Ошибка сохранения'
     toast.add({ title: 'Ошибка', description: errorMsg, color: 'red' })
   }
 }

@@ -24,9 +24,10 @@ class AuthCookies:
     def get_access_token(self, request: Request):
         return request.cookies.get(self.access_token_key)
 
-    def clear_tokens(self, response: Response):
-        response.delete_cookie("access_token")
-        response.delete_cookie("refresh_token", path="/refresh")
+    @staticmethod
+    def clear_tokens(response: Response):
+        response.delete_cookie("access_token", path="/")
+        response.delete_cookie("refresh_token", path="/")
 
     def set_refresh_token(self, response: Response, value: str):
         ttl = 86400 * 7
@@ -37,7 +38,7 @@ class AuthCookies:
             max_age=ttl,
             samesite="strict",
             secure=self.cookie_secret,
-            path="/refresh",
+            path="/",
         )
 
     def set_access_token(self, response: Response, value: str):
@@ -49,11 +50,12 @@ class AuthCookies:
             max_age=ttl,
             samesite="strict",
             secure=self.cookie_secret,
+            path="/"
         )
 
-    def set_tokens(self, tokens: dict, response: Response):
-        self.set_access_token(value=tokens["access_token"], response=response)
-        self.set_refresh_token(value=tokens["refresh_token"], response=response)
+    def set_tokens(self, access_token: str, refresh_token: str, response: Response):
+        self.set_access_token(value=access_token, response=response)
+        self.set_refresh_token(value=refresh_token, response=response)
 
 
 authCookiesDep = Annotated[AuthCookies, Depends()]
@@ -63,6 +65,7 @@ async def get_user(
     request: Request, response: Response, cookies: authCookiesDep, redis: RedisDep, uow: UowDep
 ):
     access_token = cookies.get_access_token(request)
+    #log.debug("access token: %s", access_token)
     if access_token:
         log.debug("access token exists")
         check_access_token(access_token)
@@ -70,10 +73,9 @@ async def get_user(
         return get_data_from_token(access_token)
     else:
         refresh_token = cookies.get_refresh_token(request)
-        new_access, new_refresh = await create_tokens_from_refresh(refresh_token=refresh_token, redis=redis, uow=uow)
-        cookies.set_access_token(response, new_access)
-        cookies.set_refresh_token(response, new_refresh)
-        return get_data_from_token(new_access)
+        new_tokens = await create_tokens_from_refresh(refresh_token=refresh_token, redis=redis, uow=uow)
+        cookies.set_tokens(response=response, **new_tokens)
+        return get_data_from_token(new_tokens["access_token"])
 
 
 GetUserDep = Annotated[dict, Depends(get_user)]
@@ -88,7 +90,7 @@ async def get_client(payload: GetUserDep, uow: UowDep) -> Client:
         raise HTTPException(status_code=403, detail="Доступно только клиентам")
 
     async with uow:
-        client = await uow.db.read_one(Client, id=user_id, with_raise=True)
+        client = await uow.db.read_one(Client, id=int(user_id), with_raise=True)
         return client
 
 
@@ -100,7 +102,7 @@ async def get_seller(payload: GetUserDep, uow: UowDep) -> Seller:
         raise HTTPException(status_code=403, detail="Доступно только продавцам")
 
     async with uow:
-        seller = await uow.db.read_one(Seller, id=user_id, with_raise=True)
+        seller = await uow.db.read_one(Seller, id=int(user_id), with_raise=True)
         return seller
 
 

@@ -8,29 +8,37 @@
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-10">
-      <UCard v-for="product in products" :key="product.id" class="flex flex-col justify-between">
-        <template #header>
-          <div class="font-bold text-lg truncate">{{ product.title }}</div>
-          <div class="text-xs text-gray-400 mt-1">{{ product.category }}</div>
-        </template>
+      <NuxtLink
+        v-for="product in products"
+        :key="product.id"
+        :to="`/products/${product.id}`"
+        class="block outline-none"
+      >
+        <UCard
+          class="flex flex-col justify-between h-full cursor-pointer transition-all duration-200 hover:ring-2 hover:ring-primary-500 hover:shadow-md"
+        >
+          <template #header>
+            <div class="font-bold text-lg truncate">{{ product.title }}</div>
+            <div class="text-xs text-gray-400 mt-1">{{ product.category }}</div>
+          </template>
 
-        <p class="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
-          {{ product.description }}
-        </p>
+          <p class="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
+            {{ product.description }}
+          </p>
 
-        <template #footer>
-          <div class="flex items-center justify-between">
-            <span class="text-xl font-bold text-green-600 dark:text-green-400">
-              {{ product.price }} ₽
-            </span>
-            <UButton color="primary" size="sm" icon="i-heroicons-shopping-cart">
-              Купить
-            </UButton>
-          </div>
-        </template>
-      </UCard>
+          <template #footer>
+            <div class="flex items-center justify-between">
+              <span class="text-xl font-bold text-green-600 dark:text-green-400">
+                {{ product.price }} ₽
+              </span>
+              <UButton color="primary" size="sm" icon="i-heroicons-shopping-cart" pointer-events-none>
+                Купить
+              </UButton>
+            </div>
+          </template>
+        </UCard>
+      </NuxtLink>
     </div>
-
     <div class="flex justify-center mt-8" v-if="totalItems > itemsPerPage">
       <UPagination
         v-model="page"
@@ -44,16 +52,15 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from 'vue'
+import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
 const router = useRouter()
-const config = useRuntimeConfig()
+const { $api } = useNuxtApp()
 const itemsPerPage = 8
-const totalItems = ref(0)
-const products = ref([])
 
+// 1. Оставляем реактивную страницу, которая синхронизируется с URL
 const page = computed({
   get: () => Number(route.query.page) || 1,
   set: (val) => {
@@ -61,26 +68,21 @@ const page = computed({
   }
 })
 
-const fetchProducts = async (currentPage, limit) => {
-  const offset = (currentPage - 1) * limit
+// 2. Вычисляем offset (тоже реактивно!)
+const currentOffset = computed(() => (page.value - 1) * itemsPerPage)
 
-  try {
-    const response = await $api('/api/products', {
-          query: { limit, offset }
-        })
-
-    if (response) {
-      products.value = response.items || []
-      totalItems.value = response.total || 0
-    }
-  } catch (error) {
-    console.error('Ошибка при запросе товаров:', error)
+// 3. Используем мощь useFetch!
+const { data, pending, error } = await useFetch('/api/products', {
+  $fetch: $api,
+  query: {
+    limit: itemsPerPage,
+    offset: currentOffset // <-- сам следит за этой переменной
   }
-}
+})
 
-watch(() => route.query.page, () => {
-  fetchProducts(page.value, itemsPerPage)
-}, { immediate: true })
+// Если data.value есть, берем items, иначе пустой массив
+const products = computed(() => data.value?.items || [])
+const totalItems = computed(() => data.value?.total || 0)
 
 useHead({
   title: 'Каталог цифровых товаров | myMarket'

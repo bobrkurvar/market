@@ -39,11 +39,14 @@ CMD ["alembic", "upgrade", "head"]
 
 FROM base AS runner
 COPY infra/security.py infra/security.py
-COPY adapters/db.py adapters/db.py
+COPY adapters/generic_repo.py adapters/generic_repo.py
 COPY adapters/db_provider.py adapters/db_provider.py
+COPY adapters/order_repo.py adapters/order_repo.py
+COPY adapters/product_repo.py adapters/product_repo.py
+COPY adapters/uow.py adapters/uow.py
 COPY domain domain
 COPY db db
-COPY scripts/add_admins.py ./add_admins.py
+COPY scripts/db_init.py ./db_init.py
 CMD ["python", "-m", "db_init"]
 
 

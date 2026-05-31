@@ -7,7 +7,7 @@ export default defineNuxtConfig({
   devtools: {
     enabled: true
   },
-
+  ssr: false,
   css: ['~/assets/css/main.css'],
 
   routeRules: {

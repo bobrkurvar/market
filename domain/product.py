@@ -73,8 +73,6 @@ class ProductVariant:
     def _validate(self):
         if self.price < 0:
             raise ValueError("Цена не может быть отрицательной")
-        # if self.product_id is None and self.product is None:
-        #     raise ValueError("Не может существовать вариант товара без самого товара")
 
     @property
     def items(self):
@@ -98,6 +96,7 @@ class Product:
         product_id: int | None = None,
         variants: Collection[ProductVariant] | ProductVariant | None = None,
         description: str = "",
+        items_count: int | None = None,
     ):
         self.id = product_id
         self.seller = seller
@@ -108,6 +107,7 @@ class Product:
         self._variants = None
         if variants is not None:
             self.add_variants(variants)
+        self.items_count = items_count
         self._validate()
 
     def _validate(self):
@@ -117,6 +117,14 @@ class Product:
             )
         if len(self.title) < 3:
             raise ValueError("Заголовок товара слишком короткий")
+
+    @property
+    def variants_count(self):
+        return len(self.variants)
+
+    @property
+    def price(self):
+        return min(variant.price for variant in self.variants)
 
     def add_variants(self, variants: Collection[ProductVariant] | ProductVariant):
         new_variants = [variants] if isinstance(variants, ProductVariant) else list(variants)

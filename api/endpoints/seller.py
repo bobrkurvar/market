@@ -1,12 +1,11 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 from adapters.deps import UowDep
 from adapters.web import GetSellerDep
-from domain import Product
 
-from .schemas import ProductCreate
+from api.schemas import ProductCreate, ProductSellerListOut
 
-router = APIRouter(prefix="/seller")
+router = APIRouter(prefix="")
 
 
 @router.post("/product")
@@ -16,10 +15,11 @@ async def create_product(seller: GetSellerDep, product: ProductCreate, uow: UowD
         return await uow.db.create(product)
 
 
-@router.get("/products")
+@router.get("/seller/products", response_model=list[ProductSellerListOut])
 async def get_seller_products(seller: GetSellerDep, uow: UowDep):
     async with uow:
-        return await uow.db.read(Product, seller_id=seller.id)
+        return await uow.product.read_products_with_variants_and_items(seller_id=seller.id)
+
 
 
 # @router.patch("/product/{product_id}")

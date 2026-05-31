@@ -57,12 +57,6 @@ async def health():
     return {"status": "ok"}
 
 
-@app.get("/{full_path:path}")
-async def catch_all(full_path: str):
-    log.debug("ТАКОЙ URL НЕ ОБСЛУЖИВАЕТСЯ")
-    return RedirectResponse("/", status_code=303)
-
-
 app.add_exception_handler(UserLoginNotFoundError, user_login_not_found_error_handler)
 app.add_exception_handler(NotFoundError, not_found_handler)
 app.add_exception_handler(AlreadyExistsError, already_exists_handler)

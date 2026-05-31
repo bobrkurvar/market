@@ -1,11 +1,16 @@
 <template>
-  <div v-if="isCheckingAuth" class="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
-    <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-primary-500" />
-  </div>
+  <div>
+    <div
+      v-if="isCheckingAuth"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-gray-50 dark:bg-gray-950"
+    >
+      <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-primary-500" />
+    </div>
 
-  <NuxtLayout v-else>
-    <NuxtPage />
-  </NuxtLayout>
+    <NuxtLayout>
+      <NuxtPage />
+    </NuxtLayout>
+  </div>
 </template>
 
 <script setup>
@@ -20,15 +25,15 @@ const isCheckingAuth = ref(true)
 // onMounted выполняется ТОЛЬКО в браузере клиента, где уже есть куки
 onMounted(async () => {
   try {
-    // 1. Делаем запрос за профилем
+    // 1. Делаем запрос за профилем.
+    // Если мы гость, плагин api.ts выкинет ошибку (throw), и мы попадем в catch
     const data = await $api('/api/me')
-    // 2. Сохраняем стейт
     currentUser.value = data?.user || data
   } catch (error) {
-    // 3. Если кук нет или они протухли - очищаем
+    // 2. Срабатывает при 401 ошибке от бэкенда. Просто обнуляем стейт.
     currentUser.value = null
   } finally {
-    // 4. СНИМАЕМ БЛОКИРОВКУ (только теперь приложение начнет рендериться!)
+    // 3. Убираем "шторку" лоадера
     isCheckingAuth.value = false
   }
 })

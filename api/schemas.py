@@ -50,6 +50,56 @@ class ProductCreate(BaseInput):
             variants=domain_variants
         )
 
-# class CartItemUpdate(BaseModel):
-#     product_id: int
-#     quantity: int
+class ProductVariantOut(BaseModel):
+    id: int | None
+    price: float
+    attributes: dict | None
+
+    class Config:
+        from_attributes = True
+
+class ProductSellerListOut(BaseModel):
+    id: int | None
+    title: str
+    description: str
+    items_count: int
+    variants_count: int
+    variants: list[ProductVariantOut]
+
+    class Config:
+        from_attributes = True
+
+class ProductCatalogOut(BaseModel):
+    id: int
+    title: str
+    description: str
+    price: float
+
+    class Config:
+        from_attributes = True
+
+
+class ProductCatalogListOut(BaseModel):
+    total: int
+    items: list[ProductCatalogOut]
+
+
+class ProductVariantDetailOut(BaseModel):
+    id: int
+    price: float
+    attributes: dict | None
+
+    class Config:
+        from_attributes = True
+
+
+class ProductDetailOut(BaseModel):
+    id: int
+    title: str
+    description: str
+    # Если ты хочешь вывести имя продавца:
+    # seller_username: str | None = Field(default=None, alias="seller.username")
+    variants: list[ProductVariantDetailOut]
+
+    class Config:
+        from_attributes = True

@@ -12,11 +12,13 @@ services:
       DB_HOST: postgres
       DB_USER: postgres
       API_HOST: image_service
+      IS_TEST: True
       REDIS_HOST: redis
     networks:
       - internal
     depends_on:
       - postgres
+      - redis
     restart: unless-stopped
 
   frontend:

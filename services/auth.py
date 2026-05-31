@@ -43,8 +43,6 @@ async def check_rotate(payload: dict, redis):
         raise RefreshTokenFamilyExpiredError
 
     if await redis.incr(f"rt:{jti}") != 0:
-        # await redis.delete(f"rtfam:{family_id}")
-        # await redis.delete(f"rt:{jti}")
         await delete_redis_keys(redis, jti, family_id)
         raise RefreshTokenReusedCompromisedError
 
@@ -61,7 +59,7 @@ async def check_rotate(payload: dict, redis):
 
 async def check_role(uow, token_data: dict):
     if token_data["role"] == UserRole.seller:
-        await uow.db.read(User, type=token_data["role"], id=token_data["id"], with_raise=True)
+        await uow.db.read(User, type=token_data["role"], id=int(token_data["sub"]), with_raise=True)
 
 
 async def create_tokens_from_refresh(refresh_token: str | None, redis, uow):
@@ -110,7 +108,7 @@ async def create_tokens_from_login(
     async with uow:
         user = await check_user(uow, verify, username, password)
     log.debug("user approve")
-    user_data = dict(id=user.id, role=user.role, username=user.username)
+    user_data = dict(sub=str(user.id), role=user.role, username=user.username)
     data.update(user_data)
     tokens = await create_tokens(redis=redis, **data)
     return tokens, user_data
@@ -127,6 +125,6 @@ async def user_register(redis, uow, username: str, password: str, role: UserRole
         raise ValueError("Неизвестная роль")
     async with uow:
         user = await uow.db.create(new_account)
-    user_data = dict(id=user.id, role=user.role, username=user.username)
+    user_data = dict(sub=str(user.id), role=user.role, username=user.username)
     tokens = await create_tokens(redis=redis, **user_data)
     return tokens, user_data
