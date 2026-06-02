@@ -1,6 +1,6 @@
 import pytest
 
-from domain import Product, ProductItem, ProductItemStatuses, ProductVariant, Seller
+from domain import Product, ProductItem, ProductItemStatuses, ProductVariant, Seller, Category
 
 
 def test_product_item_reserve():
@@ -46,7 +46,7 @@ def test_product_item_compromise_success():
 
 
 def test_create_product_variant_with_product_obj_without_id():
-    product = Product(title="title", seller_id=1)
+    product = Product(title="title", seller_id=1, category_id=1)
     product_variant = ProductVariant(price=1, product=product)
     assert product_variant
 
@@ -57,15 +57,16 @@ def test_create_product_variant_with_product_id_success():
 
 
 def test_create_product_variant_with_product_with_id_success():
-    product = Product(title="title", product_id=1, seller_id=1)
+    product = Product(title="title", product_id=1, seller_id=1, category_id=1)
     product_variant = ProductVariant(price=1, product=product)
     assert product_variant.product_id == product.id
 
 
 def test_create_product_variant_with_product_with_id_and_with_product_id():
-    product = Product(title="title", product_id=1, seller_id=1)
+    product = Product(title="title", product_id=1, seller_id=1, category_id=1)
     product_variant = ProductVariant(price=1, product=product, product_id=2)
     assert product_variant.product_id == product.id
+
 
 def test_create_product_variant_obj_with_wrong_price():
     with pytest.raises(ValueError, match="Цена не может быть отрицательной"):
@@ -86,10 +87,21 @@ def test_create_product_obj_without_seller():
 def test_create_product_obj_with_seller_without_id():
     seller = Seller(username="username")
     with pytest.raises(ValueError, match="Товар не может существовать без продавца"):
-        Product(title="title", seller=seller)
+        Product(title="title", seller=seller, category_id=1)
 
 
 def test_create_product_obj_with_seller_with_id():
     seller = Seller(username="username", seller_id=1)
-    product = Product(title="title", seller=seller)
+    product = Product(title="title", seller=seller, category_id=1)
     assert product
+
+
+def test_create_product_without_category_and_category_id():
+    with pytest.raises(ValueError, match="Товар не может существовать без категории"):
+        Product(title="title", seller_id=1)
+
+
+def test_create_product_with_category_without_id():
+    category = Category(name="name")
+    with pytest.raises(ValueError, match="Товар не может существовать без категории"):
+        Product(title="title", seller_id=1, category=category)

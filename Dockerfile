@@ -11,24 +11,34 @@ COPY api ./api
 COPY db ./db
 COPY domain ./domain
 COPY infra ./infra
-COPY adapters adapters
+COPY adapters ./adapters
 COPY services ./services
 COPY tasks ./tasks
+COPY shared.py .
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 
-FROM node:22-alpine AS frontend_builder
+FROM base AS image
+COPY img_service.py .
+COPY shared.py .
+CMD ["sh", "-c", "uvicorn img_service:app --host 0.0.0.0 --port ${PORT}"]
+
+
+FROM node:22-alpine AS builder
 WORKDIR /app
 COPY frontend/package*.json .
 RUN npm install
 COPY frontend .
-ENV NODE_OPTIONS="--max-old-space-size=4096"
-RUN npm run build
+#ENV NODE_OPTIONS="--max-old-space-size=4096"
+RUN npx nuxt generate
 
-FROM node:22-alpine AS frontend
-WORKDIR /app
-COPY --from=frontend_builder app/.output .output
-CMD ["node", ".output/server/index.mjs"]
+FROM nginx:1.27-alpine AS frontend
+COPY --from=builder /app/.output/public /var/www/frontend
+
+# FROM node:22-alpine AS frontend
+# WORKDIR /app
+# COPY --from=frontend_builder app/.output .output
+# CMD ["node", ".output/server/index.mjs"]
 
 
 FROM base AS migrate
@@ -38,15 +48,14 @@ COPY db db
 CMD ["alembic", "upgrade", "head"]
 
 FROM base AS runner
-COPY infra/security.py infra/security.py
-COPY adapters/generic_repo.py adapters/generic_repo.py
-COPY adapters/db_provider.py adapters/db_provider.py
-COPY adapters/order_repo.py adapters/order_repo.py
-COPY adapters/product_repo.py adapters/product_repo.py
-COPY adapters/uow.py adapters/uow.py
-COPY domain domain
-COPY db db
+COPY infra/security.py ./infra/security.py
+COPY adapters/repo ./adapters/repo
+COPY adapters/uow.py ./adapters/uow.py
+COPY adapters/db_provider.py ./adapters/db_provider.py
+COPY domain ./domain
+COPY db ./db
 COPY scripts/db_init.py ./db_init.py
+COPY shared.py ./shared.py
 CMD ["python", "-m", "db_init"]
 
 

@@ -13,7 +13,7 @@ export default defineNuxtPlugin((nuxtApp) => {
       if (response.status === 401) {
 
         // Если сам рефреш вернул 401 (токен протух или его нет)
-        if (request.toString().endsWith('/api/refresh')) {
+        if (request.toString().endsWith('/refresh')) {
           const currentUser = useState('user')
           currentUser.value = null
           refreshPromise = null
@@ -23,7 +23,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         }
 
         if (!refreshPromise) {
-          refreshPromise = $fetch(`${config.public.apiBase}/api/refresh`, {
+          refreshPromise = $fetch(`${config.public.apiBase}/refresh`, {
             method: 'POST',
             credentials: 'include',
             retry: 0

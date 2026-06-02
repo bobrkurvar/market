@@ -6,19 +6,34 @@ services:
       target: main
     env_file:
       - .env
-    ports:
-      - "8000:8000"
     environment:
       DB_HOST: postgres
       DB_USER: postgres
       API_HOST: image_service
       IS_TEST: True
       REDIS_HOST: redis
+      IMAGE_SERVICE_HOST: image_service
     networks:
       - internal
     depends_on:
       - postgres
       - redis
+      - image_service
+    volumes:
+      - ./media:/app/media # bind mount docker compose down -v не удалит этот том
+    restart: unless-stopped
+
+  image_service:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      target: image
+    env_file:
+      - .env
+    environment:
+      PORT: ${IMAGE_SERVICE_PORT}
+    networks:
+      - internal
     restart: unless-stopped
 
   frontend:
@@ -26,15 +41,8 @@ services:
       context: .
       dockerfile: ./Dockerfile
       target: frontend
-    ports:
-      - "3000:3000"
     networks:
       - internal
-    environment:
-      HOST: 0.0.0.0
-      NUXT_PUBLIC_API_BASE: "http://localhost:8000"
-      PORT: 3000
-      NODE_ENV: production
     restart: unless-stopped
 
   migrate:
@@ -85,6 +93,23 @@ services:
       - pgdata:/var/lib/postgresql/data
     restart: unless-stopped
 
+  nginx:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      target: frontend
+    depends_on:
+      - api
+    volumes:
+      # Монтируем ТОЛЬКО конфиги и медиа. Фронтенд уже внутри
+      - ./nginx/site.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/snippets:/etc/nginx/snippets:ro
+      - ./media:/var/www/media:ro
+    restart: unless-stopped
+    networks:
+      - internal
+    ports:
+      - "80:80"
 
   redis:
     image: redis:7-alpine

@@ -1,8 +1,9 @@
 <template>
-  <div class="min-h-screen bg-gray-50 font-sans">
+  <div class="min-h-screen bg-gray-50 font-sans text-gray-900">
     <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-      <div v-if="currentView === 'list'" class="space-y-6">
+      <!-- Список товаров -->
+      <div v-if="currentView === 'list'" class="space-y-6 animate-fadeIn">
 
         <div class="flex justify-between items-center">
           <h1 class="text-2xl font-bold text-gray-900">Мои товары</h1>
@@ -61,7 +62,8 @@
         </div>
       </div>
 
-      <div v-else-if="currentView === 'create'" class="max-w-4xl mx-auto">
+      <!-- Форма создания товара -->
+      <div v-else-if="currentView === 'create'" class="max-w-4xl mx-auto animate-fadeIn">
 
         <button
           @click="currentView = 'list'"
@@ -75,20 +77,55 @@
 
           <form @submit.prevent="submitProduct" class="space-y-8">
 
+            <!-- Основная информация -->
             <section>
               <h3 class="text-lg font-semibold mb-4 border-b pb-2">Основная информация</h3>
               <div class="space-y-4">
+
                 <div>
                   <label class="block text-sm font-medium mb-1">Название товара <span class="text-red-500">*</span></label>
                   <input v-model="form.title" type="text" required placeholder="Например: Подписка Spotify Premium" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
                 </div>
+
+                <div>
+                  <label class="block text-sm font-medium mb-1">Категория товара <span class="text-red-500">*</span></label>
+                  <select
+                    v-model="form.category_id"
+                    required
+                    class="w-full border border-gray-300 rounded-lg p-3 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  >
+                    <option value="" disabled>Выберите категорию...</option>
+                    <option
+                      v-for="cat in categories"
+                      :key="cat.id"
+                      :value="cat.id"
+                    >
+                      {{ cat.name }}
+                    </option>
+                  </select>
+                </div>
+
                 <div>
                   <label class="block text-sm font-medium mb-1">Описание</label>
                   <textarea v-model="form.description" rows="3" placeholder="Подробное описание товара..." class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
                 </div>
+
+                <!-- Поле загрузки изображения -->
+                <div>
+                  <label class="block text-sm font-medium mb-1">Изображение товара <span class="text-red-500">*</span></label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    @change="onFileChange"
+                    class="w-full border border-gray-300 rounded-lg p-3 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                  />
+                  <p v-if="imageFile" class="text-sm text-gray-500 mt-1">Выбран: {{ imageFile.name }}</p>
+                </div>
+
               </div>
             </section>
 
+            <!-- Опции и ключи -->
             <section>
               <div class="flex justify-between items-center mb-4 border-b pb-2">
                 <h3 class="text-lg font-semibold">Опции и ключи</h3>
@@ -184,6 +221,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 
+// Проверка роли продавца
 definePageMeta({
   middleware: [
     async function () {
@@ -209,54 +247,89 @@ definePageMeta({
 const toast = useToast()
 const { $api } = useNuxtApp()
 
+// Состояния
 const currentView = ref('list')
 const products = ref([])
+const categories = ref([]) // Список категорий (листьев)
+const imageFile = ref(null) // Файл изображения
 
+// Загрузка товаров продавца
 const fetchProducts = async () => {
   try {
-    // Реальный запрос за товарами продавца
     products.value = await $api('/api/seller/products')
   } catch (error) {
     toast.add({ title: 'Ошибка', description: 'Не удалось загрузить товары', color: 'red' })
   }
 }
 
-onMounted(fetchProducts)
+// Загрузка категорий (листьев) для выпадающего списка
+const fetchCategories = async () => {
+  try {
+    categories.value = await $api('/api/seller/categories')
+  } catch (error) {
+    toast.add({ title: 'Ошибка', description: 'Не удалось загрузить категории', color: 'red' })
+  }
+}
 
-const resetForm = () => ({
-  title: '',
-  description: '',
-  variants: [{ price: null, attributes: [{ key: '', value: '' }], rawKeys: '' }]
+// Выполняется при загрузке страницы
+onMounted(() => {
+  fetchProducts()
+  fetchCategories()
 })
+
+// Обработчик выбора файла
+const onFileChange = (event) => {
+  const file = event.target.files?.[0] || null
+  imageFile.value = file
+}
+
+// Сброс формы
+const resetForm = () => {
+  imageFile.value = null
+  return {
+    title: '',
+    description: '',
+    category_id: '',
+    variants: [{ price: null, attributes: [{ key: '', value: '' }], rawKeys: '' }]
+  }
+}
 
 const form = ref(resetForm())
 
-// Функции для вариантов и атрибутов стали однострочными
+// Управление вариантами и атрибутами
 const addVariant = () => form.value.variants.push({ price: null, attributes: [{ key: '', value: '' }], rawKeys: '' })
 const removeVariant = (index) => form.value.variants.splice(index, 1)
 
 const addAttribute = (variant) => variant.attributes.push({ key: '', value: '' })
 const removeAttribute = (variant, index) => variant.attributes.splice(index, 1)
 
-// Упрощенный подсчет строк
 const countKeys = (rawText) => rawText ? rawText.split('\n').filter(k => k.trim()).length : 0
 
+// Отправка формы (создание товара) с файлом
 const submitProduct = async () => {
+  // Валидация наличия файла
+  if (!imageFile.value) {
+    toast.add({
+      title: 'Ошибка',
+      description: 'Пожалуйста, загрузите изображение товара',
+      color: 'red'
+    })
+    return
+  }
+
   try {
+    // Формируем JSON-данные товара
     const payload = {
       title: form.value.title,
       description: form.value.description,
+      category_id: form.value.category_id,
       variants: form.value.variants.map(v => {
-        // Отфильтровываем пустые атрибуты заранее
         const validAttrs = v.attributes.filter(a => a.key.trim() && a.value.trim())
-
         return {
           price: v.price,
-          // Object.fromEntries делает из массива [[key, value]] готовый словарь гораздо изящнее, чем reduce
           attributes: validAttrs.length
             ? Object.fromEntries(validAttrs.map(a => [a.key.trim(), a.value.trim()]))
             : null,
-          // Boolean в filter автоматически удаляет пустые строки
           items: v.rawKeys
             .split('\n')
             .map(k => k.trim())
@@ -266,17 +339,25 @@ const submitProduct = async () => {
       })
     }
 
-    // Реальный POST запрос для публикации
-    await $api('/api/product', { method: 'POST', body: payload })
+    // Собираем FormData: поле data (JSON) и поле file (изображение)
+    const formData = new FormData()
+    formData.append('data', JSON.stringify(payload))
+    formData.append('file', imageFile.value)
+
+    // Отправляем multipart/form-data запрос
+    await $api('/api/product', {
+      method: 'POST',
+      body: formData
+    })
 
     toast.add({ title: 'Успешно', description: 'Товар сохранен и опубликован', color: 'green' })
 
+    // Возвращаемся в список и обновляем данные
     currentView.value = 'list'
     form.value = resetForm()
-    fetchProducts() // Сразу обновляем список после публикации
+    fetchProducts()
 
   } catch (error) {
-    // ofetch в Nuxt 3 обычно хранит ответ об ошибке в error.data
     const errorMsg = error.data?.detail || error.response?._data?.detail || 'Ошибка сохранения'
     toast.add({ title: 'Ошибка', description: errorMsg, color: 'red' })
   }
@@ -284,3 +365,13 @@ const submitProduct = async () => {
 
 useHead({ title: 'Кабинет продавца | myMarket' })
 </script>
+
+<style scoped>
+.animate-fadeIn {
+  animation: fadeIn 0.25s ease-out forwards;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>

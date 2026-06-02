@@ -1,9 +1,10 @@
 import logging
 
 from adapters.db_provider import DbProvider
-from adapters.generic_repo import GenericRepository
-from adapters.order_repo import OrderRepository
-from adapters.product_repo import ProductRepository
+from adapters.repo.generic_repo import GenericRepository
+from adapters.repo.order_repo import OrderRepository
+from adapters.repo.product_repo import ProductRepository
+from adapters.repo.category_repo import CategoryRepository
 
 log = logging.getLogger(__name__)
 
@@ -29,6 +30,7 @@ class UnitOfWork:
         self.db = GenericRepository(session=self.session, registry=self._registry)
         self.order = OrderRepository(session=self.session, registry=self._registry)
         self.product = ProductRepository(session=self.session, registry=self._registry)
+        self.category = CategoryRepository(session=self.session, registry=self._registry)
 
         return self
 

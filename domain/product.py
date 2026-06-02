@@ -1,6 +1,7 @@
 from enum import StrEnum
 from collections.abc import Collection
 from .user import Seller
+from .category import Category
 
 
 class ProductItemStatuses(StrEnum):
@@ -91,19 +92,25 @@ class Product:
     def __init__(
         self,
         title: str,
+        image_url: str | None = None,
         seller: Seller | None = None,
         seller_id: int | None = None,
         product_id: int | None = None,
+        category_id: int | None = None,
+        category: Category | None = None,
         variants: Collection[ProductVariant] | ProductVariant | None = None,
         description: str = "",
         items_count: int | None = None,
     ):
         self.id = product_id
+        self.image_url = image_url
         self.seller = seller
         self.title = title
         self.description = description
         #self._variants = [variants] if isinstance(variants, ProductVariant) else variants
         self.seller_id = seller.id if seller else seller_id
+        self.category = category
+        self.category_id = category.id if category else category_id
         self._variants = None
         if variants is not None:
             self.add_variants(variants)
@@ -113,10 +120,14 @@ class Product:
     def _validate(self):
         if self.seller_id is None:
             raise ValueError(
-                "Товар не может существовать без продавца (передайте объект seller или seller_id)"
+                "Товар не может существовать без продавца (передайте объект seller у которого есть id или seller_id)"
             )
         if len(self.title) < 3:
             raise ValueError("Заголовок товара слишком короткий")
+        if self.category_id is None:
+            raise ValueError(
+                "Товар не может существовать без категории (передайте объект category у которой есть id или category_id)"
+            )
 
     @property
     def variants_count(self):

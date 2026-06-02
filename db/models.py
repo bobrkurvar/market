@@ -1,7 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import DECIMAL, BigInteger, ForeignKey, String, Text, func
+from sqlalchemy import DECIMAL, BigInteger, ForeignKey, String, Text, func, Index, literal_column
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import JSONB
@@ -16,15 +16,35 @@ class Product(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     seller_id: Mapped[int] = mapped_column(ForeignKey("sellers.id"))
-
+    image_url: Mapped[str]
     title: Mapped[str] = mapped_column(String(255))
     description: Mapped[str] = mapped_column(Text)
+    category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"))
+    category: Mapped["Category"] = relationship("Category", back_populates="products")
     variants: Mapped[list["ProductVariant"]] = relationship(
         "ProductVariant",
         cascade="all, delete-orphan",
-        back_populates="product"
+        back_populates="product",
+        passive_deletes=True,
     )
     seller: Mapped["Seller"] = relationship("Seller", back_populates="products")
+
+
+    __table_args__ = (
+        # 1. Полнотекстовый поиск (FTS) по заголовку и описанию (склонения)
+        Index(
+            "idx_product_fts",
+            func.to_tsvector(literal_column("'russian'"), title),
+            postgresql_using="gin",
+        ),
+        # 2. Индекс для опечаток (Триграммы) только по заголовку
+        Index(
+            "idx_product_title_trgm",
+            "title",
+            postgresql_using="gin",
+            postgresql_ops={"title": "gin_trgm_ops"},
+        ),
+    )
 
 
 class ProductVariant(Base):
@@ -38,13 +58,9 @@ class ProductVariant(Base):
     items: Mapped[list["ProductItem"]] = relationship(
         "ProductItem",
         cascade="all, delete-orphan",
-        back_populates="variant"
+        back_populates="variant",
+        passive_deletes=True,
     )
-
-
-class ProductItemStatuses(Base):
-    __tablename__ = "product_item_statuses"
-    name: Mapped[str] = mapped_column(primary_key=True)
 
 
 class ProductItem(Base):
@@ -59,6 +75,10 @@ class ProductItem(Base):
 
     variant: Mapped["ProductVariant"] = relationship("ProductVariant", back_populates="items")
 
+
+class ProductItemStatuses(Base):
+    __tablename__ = "product_item_statuses"
+    name: Mapped[str] = mapped_column(primary_key=True)
 
 
 
@@ -131,3 +151,34 @@ class Order(Base):
     amount: Mapped[int]
     product_snapshot: Mapped[dict] = mapped_column(JSONB, default={}, server_default='{}')
     #seller: Mapped["Seller"] = relationship("Seller")
+
+
+class Category(Base):
+    __tablename__ = "categories"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(unique=True, nullable=False)
+
+    parent_id: Mapped[int | None] = mapped_column(
+        ForeignKey("categories.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True
+    )
+
+    parent: Mapped["Category | None"] = relationship(
+        "Category",
+        back_populates="children",
+        remote_side=[id]
+    )
+
+    children: Mapped[list["Category"]] = relationship(
+        "Category",
+        back_populates="parent",
+        cascade="all, delete-orphan",
+        passive_deletes=True
+    )
+
+    products: Mapped[list["Product"]] = relationship(
+        "Product",
+        back_populates="category"
+    )

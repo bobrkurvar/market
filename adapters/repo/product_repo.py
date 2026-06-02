@@ -1,9 +1,9 @@
 import logging
 
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_, desc
 from sqlalchemy.orm import selectinload
 
-from db.models import ProductItem, Product, ProductVariant
+from db.models import ProductItem, Product, ProductVariant, Category
 from domain import ProductItemStatuses
 
 log = logging.getLogger(__name__)
@@ -52,3 +52,34 @@ class ProductRepository:
             domain_products.append(domain_product)
 
         return domain_products
+
+
+    async def search_categories_by_product(self, query: str, limit: int = 10):
+        fts_query = func.plainto_tsquery('russian', query)
+        fts_rank = func.ts_rank(func.to_tsvector('russian', Product.title), fts_query)
+        trgm_sim = func.similarity(Product.title, query)
+        total_rank = (fts_rank * 0.7) + (trgm_sim * 0.3)
+
+        stmt = (
+            select(
+                Category,
+                func.max(total_rank).label('max_rank'),
+                func.count(Product.id).label('match_count')
+            )
+            .select_from(Category)
+            .join(Product, Product.category_id == Category.id)
+            .where(
+                or_(
+                    func.to_tsvector('russian', Product.title).op('@@')(fts_query),
+                    func.similarity(Product.title, query) > 0.15
+                )
+            )
+            .group_by(Category.id)
+            .order_by(desc('max_rank'), desc('match_count'))
+            .limit(limit)
+        )
+
+        result = await self.session.execute(stmt)
+
+        categories = result.scalars()
+        return tuple(self._registry.to_domain(cat) for cat in categories)

@@ -14,10 +14,16 @@ class Settings(BaseSettings):
     secret_key: str
     algorithm: str
     pepper: str
+    image_service_port: str
+    image_service_host: str
 
     @property
     def db_url(self):
         return f"postgresql+asyncpg://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.db_name}"
+
+    @property
+    def image_api_url(self):
+        return f"http://{self.image_service_host}:{self.image_service_port}/"
 
     @property
     def test_db_url(self):

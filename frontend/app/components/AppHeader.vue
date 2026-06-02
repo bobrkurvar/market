@@ -6,12 +6,6 @@
         my<span class="text-white">Market</span>
       </div>
 
-      <nav class="hidden md:flex space-x-6">
-        <NuxtLink to="/catalog" class="text-sm font-medium text-gray-300 hover:text-primary-400 transition-colors">
-          Каталог
-        </NuxtLink>
-      </nav>
-
       <div class="flex items-center gap-3">
 
         <UButton

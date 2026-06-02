@@ -35,7 +35,8 @@ async def uow(request, db_provider):
                     orders,
                     clients,
                     sellers,
-                    users
+                    users,
+                    categories
                 RESTART IDENTITY CASCADE;
                 """
             )

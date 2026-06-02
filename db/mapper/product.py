@@ -35,24 +35,33 @@ def map_product_item_to_orm(d_obj: domain.ProductItem) -> models.ProductItem:
     )
 
 def map_product_to_domain(orm_obj: models.Product) -> domain.Product:
+    insp = inspect(orm_obj)
     variants = []
-    if "variants" not in inspect(orm_obj).unloaded:
+    if "variants" not in insp.unloaded:
         variants = [map_product_variant_to_domain(variant) for variant in orm_obj.variants]
+    category = None
+    if "category" not in insp.unloaded:
+        category = orm_obj.category
 
     return domain.Product(
         product_id=orm_obj.id,
         seller_id=orm_obj.seller_id,
         title=orm_obj.title,
         description=orm_obj.description,
-        variants=variants
+        variants=variants,
+        category_id=orm_obj.category_id,
+        category=category,
+        image_url=orm_obj.image_url
     )
 
 def map_product_to_orm(d_obj: domain.Product) -> models.Product:
     return models.Product(
+        image_url=d_obj.image_url,
         id=d_obj.id,
         seller_id=d_obj.seller_id,
         title=d_obj.title,
         description=d_obj.description,
+        category_id=d_obj.category_id,
         variants = [map_product_variant_to_orm(variant) for variant in d_obj._variants] if d_obj._variants else []
     )
 

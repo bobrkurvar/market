@@ -1,8 +1,24 @@
-from pydantic import BaseModel, Field, ConfigDict
-from domain import UserRole, ProductVariant, ProductItem, Product, Seller
+from pydantic import BaseModel, Field, ConfigDict, computed_field
+from domain import UserRole, ProductVariant, ProductItem, Product, Seller, Category
+from pathlib import Path
+from adapters.images import ProductImagesManager
 
 class BaseInput(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
+
+class CategoryCreate(BaseInput):
+    name: str
+    parent_id: int | None = None
+
+    def to_domain(self):
+        return Category(name=self.name, parent_id=self.parent_id)
+
+
+class CategoryAdminResponseSchema(BaseInput):
+    id: int
+    name: str
+    level: int
+    has_children: bool
 
 
 class UserLogin(BaseInput):
@@ -39,6 +55,7 @@ class ProductCreate(BaseInput):
     title: str = Field(..., min_length=3, max_length=255)
     description: str
     variants: list[ProductVariantCreate] = Field(..., min_length=1)
+    category_id: int
 
     def to_domain(self, seller: Seller) -> Product:
         domain_variants = [variant.to_domain() for variant in self.variants]
@@ -47,7 +64,8 @@ class ProductCreate(BaseInput):
             title=self.title,
             description=self.description,
             seller=seller,
-            variants=domain_variants
+            variants=domain_variants,
+            category_id=self.category_id
         )
 
 class ProductVariantOut(BaseModel):
@@ -74,6 +92,14 @@ class ProductCatalogOut(BaseModel):
     title: str
     description: str
     price: float
+    image_url: str
+
+    @computed_field
+    @property
+    def thumbnail_url(self) -> str | None:
+        if not self.image_url:
+            return None
+        return ProductImagesManager().get_product_catalog_image_path(self.image_url)
 
     class Config:
         from_attributes = True
