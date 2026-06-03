@@ -17,8 +17,10 @@ class NotFoundError(RepositoryError):
         else:
             super().__init__(f"{entity_name} not found")
 
+
 class ConcurrentModificationError(RepositoryError):
     pass
+
 
 class AlreadyExistsError(RepositoryError):
     """Запись с таким атрибутом уже существует в базе"""
@@ -38,15 +40,13 @@ class ForeignKeyViolationError(RepositoryError):
         super().__init__(f"Foreign key violation in {model_name}: {detail}")
 
 
-# БАЗОВЫЕ ОШИБКИ АВТОРИЗАЦИИ
-
+# ОШИБКИ АВТОРИЗАЦИИ
 
 class UnauthorizedError(Exception):
     """Базовое исключение для всех проблем с доступом (HTTP 401)"""
 
     def __init__(self, detail: str):
         self.detail = detail
-        # ИМЕННО ЗДЕСЬ строка навсегда улетает в ядро Питона (в self.args)
         super().__init__(self.detail)
 
 
@@ -60,6 +60,13 @@ class UserLoginNotFoundError(NotFoundError):
 
     def __init__(self, username: str):
         super().__init__(User, username=username)
+
+
+class MissingRoleError(UnauthorizedError):
+    """Ошибка неправильной роли пользователя - доступ запрещён"""
+    def __init__(self, user_id: int | str, role: str):
+        super().__init__(f"У пользователя с id {user_id} нет данной роли: {role}")
+
 
 
 # БАЗОВЫЕ ОШИБКИ ТОКЕНОВ

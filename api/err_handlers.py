@@ -3,7 +3,7 @@ import logging
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
-from adapters.web import AuthCookies
+from adapters.cookies import AuthCookies
 from domain.exceptions import (AlreadyExistsError, CredentialsValidateError,
                                ForeignKeyViolationError, NotFoundError,
                                UnauthorizedError, UserLoginNotFoundError)

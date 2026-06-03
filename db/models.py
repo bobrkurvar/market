@@ -158,7 +158,6 @@ class Category(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(unique=True, nullable=False)
-
     parent_id: Mapped[int | None] = mapped_column(
         ForeignKey("categories.id", ondelete="CASCADE"),
         nullable=True,
@@ -182,3 +181,9 @@ class Category(Base):
         "Product",
         back_populates="category"
     )
+
+
+class Route(Base):
+    __tablename__ = "routes"
+    value: Mapped[str] = mapped_column(primary_key=True)
+    slug: Mapped[str] = mapped_column(primary_key=True)

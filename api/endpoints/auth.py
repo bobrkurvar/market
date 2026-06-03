@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
-from adapters.deps import UowDep, RedisDep
-from adapters.web import GetUserDep
+from adapters.deps import UowDep, RedisDep, GetUserDep
 from services.auth import create_tokens_from_login, create_tokens_from_refresh, user_register, delete_redis_keys
-from adapters.web import AuthCookies
+from adapters.cookies import AuthCookies
 from infra.security import verify
 from infra.auth import get_data_from_token
 
@@ -28,9 +27,9 @@ async def logout(request: Request, redis: RedisDep):
 
 
 @router.get("/me")
-async def get_user_profile(request: Request, user: GetUserDep):
-    cookie_manager = AuthCookies()
-    access_token = cookie_manager.get_access_token(request=request)
+async def get_user_profile(user: GetUserDep):
+    #cookie_manager = AuthCookies()
+    #access_token = cookie_manager.get_access_token(request=request)
     #log.debug("access_token: %s", access_token)
     return {"user": user}
 

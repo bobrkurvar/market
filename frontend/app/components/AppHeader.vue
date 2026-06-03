@@ -1,13 +1,62 @@
 <template>
   <header class="sticky top-0 z-50 backdrop-blur-md bg-slate-950/70 border-b border-gray-100/10">
-    <UContainer class="flex items-center justify-between h-16">
+    <UContainer class="flex items-center justify-between h-16 gap-4">
 
-      <div class="text-xl font-black tracking-wider text-primary-500 cursor-pointer flex items-center gap-1" @click="$router.push('/')">
+      <div
+        class="text-xl font-black tracking-wider text-primary-500 cursor-pointer flex items-center gap-1 flex-shrink-0 outline-none"
+        @click="goHome"
+      >
         my<span class="text-white">Market</span>
       </div>
 
-      <div class="flex items-center gap-3">
+      <div class="relative flex-1 max-w-2xl hidden md:block">
+        <UInput
+          v-model="searchInput"
+          icon="i-heroicons-magnifying-glass"
+          placeholder="Найти игру, подписку, аккаунт или ключ..."
+          size="md"
+          :ui="{ icon: { trailing: { pointer: '' } } }"
+          @keyup.enter="applySearch"
+          @blur="handleBlur"
+          autocomplete="off"
+          class="w-full shadow-sm"
+        >
+          <template #trailing>
+            <UButton
+              v-show="searchInput !== ''"
+              color="gray"
+              variant="link"
+              icon="i-heroicons-x-mark"
+              :padded="false"
+              @click="clearSearch"
+            />
+          </template>
+        </UInput>
 
+        <div
+          v-if="suggestions.length > 0"
+          class="absolute w-full mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-50 overflow-hidden text-gray-900 dark:text-white"
+        >
+          <ul class="max-h-60 overflow-y-auto">
+            <li
+              v-for="item in suggestions"
+              :key="item.id"
+              @click="selectSuggestion(item)"
+              class="px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer flex justify-between items-center transition-colors"
+            >
+              <div class="flex items-center gap-2">
+                <UIcon name="i-heroicons-folder" class="text-gray-400 w-5 h-5" />
+                <span class="font-medium">{{ item.name }}</span>
+              </div>
+              <span v-if="item.match_count" class="text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-full">
+                {{ item.match_count }}
+              </span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3 flex-shrink-0">
         <UButton
           :icon="colorMode.value === 'dark' ? 'i-heroicons-sun-20-solid' : 'i-heroicons-moon-20-solid'"
           color="neutral"
@@ -34,18 +83,20 @@
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router'
+import { ref, watch, onUnmounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
+const route = useRoute()
 const router = useRouter()
 const currentUser = useState('user')
 const colorMode = useColorMode()
 const { $api } = useNuxtApp()
 
+// --- МЕНЮ ПРОФИЛЯ ---
 const dropdownItems = [
   [{
     label: 'Панель управления',
     icon: 'i-heroicons-cog-8-tooth',
-    // В Nuxt UI v4 клик по меню обрабатывается через onSelect
     onSelect: () => {
        const path = currentUser.value.role === 'seller' ? '/seller' : '/profile'
        router.push(path)
@@ -57,10 +108,116 @@ const dropdownItems = [
     onSelect: async () => {
       try {
         await $api('/api/logout', { method: 'POST' })
-      } catch (e) {} // Игнорируем ошибку при выходе
+      } catch (e) {}
       currentUser.value = null
-      router.push('/catalog')
+      router.push('/')
     }
   }]
 ]
+
+// --- ЛОГИКА ПОИСКА ---
+const searchInput = ref(route.query.q || '')
+const suggestions = ref([])
+let ws = null
+let idleTimeout = null
+const IDLE_TIME_MS = 30000
+
+const goHome = () => {
+  clearSearch() // Очищаем поиск при клике на логотип
+}
+
+const applySearch = () => {
+  suggestions.value = []
+  closeWebSocket()
+  router.push({
+    path: '/',
+    query: { q: searchInput.value || undefined, page: 1 }
+  })
+}
+
+const clearSearch = () => {
+  searchInput.value = ''
+  suggestions.value = []
+  closeWebSocket()
+  router.push({ path: '/' })
+}
+
+const selectSuggestion = (item) => {
+  searchInput.value = item.name
+  suggestions.value = []
+  applySearch()
+}
+
+// --- WEBSOCKETS (ПОДСКАЗКИ) ---
+const resetIdleTimeout = () => {
+  if (idleTimeout) clearTimeout(idleTimeout)
+  idleTimeout = setTimeout(() => {
+    closeWebSocket()
+  }, IDLE_TIME_MS)
+}
+
+const closeWebSocket = () => {
+  if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+    ws.close()
+    ws = null
+  }
+  if (idleTimeout) clearTimeout(idleTimeout)
+}
+
+const connectWebSocket = () => {
+  if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+    return
+  }
+
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${window.location.host}/api/ws/search`;
+  ws = new WebSocket(wsUrl)
+
+  ws.onopen = () => {
+    if (searchInput.value.length >= 3) {
+      ws.send(searchInput.value)
+    }
+    resetIdleTimeout()
+  }
+
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data)
+    suggestions.value = data.suggestions || []
+    resetIdleTimeout()
+  }
+}
+
+const handleBlur = () => {
+  setTimeout(() => {
+    suggestions.value = []
+    closeWebSocket()
+  }, 200)
+}
+
+watch(searchInput, (newVal) => {
+  if (newVal.length >= 3) {
+    if (!ws || ws.readyState === WebSocket.CLOSED) {
+      connectWebSocket()
+    } else if (ws.readyState === WebSocket.OPEN) {
+      ws.send(newVal)
+      resetIdleTimeout()
+    }
+  } else {
+    suggestions.value = []
+    if (newVal.length === 0) {
+      closeWebSocket()
+    }
+  }
+})
+
+// Синхронизация поиска при навигации (например, кнопка "Назад" в браузере)
+watch(() => route.query.q, (newQ) => {
+  if (searchInput.value !== newQ) {
+    searchInput.value = newQ || ''
+  }
+})
+
+onUnmounted(() => {
+  closeWebSocket()
+})
 </script>

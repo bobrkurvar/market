@@ -105,9 +105,10 @@ const { $api } = useNuxtApp()
 const toast = useToast()
 
 const productId = route.params.id
+const slug = route.params.slug
 
 // Загружаем данные конкретного товара
-const { data: product, pending } = await useFetch(`/api/products/${productId}`, {
+const { data: product, pending } = await useFetch(`/api/products/${slug}/${productId}`, {
   $fetch: $api
 })
 

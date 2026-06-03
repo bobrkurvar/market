@@ -5,8 +5,8 @@ from domain import (CredentialsValidateError, RefreshTokenFamilyExpiredError,
                     RefreshTokenMissingError,
                     RefreshTokenReusedCompromisedError,
                     RefreshTokenRotationRaceConditionError, User,
-                    UserLoginNotFoundError, UserRole, Client, Seller)
-from infra.auth import check_refresh_token, data_encode_to_jwt
+                    UserLoginNotFoundError, UserRole, Client, Seller, MissingRoleError)
+from infra.auth import check_refresh_token, data_encode_to_jwt, check_access_token, get_data_from_token
 from infra.security import create_token_family_id, create_token_jti, get_hash
 
 log = logging.getLogger(__name__)
@@ -128,3 +128,37 @@ async def user_register(redis, uow, username: str, password: str, role: UserRole
     user_data = dict(sub=str(user.id), role=user.role, username=user.username)
     tokens = await create_tokens(redis=redis, **user_data)
     return tokens, user_data
+
+
+async def get_user_from_token(access_token: str | None, refresh_token: str | None, redis, uow):
+    if access_token:
+        log.debug("access token exists")
+        check_access_token(access_token)
+        log.debug("access token approve")
+        return get_data_from_token(access_token), None
+    else:
+        new_tokens = await create_tokens_from_refresh(refresh_token=refresh_token, redis=redis, uow=uow)
+        return get_data_from_token(new_tokens["access_token"]), new_tokens
+
+
+def get_user_id_from_payload(payload: dict, expected_role: str) -> int:
+    role = payload.get("role")
+    user_id = payload.get("sub")
+
+    if role != expected_role:
+        raise MissingRoleError(user_id=user_id, role=role)
+    return user_id
+
+
+async def get_client_from_user(payload: dict, uow) -> Client:
+    user_id = get_user_id_from_payload(payload, expected_role="client")
+    async with uow:
+        client = await uow.db.read_one(Client, id=int(user_id), with_raise=True)
+        return client
+
+
+async def get_seller_from_user(payload: dict, uow) -> Seller:
+    user_id = get_user_id_from_payload(payload, expected_role="seller")
+    async with uow:
+        seller = await uow.db.read_one(Seller, id=int(user_id), with_raise=True)
+        return seller

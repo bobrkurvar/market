@@ -107,7 +107,6 @@ class Product:
         self.seller = seller
         self.title = title
         self.description = description
-        #self._variants = [variants] if isinstance(variants, ProductVariant) else variants
         self.seller_id = seller.id if seller else seller_id
         self.category = category
         self.category_id = category.id if category else category_id

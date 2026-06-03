@@ -345,7 +345,7 @@ const submitProduct = async () => {
     formData.append('file', imageFile.value)
 
     // Отправляем multipart/form-data запрос
-    await $api('/api/product', {
+    await $api('/api/products', {
       method: 'POST',
       body: formData
     })

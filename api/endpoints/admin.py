@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends
 from adapters.deps import UowDep
 from domain import Category
 from api.schemas import CategoryCreate, CategoryAdminResponseSchema

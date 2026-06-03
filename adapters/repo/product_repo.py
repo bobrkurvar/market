@@ -5,6 +5,7 @@ from sqlalchemy.orm import selectinload
 
 from db.models import ProductItem, Product, ProductVariant, Category
 from domain import ProductItemStatuses
+from .query_utils import apply_sold_items_filter
 
 log = logging.getLogger(__name__)
 
@@ -26,6 +27,22 @@ class ProductRepository:
         )
         result = (await self.session.execute(query)).scalars()
         return tuple(self._registry.to_domain(r) for r in result)
+
+
+    async def get_popular_products_by_orders(self, limit: int):
+        stmt = select(Product)
+        stmt = apply_sold_items_filter(stmt, is_outer=True)
+        stmt = (
+            stmt
+            .options(selectinload(Product.variants))
+            .group_by(Product.id)
+            .order_by(desc(func.count(ProductItem.id)))
+            .limit(limit)
+        )
+
+        result = (await self.session.execute(stmt)).scalars()
+        return tuple(self._registry.to_domain(prod) for prod in result)
+
 
     async def read_products_with_variants_and_items(self, seller_id: int):
         items_subq = (

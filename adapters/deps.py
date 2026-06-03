@@ -1,13 +1,19 @@
 from typing import Annotated
 
-from fastapi import Depends, Request
+from fastapi import Depends, Request, Response
 from starlette.requests import HTTPConnection
 from db.mapper import registry
 from infra.event_bus import EventBus
 from adapters.redis import RedisService
 from adapters.http_client import HttpClient
+from .cookies import AuthCookies
+import logging
+from domain import Client, Seller
+from services.auth import resolve_session_payload, get_client_from_user, get_seller_from_user
 
 from .uow import UnitOfWork
+
+log = logging.getLogger(__name__)
 
 
 def get_uow(request: HTTPConnection):
@@ -37,7 +43,29 @@ def get_image_api(request: Request) -> HttpClient:
     return client
 
 
+
+async def get_user(
+    request: Request, response: Response, cookies: "authCookiesDep", redis: "RedisDep", uow: "UowDep"
+):
+    access_token, refresh_token = cookies.get_access_token(request), cookies.get_refresh_token(request)
+    payload, new_tokens = await resolve_session_payload(access_token=access_token, refresh_token=refresh_token, uow=uow, redis=redis)
+    if new_tokens:
+        cookies.set_tokens(response=response, **new_tokens)
+    return payload
+
+
+async def get_client(payload: "GetUserDep", uow: "UowDep") -> Client:
+    return await get_client_from_user(payload, uow)
+
+async def get_seller(payload: "GetUserDep", uow: "UowDep") -> Seller:
+    return await get_seller_from_user(payload, uow)
+
+
 UowDep = Annotated[UnitOfWork, Depends(get_uow)]
 EventBusDep = Annotated[EventBus, Depends(get_event_bus)]
 RedisDep = Annotated[RedisService, Depends(get_redis)]
 HttpClientDep = Annotated[HttpClient, Depends(get_image_api)]
+authCookiesDep = Annotated[AuthCookies, Depends()]
+GetUserDep = Annotated[dict, Depends(get_user)]
+GetClientDep = Annotated[Client, Depends(get_client)]
+GetSellerDep = Annotated[Seller, Depends(get_seller)]

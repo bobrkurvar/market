@@ -1,20 +1,19 @@
 from fastapi import APIRouter, UploadFile, File, Form, Depends
 
-from adapters.deps import UowDep, HttpClientDep
-from adapters.web import GetSellerDep
+from adapters.deps import UowDep, HttpClientDep, GetSellerDep, get_seller
 from adapters.images import ImageGenerator, ProductImagesManager
 from services.product import create_product
 from api.schemas import ProductCreate, ProductSellerListOut
 from typing import Annotated
 
-router = APIRouter()
+router = APIRouter(prefix="/seller", dependencies=[Depends(get_seller)])
 
 def parse_product_json(
     data: Annotated[str, Form()]
 ) -> ProductCreate:
     return ProductCreate.model_validate_json(data)
 
-@router.post("/product")
+@router.post("/products")
 async def seller_create_product(
     seller: GetSellerDep,
     product_dto: Annotated[ProductCreate, Depends(parse_product_json)],
@@ -31,18 +30,15 @@ async def seller_create_product(
         img_generator=ImageGenerator(http_client),
         uow=uow
     )
-    # product = product_dto.to_domain(seller)
-    # async with uow:
-    #     return await uow.db.create(product)
 
 
-@router.get("/seller/products", response_model=list[ProductSellerListOut])
+@router.get("/products", response_model=list[ProductSellerListOut])
 async def get_seller_products(seller: GetSellerDep, uow: UowDep):
     async with uow:
         return await uow.product.read_products_with_variants_and_items(seller_id=seller.id)
 
 
-@router.get("/seller/categories")
+@router.get("/categories")
 async def get_catalog(uow: UowDep):
     async with uow:
         return await uow.category.get_leaf_categories()

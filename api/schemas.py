@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field, ConfigDict, computed_field
 from domain import UserRole, ProductVariant, ProductItem, Product, Seller, Category
-from pathlib import Path
 from adapters.images import ProductImagesManager
+from slugify import slugify
 
 class BaseInput(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
@@ -65,7 +65,7 @@ class ProductCreate(BaseInput):
             description=self.description,
             seller=seller,
             variants=domain_variants,
-            category_id=self.category_id
+            category_id=self.category_id,
         )
 
 class ProductVariantOut(BaseModel):
@@ -96,6 +96,11 @@ class ProductCatalogOut(BaseModel):
 
     @computed_field
     @property
+    def slug(self) -> str:
+        return slugify(self.title)
+
+    @computed_field
+    @property
     def thumbnail_url(self) -> str | None:
         if not self.image_url:
             return None
@@ -106,9 +111,21 @@ class ProductCatalogOut(BaseModel):
 
 
 class ProductCatalogListOut(BaseModel):
-    total: int
+    total: int | None = None
     items: list[ProductCatalogOut]
 
+
+class CategoryOut(BaseModel):
+    id: int
+    name: str
+
+    class Config:
+        from_attributes = True
+
+
+class HomePageOut(BaseModel):
+    categories: list[CategoryOut]
+    products: list[ProductCatalogOut]
 
 class ProductVariantDetailOut(BaseModel):
     id: int
