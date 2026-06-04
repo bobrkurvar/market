@@ -49,14 +49,23 @@ CMD ["alembic", "upgrade", "head"]
 
 FROM base AS runner
 COPY infra/security.py ./infra/security.py
-COPY adapters/repo ./adapters/repo
-COPY adapters/uow.py ./adapters/uow.py
-COPY adapters/db_provider.py ./adapters/db_provider.py
+COPY adapters ./adapters
 COPY domain ./domain
+COPY services ./services
 COPY db ./db
 COPY scripts/db_init.py ./db_init.py
 COPY shared.py ./shared.py
 CMD ["python", "-m", "db_init"]
+
+FROM base AS init_test_data
+COPY infra/security.py ./infra/security.py
+COPY adapters ./adapters
+COPY domain ./domain
+COPY services ./services
+COPY db ./db
+COPY scripts/init_test_data.py .
+COPY shared.py ./shared.py
+CMD ["python", "-m", "init_test_data"]
 
 
 

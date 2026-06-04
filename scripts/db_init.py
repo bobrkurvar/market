@@ -15,5 +15,22 @@ async def seed_data():
     async with uow:
         await uow.db.create(seq_data=all_data)
 
+# async def seed_data():
+#     db_provider = DbProvider(conf.db_url)
+#     uow = UnitOfWork(registry=registry, session_factory=db_provider.session_factory)
+#     for status in ProductItemStatuses:
+#         try:
+#             async with uow:
+#                 uow.db.create(ProductItemStatuses(status))
+#         except:
+#             pass
+#
+#     for status in OrderStatuses:
+#         try:
+#             async with uow:
+#                 uow.db.create(ProductItemStatuses(status))
+#         except:
+#             pass
+
 if __name__ == "__main__":
     asyncio.run(seed_data())

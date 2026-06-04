@@ -14,7 +14,7 @@ from adapters.http_client import HttpClient
 from core.logger import setup_logging
 from core import conf
 
-setup_logging()()
+setup_logging()
 
 log = logging.getLogger(__name__)
 
@@ -22,9 +22,9 @@ log = logging.getLogger(__name__)
 # НАСТРОЙКИ МАССОВОСТИ (МЕНЯЙ ПОД СЕБЯ)
 # ==========================================
 NUM_CATEGORIES = 10  # Сколько создать категорий
-PRODUCTS_PER_CAT = 3  # Сколько товаров в КАЖДОЙ категории (Итого: 10 * 30 = 300 товаров)
-VARIANTS_PER_PRODUCT = (1, 3)  # Рандомный разброс количества опций у одного товара (от 1 до 3)
-KEYS_PER_VARIANT = (5, 20)  # Рандомное количество ключей в каждой опции (от 5 до 20)
+PRODUCTS_PER_CAT = 3  # Сколько товаров в КАЖДОЙ категории
+VARIANTS_PER_PRODUCT = (1, 3)  # Рандомный разброс количества опций у одного товара
+KEYS_PER_VARIANT = (5, 20)  # Рандомное количество ключей в каждой опции
 SELLER_ID = 1  # ID продавца, на которого вешаем товары
 
 
@@ -106,7 +106,6 @@ async def seed_mass_data(uow, http_client):
 
 
 if __name__ == "__main__":
-    # Раскомментируй и подставь свой провайдер
     provider = DbProvider(conf.db_url)
     uow = UnitOfWork(session_factory=provider.session_factory, registry=registry)
     http_client = HttpClient(url=conf.image_api_url)
