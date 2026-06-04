@@ -1,39 +1,14 @@
-from pydantic import BaseModel, Field, ConfigDict, computed_field
-from domain import UserRole, ProductVariant, ProductItem, Product, Seller, Category
+from pydantic import BaseModel, Field, computed_field
+from domain import ProductVariant, ProductItem, Product, Seller
 from adapters.images import ProductImagesManager
 from slugify import slugify
-
-class BaseInput(BaseModel):
-    model_config = ConfigDict(str_strip_whitespace=True)
-
-class CategoryCreate(BaseInput):
-    name: str
-    parent_id: int | None = None
-
-    def to_domain(self):
-        return Category(name=self.name, parent_id=self.parent_id)
-
-
-class CategoryAdminResponseSchema(BaseInput):
-    id: int
-    name: str
-    level: int
-    has_children: bool
-
-
-class UserLogin(BaseInput):
-    username: str
-    password: str
-
-class UserRegister(BaseInput):
-    username: str
-    password: str
-    role: UserRole
+from .base import BaseInput
 
 
 
 class ProductItemCreate(BaseInput):
     content: str
+
 
 class ProductVariantCreate(BaseInput):
     price: float = Field(..., ge=0)
@@ -50,6 +25,7 @@ class ProductVariantCreate(BaseInput):
             attributes=self.attributes,
             items=domain_items
         )
+
 
 class ProductCreate(BaseInput):
     title: str = Field(..., min_length=3, max_length=255)
@@ -76,6 +52,7 @@ class ProductVariantOut(BaseModel):
     class Config:
         from_attributes = True
 
+
 class ProductSellerListOut(BaseModel):
     id: int | None
     title: str
@@ -87,11 +64,8 @@ class ProductSellerListOut(BaseModel):
     class Config:
         from_attributes = True
 
-class ProductCatalogOut(BaseModel):
-    id: int
-    title: str
-    description: str
-    price: float
+
+class ProductImage(BaseModel):
     image_url: str
 
     @computed_field
@@ -101,31 +75,33 @@ class ProductCatalogOut(BaseModel):
 
     @computed_field
     @property
-    def thumbnail_url(self) -> str | None:
+    def catalog_url(self) -> str | None:
         if not self.image_url:
             return None
         return ProductImagesManager().get_product_catalog_image_path(self.image_url)
 
+    @computed_field
+    @property
+    def detail_url(self) -> str | None:
+        if not self.image_url:
+            return None
+        return ProductImagesManager().get_product_details_image_path(self.image_url)
+
     class Config:
         from_attributes = True
+
+
+class ProductOut(ProductImage):
+    id: int
+    title: str
+    description: str
+    price: float
 
 
 class ProductCatalogListOut(BaseModel):
     total: int | None = None
-    items: list[ProductCatalogOut]
+    items: list[ProductOut]
 
-
-class CategoryOut(BaseModel):
-    id: int
-    name: str
-
-    class Config:
-        from_attributes = True
-
-
-class HomePageOut(BaseModel):
-    categories: list[CategoryOut]
-    products: list[ProductCatalogOut]
 
 class ProductVariantDetailOut(BaseModel):
     id: int
@@ -136,7 +112,7 @@ class ProductVariantDetailOut(BaseModel):
         from_attributes = True
 
 
-class ProductDetailOut(BaseModel):
+class ProductDetailOut(ProductImage):
     id: int
     title: str
     description: str

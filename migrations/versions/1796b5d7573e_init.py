@@ -1,8 +1,8 @@
 """init
 
-Revision ID: 2593a36be459
+Revision ID: 1796b5d7573e
 Revises: 
-Create Date: 2026-06-02 11:23:33.284641
+Create Date: 2026-06-04 09:59:23.497736
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '2593a36be459'
+revision: str = '1796b5d7573e'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -23,6 +23,7 @@ def upgrade() -> None:
     op.create_table('categories',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(), nullable=False),
+    sa.Column('logo_url', sa.String(), nullable=False),
     sa.Column('parent_id', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['parent_id'], ['categories.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),
@@ -36,6 +37,11 @@ def upgrade() -> None:
     op.create_table('product_item_statuses',
     sa.Column('name', sa.String(), nullable=False),
     sa.PrimaryKeyConstraint('name')
+    )
+    op.create_table('routes',
+    sa.Column('value', sa.String(), nullable=False),
+    sa.Column('slug', sa.String(), nullable=False),
+    sa.PrimaryKeyConstraint('value', 'slug')
     )
     op.create_table('users',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -119,6 +125,7 @@ def downgrade() -> None:
     op.drop_table('sellers')
     op.drop_table('clients')
     op.drop_table('users')
+    op.drop_table('routes')
     op.drop_table('product_item_statuses')
     op.drop_table('order_statuses')
     op.drop_index(op.f('ix_categories_parent_id'), table_name='categories')

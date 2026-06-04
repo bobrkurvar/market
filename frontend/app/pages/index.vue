@@ -46,7 +46,7 @@
               >
                 <template #header>
                   <div class="aspect-video w-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden relative">
-                    <img v-if="product.thumbnail_url" :src="product.thumbnail_url" @error="$event.target.src = product.image_url" :alt="product.title" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105" />
+                    <img v-if="product.catalog_url" :src="product.catalog_url" @error="$event.target.src = product.image_url" :alt="product.title" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105" />
                     <img v-else-if="product.image_url" :src="product.image_url" :alt="product.title" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105" />
                     <UIcon v-else name="i-heroicons-photo" class="w-12 h-12 text-gray-300 dark:text-gray-600" />
                   </div>
@@ -112,7 +112,7 @@
             >
               <template #header>
                 <div class="aspect-video w-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden relative">
-                  <img v-if="product.thumbnail_url" :src="product.thumbnail_url" @error="$event.target.src = product.image_url" :alt="product.title" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105" />
+                  <img v-if="product.catalog_url" :src="product.catalog_url" @error="$event.target.src = product.image_url" :alt="product.title" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105" />
                   <img v-else-if="product.image_url" :src="product.image_url" :alt="product.title" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105" />
                   <UIcon v-else name="i-heroicons-photo" class="w-12 h-12 text-gray-300 dark:text-gray-600" />
                 </div>

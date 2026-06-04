@@ -6,34 +6,62 @@
 
     <div v-else-if="product" class="grid grid-cols-1 lg:grid-cols-12 gap-10">
 
-      <div class="lg:col-span-7 space-y-6">
-        <div>
-          <h1 class="text-3xl font-extrabold text-gray-900 dark:text-white sm:text-4xl">
-            {{ product.title }}
-          </h1>
-          <p class="text-sm text-gray-500 mt-2">Продавец: {{ product.seller_username }}</p>
+      <div class="lg:col-span-7 space-y-8">
+
+        <div class="flex flex-col sm:flex-row gap-6">
+
+          <div class="w-full sm:w-64 md:w-72 flex-shrink-0 aspect-square rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-800 shadow-sm relative group flex items-center justify-center">
+            <img
+              v-if="product.detail_url"
+              :src="product.detail_url"
+              :alt="product.title"
+              class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+            />
+            <div v-else class="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
+              <UIcon name="i-heroicons-photo" class="w-12 h-12 mb-2" />
+              <span class="text-sm font-medium">Нет фото</span>
+            </div>
+          </div>
+
+          <div class="flex flex-col justify-center py-2">
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white leading-tight">
+              {{ product.title }}
+            </h1>
+
+            <div class="mt-4 space-y-2 text-sm text-gray-500 dark:text-gray-400">
+              <p class="flex items-center gap-2">
+                <UIcon name="i-heroicons-user-circle" class="w-5 h-5 text-gray-400" />
+                Продавец: <span class="font-bold text-gray-900 dark:text-gray-200">{{ product.seller_username || 'Неизвестно' }}</span>
+              </p>
+              <p class="flex items-center gap-2">
+                <UIcon name="i-heroicons-bolt" class="w-5 h-5 text-amber-500" />
+                Автоматическая доставка
+              </p>
+            </div>
+          </div>
+
         </div>
 
-        <div class="prose dark:prose-invert max-w-none">
-          <h3 class="text-lg font-semibold">Описание</h3>
-          <p class="whitespace-pre-line text-gray-700 dark:text-gray-300">
+        <div class="prose dark:prose-invert max-w-none bg-white dark:bg-gray-900 p-6 sm:p-8 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
+          <h3 class="text-xl font-bold mb-4">Описание товара</h3>
+          <p class="whitespace-pre-line text-gray-700 dark:text-gray-300 leading-relaxed">
             {{ product.description }}
           </p>
         </div>
       </div>
 
       <div class="lg:col-span-5">
-        <UCard class="sticky top-10">
+        <UCard class="sticky top-24 shadow-md ring-1 ring-gray-200 dark:ring-gray-800" :ui="{ body: { padding: 'p-6 sm:p-8' } }">
 
-          <div class="mb-6">
-            <span class="text-sm text-gray-500">Итоговая стоимость</span>
-            <div class="text-4xl font-extrabold text-green-600 dark:text-green-400">
+          <div class="mb-8 pb-6 border-b border-gray-100 dark:border-gray-800">
+            <span class="text-sm font-medium text-gray-500">Итоговая стоимость</span>
+            <div class="text-4xl font-black text-green-600 dark:text-green-400 mt-1">
               {{ selectedVariant?.price || 0 }} ₽
             </div>
           </div>
 
           <div class="mb-8" v-if="product.variants?.length > 0">
-            <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3 uppercase tracking-wider">
+            <h3 class="text-sm font-bold text-gray-900 dark:text-white mb-4 uppercase tracking-wider">
               Выберите опцию
             </h3>
 
@@ -43,10 +71,10 @@
                 :key="variant.id"
                 class="flex items-start p-4 border rounded-xl cursor-pointer transition-all duration-200"
                 :class="selectedVariant?.id === variant.id
-                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/30 ring-1 ring-primary-500'
-                  : 'border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900'"
+                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/30 ring-2 ring-primary-500'
+                  : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'"
               >
-                <div class="flex items-center h-5">
+                <div class="flex items-center h-5 mt-0.5">
                   <input
                     type="radio"
                     name="variant"
@@ -59,7 +87,7 @@
                 <div class="ml-3 flex-1">
                   <div v-if="variant.attributes && Object.keys(variant.attributes).length > 0">
                     <div v-for="(val, key) in variant.attributes" :key="key" class="text-sm font-medium text-gray-900 dark:text-white">
-                      {{ key }}: <span class="text-gray-500">{{ val }}</span>
+                      {{ key }}: <span class="text-gray-500 dark:text-gray-400">{{ val }}</span>
                     </div>
                   </div>
                   <div v-else class="text-sm font-medium text-gray-900 dark:text-white">
@@ -67,7 +95,7 @@
                   </div>
                 </div>
 
-                <div class="text-sm font-bold text-gray-900 dark:text-white ml-4">
+                <div class="text-base font-bold text-gray-900 dark:text-white ml-4">
                   {{ variant.price }} ₽
                 </div>
               </label>
@@ -78,20 +106,27 @@
             size="xl"
             block
             color="primary"
-            icon="i-heroicons-credit-card"
+            icon="i-heroicons-shopping-bag"
             :disabled="!selectedVariant"
             @click="buyProduct"
+            class="font-bold text-base shadow-sm"
           >
             Купить сейчас
           </UButton>
+
+          <p class="text-xs text-center text-gray-500 mt-4 flex items-center justify-center gap-1">
+            <UIcon name="i-heroicons-shield-check" class="w-4 h-4" />
+            Безопасная сделка. Мгновенная доставка.
+          </p>
         </UCard>
       </div>
     </div>
 
     <div v-else class="text-center py-20">
-      <UIcon name="i-heroicons-archive-box-x-mark" class="w-16 h-16 mx-auto text-gray-400 mb-4" />
+      <UIcon name="i-heroicons-archive-box-x-mark" class="w-20 h-20 mx-auto text-gray-300 dark:text-gray-700 mb-4" />
       <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Товар не найден</h2>
-      <UButton to="/products" variant="ghost" class="mt-4">Вернуться в каталог</UButton>
+      <p class="text-gray-500 mt-2 mb-6">Возможно, он был удален или ссылка недействительна.</p>
+      <UButton to="/" size="lg" color="gray" variant="solid">Вернуться в каталог</UButton>
     </div>
   </UContainer>
 </template>

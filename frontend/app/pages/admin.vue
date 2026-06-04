@@ -3,7 +3,6 @@
 
     <header class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-40 shadow-sm">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-
         <div class="flex items-center gap-3">
           <UIcon name="i-heroicons-wrench-screwdriver" class="w-6 h-6 text-primary-500" />
           <h2 class="text-xl font-black tracking-tight flex items-center gap-2">
@@ -36,16 +35,8 @@
             <p class="text-xs font-bold">Администратор</p>
             <p class="text-[10px] text-gray-400">admin@mymarket.ru</p>
           </div>
-          <UButton
-            icon="i-heroicons-arrow-left-on-rectangle"
-            color="gray"
-            variant="ghost"
-            size="sm"
-            to="/"
-            title="Вернуться на сайт"
-          />
+          <UButton icon="i-heroicons-arrow-left-on-rectangle" color="gray" variant="ghost" size="sm" to="/" title="Вернуться на сайт" />
         </div>
-
       </div>
     </header>
 
@@ -56,7 +47,6 @@
           <h1 class="text-3xl font-extrabold">Главная панель</h1>
           <p class="text-sm text-gray-500 mt-1">Основные показатели платформы</p>
         </div>
-
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <UCard v-for="stat in mockStats" :key="stat.title" class="shadow-sm">
             <div class="flex items-center justify-between">
@@ -78,10 +68,60 @@
             <h1 class="text-3xl font-extrabold">Дерево категорий</h1>
             <p class="text-sm text-gray-500 mt-1">Управление уровнями вложенности и иерархией каталога</p>
           </div>
-          <UButton icon="i-heroicons-plus" color="primary" @click="openCreateModal(null)">
-            Создать корень
+          <UButton
+            :icon="showCreateForm ? 'i-heroicons-x-mark' : 'i-heroicons-plus'"
+            :color="showCreateForm ? 'gray' : 'primary'"
+            @click="toggleCreateForm(null)"
+          >
+            {{ showCreateForm ? 'Закрыть форму' : 'Создать корень' }}
           </UButton>
         </div>
+
+        <UCard v-if="showCreateForm" class="mb-6 border border-primary-200 dark:border-primary-800 shadow-sm animate-fadeIn bg-primary-50/30 dark:bg-primary-950/20">
+          <template #header>
+            <h3 class="text-base font-semibold leading-6 text-gray-900 dark:text-white">
+              {{ categoryForm.parent_id ? `Новая подкатегория для «${categoryForm.parent_name}»` : 'Новый корневой раздел' }}
+            </h3>
+          </template>
+
+          <form @submit.prevent="submitCategory" class="space-y-6">
+            <UFormGroup label="Название категории" required>
+              <UInput
+                v-model="categoryForm.name"
+                placeholder="Например: Ключи Steam..."
+                autofocus
+                required
+              />
+            </UFormGroup>
+
+            <div>
+              <span class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                Логотип (иконка)
+              </span>
+              <div class="flex items-center gap-4 mt-1">
+                <UButton color="white" icon="i-heroicons-arrow-up-tray" @click="$refs.fileInputRef.click()">
+                  Выбрать файл
+                </UButton>
+                <span class="text-sm text-gray-500 truncate max-w-[200px]">
+                  {{ categoryForm.file ? categoryForm.file.name : 'Файл не выбран' }}
+                </span>
+              </div>
+              <input
+                type="file"
+                accept="image/png, image/jpeg, image/webp, image/svg+xml"
+                class="hidden"
+                @change="handleFileChange"
+                ref="fileInputRef"
+              />
+              <p class="text-xs text-gray-500 mt-2">Форматы: PNG, WebP, SVG. Фон должен быть прозрачным.</p>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-800">
+              <UButton color="gray" variant="ghost" @click="showCreateForm = false">Отмена</UButton>
+              <UButton type="submit" color="primary" :loading="isSubmittingCategory">Создать</UButton>
+            </div>
+          </form>
+        </UCard>
 
         <div v-if="categoriesPending" class="flex justify-center py-20">
           <UIcon name="i-heroicons-arrow-path" class="animate-spin w-10 h-10 text-primary-500" />
@@ -99,16 +139,17 @@
               :style="{ paddingLeft: `${cat.level * 24 + 16}px` }"
             >
               <div class="flex items-center gap-3">
-                <UIcon
-                  :name="cat.has_children ? 'i-heroicons-folder-open' : 'i-heroicons-document-text'"
-                  :class="cat.has_children ? 'text-amber-500 w-5 h-5' : 'text-gray-400 w-4 h-4'"
-                />
+                <div class="w-8 h-8 flex-shrink-0 flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded border border-gray-100 dark:border-gray-700 overflow-hidden">
+                   <img v-if="cat.search_url" :src="cat.search_url" :alt="cat.name" class="w-full h-full object-contain p-1" />
+                   <UIcon v-else :name="cat.has_children ? 'i-heroicons-folder-open' : 'i-heroicons-document-text'" :class="cat.has_children ? 'text-amber-500 w-5 h-5' : 'text-gray-400 w-4 h-4'" />
+                </div>
+
                 <span :class="{ 'font-bold text-gray-900 dark:text-white': cat.level === 0, 'text-gray-700 dark:text-gray-300': cat.level > 0 }">
                   {{ cat.name }}
                 </span>
               </div>
               <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <UButton icon="i-heroicons-plus-circle" color="gray" variant="ghost" size="xs" title="Добавить подкатегорию" @click="openCreateModal(cat)" />
+                <UButton icon="i-heroicons-plus-circle" color="gray" variant="ghost" size="xs" title="Добавить подкатегорию" @click="toggleCreateForm(cat)" />
                 <UButton icon="i-heroicons-trash" color="red" variant="ghost" size="xs" title="Удалить" @click="confirmDelete(cat)" />
               </div>
             </div>
@@ -125,40 +166,13 @@
           <p class="font-medium">Все товары проверены</p>
         </div>
       </div>
-
     </main>
-
-    <UModal v-model="isModalOpen">
-      <UCard :ui="{ ring: '', divide: 'divide-y divide-gray-100 dark:divide-gray-800' }">
-        <template #header>
-          <div class="flex items-center justify-between">
-            <h3 class="text-base font-semibold leading-6 text-gray-900 dark:text-white">
-              {{ categoryForm.parent_id ? `Новая подкатегория для «${categoryForm.parent_name}»` : 'Новый корневой раздел' }}
-            </h3>
-            <UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" class="-my-1" @click="isModalOpen = false" />
-          </div>
-        </template>
-
-        <form @submit.prevent="submitCategory" class="space-y-4 py-2">
-          <UFormGroup label="Название категории" required>
-            <UInput v-model="categoryForm.name" placeholder="Например: Ключи Steam, VPN, Подписки..." autofocus required />
-          </UFormGroup>
-
-          <div class="flex justify-end gap-3 pt-4">
-            <UButton color="gray" variant="ghost" @click="isModalOpen = false">Отмена</UButton>
-            <UButton type="submit" color="primary" :loading="isSubmittingCategory">Создать</UButton>
-          </div>
-        </form>
-      </UCard>
-    </UModal>
-
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 
-// ВАЖНО: Отключаем дефолтный макет сайта (затираем общую синюю шапку)
 definePageMeta({
   layout: false
 })
@@ -180,13 +194,15 @@ const mockStats = [
 
 const categories = ref([])
 const categoriesPending = ref(false)
-const isModalOpen = ref(false)
+const showCreateForm = ref(false)
 const isSubmittingCategory = ref(false)
+const fileInputRef = ref(null)
 
 const categoryForm = ref({
   name: '',
   parent_id: null,
-  parent_name: ''
+  parent_name: '',
+  file: null
 })
 
 const fetchCategories = async () => {
@@ -200,8 +216,17 @@ const fetchCategories = async () => {
   }
 }
 
-const openCreateModal = (parentCategory = null) => {
+const toggleCreateForm = (parentCategory = null) => {
+  // Если форма открыта и кликнули на ту же кнопку отмены/создания корня
+  if (showCreateForm.value && !parentCategory && !categoryForm.value.parent_id) {
+    showCreateForm.value = false
+    return
+  }
+
   categoryForm.value.name = ''
+  categoryForm.value.file = null
+  if (fileInputRef.value) fileInputRef.value.value = ''
+
   if (parentCategory) {
     categoryForm.value.parent_id = parentCategory.id
     categoryForm.value.parent_name = parentCategory.name
@@ -209,25 +234,41 @@ const openCreateModal = (parentCategory = null) => {
     categoryForm.value.parent_id = null
     categoryForm.value.parent_name = ''
   }
-  isModalOpen.value = true
+
+  showCreateForm.value = true
+  // Плавно скроллим наверх, чтобы форма точно была в поле зрения
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+const handleFileChange = (event) => {
+  const files = event.target.files
+  if (files && files.length > 0) {
+    categoryForm.value.file = files[0]
+  } else {
+    categoryForm.value.file = null
+  }
 }
 
 const submitCategory = async () => {
   if (!categoryForm.value.name.trim()) return
   isSubmittingCategory.value = true
+
   try {
-    await $api('/api/admin/category', {
+    const formData = new FormData()
+    formData.append('name', categoryForm.value.name)
+    if (categoryForm.value.parent_id) formData.append('parent_id', categoryForm.value.parent_id)
+    if (categoryForm.value.file) formData.append('file', categoryForm.value.file)
+
+    await $api('/api/admin/categories', {
       method: 'POST',
-      body: {
-        name: categoryForm.value.name,
-        parent_id: categoryForm.value.parent_id
-      }
+      body: formData
     })
-    toast.add({ title: 'Успешно', description: 'Категория добавлена в структуру', color: 'green' })
-    isModalOpen.value = false
+
+    toast.add({ title: 'Успешно', description: 'Категория добавлена', color: 'green' })
+    showCreateForm.value = false
     await fetchCategories()
   } catch (error) {
-    toast.add({ title: 'Ошибка', description: 'Не удалось создать категорию', color: 'red' })
+    toast.add({ title: 'Ошибка', description: 'Не удалось создать', color: 'red' })
   } finally {
     isSubmittingCategory.value = false
   }

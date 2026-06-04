@@ -9,7 +9,7 @@ from PIL import Image, ImageOps
 from pydantic import BaseModel
 
 from core.logger import setup_logging
-from shared import DETAILS, PRODUCTS
+from shared import DETAILS, PRODUCTS, CATEGORY_SEARCH, CATEGORY_CATALOG
 
 setup_logging()
 
@@ -29,8 +29,11 @@ IMAGE_PRESETS = {
     # Большие изображения для страницы товара (достаточно для Retina-экранов)
     DETAILS: {"size": (1200, 1200), "mode": "fit"},
 
-    # Если есть баннеры/слайдеры на главной странице (горизонтальные)
-    #SLIDES: {"size": (1920, 600), "mode": "cover"},
+    CATEGORY_CATALOG: {"size": (256, 256), "mode": "fit"},
+
+    # Микро-иконки для выпадающего поиска (Search) и бокового меню
+    CATEGORY_SEARCH: {"size": (64, 64), "mode": "fit"},
+
 }
 
 

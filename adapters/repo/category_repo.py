@@ -47,7 +47,8 @@ class CategoryRepository:
                     "id": cat.id,
                     "name": cat.name,
                     "level": level,
-                    "has_children": cat.id in children_map
+                    "has_children": cat.id in children_map,
+                    "logo_url": cat.logo_url,
                 })
                 build_tree(cat.id, level + 1)
 

@@ -16,6 +16,7 @@ async def get_home_page(uow: UowDep):
         #categories, products = await asyncio.gather(*(categories_cor, products_cor))
     return {"products": products, "categories": categories}
 
+
 @router.websocket("/ws/search")
 async def websocket_search(websocket: WebSocket, uow: UowDep):
     log.debug("Вход в поиск")
