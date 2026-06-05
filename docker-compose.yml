@@ -9,7 +9,6 @@ services:
     environment:
       DB_HOST: postgres
       DB_USER: postgres
-      API_HOST: image_service
       IS_TEST: True
       REDIS_HOST: redis
       IMAGE_SERVICE_HOST: image_service
@@ -61,7 +60,6 @@ services:
       - internal
     depends_on:
       - postgres
-      - image_service
     restart: "no"
 
   runner:

@@ -19,15 +19,19 @@
         <div class="mb-12" v-if="popularCategories.length > 0">
           <h2 class="text-2xl font-bold mb-6">Популярные категории</h2>
           <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <UCard
+            <NuxtLink
               v-for="category in popularCategories"
               :key="category.id"
-              class="cursor-pointer hover:ring-2 hover:ring-primary-500 hover:shadow-md transition-all flex items-center justify-center text-center h-20"
-              :ui="{ body: { padding: 'p-2 sm:p-4' } }"
-              @click="searchByCategory(category.name)"
+              :to="`/categories/${category.slug}/${category.id}`"
+              class="block outline-none"
             >
-              <span class="font-semibold line-clamp-2">{{ category.name }}</span>
-            </UCard>
+              <UCard
+                class="cursor-pointer hover:ring-2 hover:ring-primary-500 hover:shadow-md transition-all flex items-center justify-center text-center h-20"
+                :ui="{ body: { padding: 'p-2 sm:p-4' } }"
+              >
+                <span class="font-semibold line-clamp-2">{{ category.name }}</span>
+              </UCard>
+            </NuxtLink>
           </div>
         </div>
 
@@ -46,8 +50,18 @@
               >
                 <template #header>
                   <div class="aspect-video w-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden relative">
-                    <img v-if="product.catalog_url" :src="product.catalog_url" @error="$event.target.src = product.image_url" :alt="product.title" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105" />
-                    <img v-else-if="product.image_url" :src="product.image_url" :alt="product.title" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105" />
+                    <img v-if="product.catalog_url"
+                         :src="product.catalog_url"
+                         @error="$event.target.style.display='none'"
+                         :alt="product.title"
+                         class="w-full h-full object-cover transition-transform duration-300 hover:scale-105" />
+
+                    <img v-else-if="product.image_url"
+                         :src="product.image_url"
+                         @error="$event.target.style.display='none'"
+                         :alt="product.title"
+                         class="w-full h-full object-cover transition-transform duration-300 hover:scale-105" />
+
                     <UIcon v-else name="i-heroicons-photo" class="w-12 h-12 text-gray-300 dark:text-gray-600" />
                   </div>
                 </template>
@@ -103,7 +117,7 @@
           <NuxtLink
             v-for="product in searchResults"
             :key="product.id"
-            :to="`/products/${product.id}`"
+            :to="`/products/${product.slug}/${product.id}`"
             class="block outline-none"
           >
             <UCard
@@ -112,8 +126,18 @@
             >
               <template #header>
                 <div class="aspect-video w-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden relative">
-                  <img v-if="product.catalog_url" :src="product.catalog_url" @error="$event.target.src = product.image_url" :alt="product.title" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105" />
-                  <img v-else-if="product.image_url" :src="product.image_url" :alt="product.title" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105" />
+                  <img v-if="product.catalog_url"
+                       :src="product.catalog_url"
+                       @error="$event.target.style.display='none'"
+                       :alt="product.title"
+                       class="w-full h-full object-cover transition-transform duration-300 hover:scale-105" />
+
+                  <img v-else-if="product.image_url"
+                       :src="product.image_url"
+                       @error="$event.target.style.display='none'"
+                       :alt="product.title"
+                       class="w-full h-full object-cover transition-transform duration-300 hover:scale-105" />
+
                   <UIcon v-else name="i-heroicons-photo" class="w-12 h-12 text-gray-300 dark:text-gray-600" />
                 </div>
               </template>
@@ -192,17 +216,6 @@ const { data: searchData, pending: searchPending } = await useFetch('/api/produc
 })
 const searchResults = computed(() => searchData.value?.items || [])
 const searchTotal = computed(() => searchData.value?.total || 0)
-
-// --- 3. Клик по категории ---
-const searchByCategory = (categoryName) => {
-  router.push({
-    path: '/',
-    query: {
-      q: categoryName,
-      page: 1
-    }
-  })
-}
 
 useHead({
   title: 'Твой Маркетплейс Цифровых Товаров | myMarket'

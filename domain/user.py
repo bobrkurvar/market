@@ -24,7 +24,7 @@ class Seller(User):
     def __init__(
         self,
         username: str,
-        password: str | None = None,
+        password: str,
         seller_id: int | None = None,
         rating: Decimal | None = None,
         is_active: bool = True,

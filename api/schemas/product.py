@@ -70,11 +70,6 @@ class ProductImage(BaseModel):
 
     @computed_field
     @property
-    def slug(self) -> str:
-        return slugify(self.title)
-
-    @computed_field
-    @property
     def catalog_url(self) -> str | None:
         if not self.image_url:
             return None
@@ -96,6 +91,11 @@ class ProductOut(ProductImage):
     title: str
     description: str
     price: float
+
+    @computed_field
+    @property
+    def slug(self) -> str:
+        return slugify(self.title)
 
 
 class ProductCatalogListOut(BaseModel):
