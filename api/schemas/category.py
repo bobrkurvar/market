@@ -2,6 +2,7 @@ from pydantic import BaseModel, computed_field
 from domain import Category
 from adapters.images import CategoryImagesManager
 from .base import BaseInput
+from slugify import slugify
 
 
 class CategoryCreate(BaseInput):
@@ -43,6 +44,10 @@ class CategoryAdminOut(CategoryImageOut):
 class CategoryOut(CategoryImageOut):
     id: int
     name: str
+    @computed_field
+    @property
+    def slug(self) -> str:
+        return slugify(self.name)
 
     class Config:
         from_attributes = True
