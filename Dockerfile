@@ -57,15 +57,16 @@ COPY scripts/db_init.py ./db_init.py
 COPY shared.py ./shared.py
 CMD ["python", "-m", "db_init"]
 
-FROM base AS init_test_data
+FROM base AS seed_data
 COPY infra/security.py ./infra/security.py
 COPY adapters ./adapters
+COPY infra ./infra
 COPY domain ./domain
 COPY services ./services
 COPY db ./db
-COPY scripts/init_test_data.py .
+COPY scripts/seed_data.py .
 COPY shared.py ./shared.py
-CMD ["python", "-m", "init_test_data"]
+CMD ["python", "-m", "seed_data"]
 
 
 

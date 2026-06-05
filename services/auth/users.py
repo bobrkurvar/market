@@ -25,7 +25,6 @@ async def check_role(uow, token_data: dict):
 
 
 
-
 async def create_user(uow, username: str, password: str, role: UserRole):
     hash_password = get_hash(password)
     log.debug("user role: %s", role)

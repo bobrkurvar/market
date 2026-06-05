@@ -81,12 +81,12 @@ services:
       - postgres
     restart: "no"
 
-  init_test_data:
+  seed_data:
     profiles: [ "tools" ]
     build:
       context: .
       dockerfile: ./Dockerfile
-      target: init_test_data
+      target: seed_data
     env_file:
       - .env
     environment:
@@ -96,6 +96,10 @@ services:
       - internal
     depends_on:
       - postgres
+      - image_service
+    volumes:
+      - scripts/seed_category:scripts/seed_category
+      - scripts:
     restart: "no"
 
   postgres:
