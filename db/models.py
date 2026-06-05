@@ -19,6 +19,7 @@ class Product(Base):
     image_url: Mapped[str]
     title: Mapped[str] = mapped_column(String(255))
     description: Mapped[str] = mapped_column(Text)
+    suggested_category: Mapped[str] = mapped_column(String(100), nullable=True)
     category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"))
     category: Mapped["Category"] = relationship("Category", back_populates="products")
     variants: Mapped[list["ProductVariant"]] = relationship(
@@ -159,6 +160,7 @@ class Category(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(unique=True, nullable=False)
     logo_url: Mapped[str]
+    is_folder: Mapped[bool]
     parent_id: Mapped[int | None] = mapped_column(
         ForeignKey("categories.id", ondelete="CASCADE"),
         nullable=True,
@@ -184,7 +186,3 @@ class Category(Base):
     )
 
 
-class Route(Base):
-    __tablename__ = "routes"
-    value: Mapped[str] = mapped_column(primary_key=True)
-    slug: Mapped[str] = mapped_column(primary_key=True)

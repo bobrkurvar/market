@@ -17,8 +17,8 @@ async def get_catalog(uow: UowDep, limit: int, offset: int, q: str | None = None
         if q:
             category = DomainFilter(model=Category, field="name", value=q)
             domain_filters.append(category)
-        products = await uow.db.read(Product, loaded="variants", domain_filters = domain_filters, limit=limit, offset=offset)
-        count = await uow.db.count(Product)
+        products = await uow.db.read(Product, loaded="variants", domain_filters=domain_filters, limit=limit, offset=offset)
+        count = await uow.db.count(Product, domain_filters=domain_filters)
     return {"items": products, "total": count}
 
 

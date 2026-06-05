@@ -55,7 +55,6 @@ services:
     environment:
       DB_HOST: postgres
       DB_USER: postgres
-      IMAGE_SERVICE_HOST: image_service
     networks:
       - internal
     depends_on:
@@ -90,14 +89,16 @@ services:
     environment:
       DB_HOST: postgres
       DB_USER: postgres
+      IMAGE_SERVICE_HOST: image_service
     networks:
       - internal
     depends_on:
       - postgres
       - image_service
     volumes:
-      - scripts/seed_category:scripts/seed_category
-      - scripts:
+      - ./scripts/seed_categories:/app/scripts/seed_categories
+      - ./scripts/seed_products:/app/scripts/seed_products
+      - ./media:/app/media
     restart: "no"
 
   postgres:

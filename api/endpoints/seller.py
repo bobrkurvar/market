@@ -5,6 +5,7 @@ from adapters.images import ImageGenerator, ProductImagesManager
 from services.product import create_product
 from api.schemas import ProductCreate, ProductSellerListOut
 from typing import Annotated
+from domain import Category
 
 router = APIRouter(prefix="/seller", dependencies=[Depends(get_seller)])
 
@@ -41,7 +42,8 @@ async def get_seller_products(seller: GetSellerDep, uow: UowDep):
 @router.get("/categories")
 async def get_catalog(uow: UowDep):
     async with uow:
-        return await uow.category.get_leaf_categories()
+        #return await uow.category.get_leaf_categories()
+        return await uow.db.read(Category, is_folder=True)
 
 
 

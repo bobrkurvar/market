@@ -12,7 +12,7 @@ from sqlalchemy.orm.exc import StaleDataError
 
 from domain import (AlreadyExistsError, ConcurrentModificationError,
                     DomainFilter, ForeignKeyViolationError, NotFoundError,
-                    Operation)
+                    Operation, Operations)
 
 log = logging.getLogger(__name__)
 
@@ -146,14 +146,26 @@ class GenericRepository:
             return isinstance(obj, Collection) and not isinstance(obj, (str, bytes, bytearray))
 
         conditions = []
+        # operators_map = {
+        #     "exact": operator.eq,
+        #     "gte": operator.ge,
+        #     "lte": operator.le,
+        #     "gt": operator.gt,
+        #     "lt": operator.lt,
+        #     "ilike": lambda attr, value: attr.ilike(value),
+        #     "in": lambda attr, value: attr.in_(value),
+        # }
         operators_map = {
-            "exact": operator.eq,
-            "gte": operator.ge,
-            "lte": operator.le,
-            "gt": operator.gt,
-            "lt": operator.lt,
-            "ilike": lambda attr, value: attr.ilike(value),
-            "in": lambda attr, value: attr.in_(value),
+            Operations.exact: operator.eq,
+            Operations.gte: operator.ge,
+            Operations.lte: operator.le,
+            Operations.gt: operator.gt,
+            Operations.ne: operator.ne,
+            Operations.lt: operator.lt,
+            Operations.ilike: lambda attr, value: attr.ilike(value),
+            Operations.in_: lambda attr, value: attr.in_(value),
+            Operations.is_: lambda attr, _: attr.is_(),
+            Operations.is_not: lambda attr, _: attr.is_not(),
         }
         for field, filter_data in filters.items():
             attr = getattr(base_orm_model, field)

@@ -2,6 +2,7 @@ class Category:
     def __init__(
         self,
         name: str,
+        is_folder: bool,
         logo_url: str | None = None,
         category_id: int | None = None,
         parent_id: int | None = None
@@ -10,3 +11,15 @@ class Category:
         self.id = category_id
         self.parent_id = parent_id
         self.logo_url = logo_url
+        self.is_folder = is_folder
+
+    def validate_parent(self, parent_category: "Category") -> None:
+        """Проверяет, может ли переданная категория быть родителем для текущей."""
+        if self.parent_id is None:
+            return  # Если мы корневая категория, проверять нечего
+
+        if parent_category.id != self.parent_id:
+            raise ValueError("ID переданного родителя не совпадает с parent_id текущей категории.")
+
+        if not parent_category.is_folder:
+            raise ValueError("Нельзя создать вложенную категорию внутри товарного листа.")

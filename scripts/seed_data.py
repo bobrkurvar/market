@@ -65,7 +65,7 @@ async def seed_data(uow, product_file_manager, category_file_manager, img_genera
         saved_cat = await create_category(
             uow=uow,
             img=img_bytes,
-            file_manager=product_file_manager,
+            file_manager=category_file_manager,
             img_generator=img_generator,
             category=Category(name=fake['ru_RU'].word().capitalize())
         )
@@ -115,7 +115,7 @@ async def seed_data(uow, product_file_manager, category_file_manager, img_genera
         await create_product(
             uow=uow,
             img=img_bytes,
-            file_manager=category_file_manager,
+            file_manager=product_file_manager,
             img_generator=img_generator,
             product=product
         )
