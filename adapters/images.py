@@ -56,8 +56,8 @@ class ImageGenerator:
 
 class ProductImagesManager(FileManager):
 
-    def __init__(self, storage=None):
-        super().__init__(PRODUCT_IMAGE_LAYERS, storage)
+    def __init__(self, root=None, storage=None):
+        super().__init__(PRODUCT_IMAGE_LAYERS, storage=storage, root=root)
 
     async def delete_product(self, base_path: str | Path) -> int:
         return await self.delete_by_layers(base_path, [PRODUCTS, DETAILS])
@@ -68,20 +68,17 @@ class ProductImagesManager(FileManager):
     def get_product_catalog_image_path(self, base_path: str) -> str:
         base_path = Path(base_path)
         name = base_path.name
-        path_catalog = self.resolve_path(name, PRODUCTS)
-        return f"/{path_catalog.as_posix()}"
+        return str(self.resolve_path(name, PRODUCTS))
 
     def get_product_details_image_path(self, base_path: str) -> str:
         base_path = Path(base_path)
         name = base_path.name
-        path_details = self.resolve_path(name, DETAILS)
-        return f"/{path_details.as_posix()}"
-
+        return str(self.resolve_path(name, DETAILS))
 
 class CategoryImagesManager(FileManager):
 
-    def __init__(self, storage=None):
-        super().__init__(CATEGORY_IMAGE_LAYERS, storage)
+    def __init__(self, storage=None, root=None):
+        super().__init__(CATEGORY_IMAGE_LAYERS, storage=storage, root=root)
 
     async def delete_category(self, base_path: str | Path) -> int:
         return await self.delete_by_layers(base_path, [CATEGORY_CATALOG, CATEGORY_SEARCH])
@@ -92,14 +89,12 @@ class CategoryImagesManager(FileManager):
     def get_category_catalog_image_path(self, base_path: str) -> str:
         base_path = Path(base_path)
         name = base_path.name
-        path_catalog = self.resolve_path(name, CATEGORY_CATALOG)
-        return f"/{path_catalog.as_posix()}"
+        return str(self.resolve_path(name, CATEGORY_CATALOG))
 
     def get_category_search_image_path(self, base_path: str) -> str:
         base_path = Path(base_path)
         name = base_path.name
-        path_search = self.resolve_path(name, CATEGORY_SEARCH)
-        return f"/{path_search.as_posix()}"
+        return str(self.resolve_path(name, CATEGORY_SEARCH))
 
 
 

@@ -98,11 +98,13 @@ class Product:
         product_id: int | None = None,
         category_id: int | None = None,
         category: Category | None = None,
+        suggested_category: str | None = None,
         variants: Collection[ProductVariant] | ProductVariant | None = None,
         description: str = "",
         items_count: int | None = None,
     ):
         self.id = product_id
+        self.suggested_category = suggested_category
         self.image_url = image_url
         self.seller = seller
         self.title = title

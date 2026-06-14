@@ -51,7 +51,7 @@ class Client(User):
     def __init__(
         self,
         username: str,
-        password: str | None = None,
+        password: str,
         client_id: int | None = None,
         is_blocked: bool = False,
     ):

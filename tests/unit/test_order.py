@@ -24,14 +24,14 @@ def test_create_order_obj_with_client_and_product():
         price=1,
         product_variant_id=1,
         product_variant=ProductVariant(product_variant_id=2, price=7, product_id=5),
-        client=Client(username="username", client_id=2),
+        client=Client(username="username", client_id=2, password="password"),
     )
     assert order.client_id == 2 and order.product_variant_id == 2
 
 
 def test_create_order_obj_with_new_client():
     product_variant = ProductVariant(product_id=1, price=7, product_variant_id=2)
-    client = Client(username="username")
+    client = Client(username="username", password="password")
     order = Order(client_id=1, product_variant=product_variant, client=client, price=1)
     assert order.client_id is None
 

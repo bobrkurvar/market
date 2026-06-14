@@ -1,10 +1,11 @@
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import DECIMAL, BigInteger, ForeignKey, String, Text, func, Index, literal_column
+from sqlalchemy import DECIMAL, BigInteger, ForeignKey, String, Text, func, Index, literal_column, CheckConstraint
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import JSONB
+from domain import SuggestionStatus, ProductItemStatuses, OrderStatuses
 
 
 class Base(AsyncAttrs, DeclarativeBase):
@@ -38,7 +39,7 @@ class Product(Base):
             func.to_tsvector(literal_column("'russian'"), title),
             postgresql_using="gin",
         ),
-        # 2. Индекс для опечаток (Триграммы) только по заголовку
+        # 2. Индекс для Триграмм по заголовку
         Index(
             "idx_product_title_trgm",
             "title",
@@ -72,14 +73,20 @@ class ProductItem(Base):
     order_id: Mapped[int] = mapped_column(ForeignKey("orders.id"), nullable=True)
 
     content: Mapped[str] = mapped_column(Text)
-    status_name: Mapped[str] = mapped_column(ForeignKey("product_item_statuses.name"))
-
+    #status_name: Mapped[str] = mapped_column(ForeignKey("product_item_statuses.name"))
+    status_name: Mapped[str]
     variant: Mapped["ProductVariant"] = relationship("ProductVariant", back_populates="items")
+    __table_args__ = (
+        CheckConstraint(
+            f"status_name IN ({', '.join(f"'{status}'" for status in ProductItemStatuses)})",
+            name="check_product_item_status"
+        ),
+    )
 
 
-class ProductItemStatuses(Base):
-    __tablename__ = "product_item_statuses"
-    name: Mapped[str] = mapped_column(primary_key=True)
+# class ProductItemStatuses(Base):
+#     __tablename__ = "product_item_statuses"
+#     name: Mapped[str] = mapped_column(primary_key=True)
 
 
 
@@ -128,9 +135,9 @@ class Client(User):
 #     product: Mapped["Product"] = relationship("Product")
 
 
-class OrderStatuses(Base):
-    __tablename__ = "order_statuses"
-    name: Mapped[str] = mapped_column(String(20), primary_key=True)
+# class OrderStatuses(Base):
+#     __tablename__ = "order_statuses"
+#     name: Mapped[str] = mapped_column(String(20), primary_key=True)
 
 
 class Order(Base):
@@ -143,15 +150,22 @@ class Order(Base):
     )
     payment_link: Mapped[str | None] = mapped_column(default=None, nullable=True)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
-    status_name: Mapped[str] = mapped_column(
-        ForeignKey("order_statuses.name"),
-    )
+    # status_name: Mapped[str] = mapped_column(
+    #     ForeignKey("order_statuses.name"),
+    # )
+    status_name: Mapped[str]
     items: Mapped[list["ProductItem"]] = relationship("ProductItem")
     client: Mapped["Client"] = relationship("Client")
     price: Mapped[float]
     amount: Mapped[int]
     product_snapshot: Mapped[dict] = mapped_column(JSONB, default={}, server_default='{}')
-    #seller: Mapped["Seller"] = relationship("Seller")
+    __table_args__ = (
+        CheckConstraint(
+            f"status_name IN ({', '.join(f"'{status}'" for status in OrderStatuses)})",
+            name="check_order_status"
+        ),
+    )
+
 
 
 class Category(Base):
@@ -186,3 +200,16 @@ class Category(Base):
     )
 
 
+class SuggestedCategory(Base):
+    __tablename__ = "suggested_categories"
+
+    name: Mapped[str] = mapped_column(primary_key=True)
+    products_count: Mapped[int]
+    status_name: Mapped[str]
+
+    __table_args__ = (
+        CheckConstraint(
+            f"status_name IN ({', '.join(f"'{status}'" for status in SuggestionStatus)})",
+            name="check_suggested_category_status"
+        ),
+    )

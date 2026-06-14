@@ -3,6 +3,7 @@ import logging
 from domain import Product
 import asyncio
 from infra.security import calculate_file_hash
+from infra.matcher import normalize_category_name
 
 log = logging.getLogger(__name__)
 
@@ -21,5 +22,6 @@ async def create_product(uow, img: bytes, file_manager, img_generator, product: 
             log.debug("путь %s уже занять", str(image_path))
 
         product.image_url = str(image_path)
+        product.suggested_category = normalize_category_name(product.suggested_category)
         async with uow:
             return await uow.db.create(product)

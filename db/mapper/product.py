@@ -4,16 +4,16 @@ import domain
 from db import models
 from .registry import registry
 
-def map_product_items_statuses_to_domain(orm_obj: models.ProductItemStatuses) -> domain.ProductItemStatuses:
-    return models.ProductItemStatuses(
-        name=orm_obj.name
-    )
-
-
-def map_product_items_statuses_to_orm(d_obj: domain.ProductItemStatuses) -> models.ProductItemStatuses:
-    return models.ProductItemStatuses(
-        name=d_obj.value
-    )
+# def map_product_items_statuses_to_domain(orm_obj: models.ProductItemStatuses) -> domain.ProductItemStatuses:
+#     return models.ProductItemStatuses(
+#         name=orm_obj.name
+#     )
+#
+#
+# def map_product_items_statuses_to_orm(d_obj: domain.ProductItemStatuses) -> models.ProductItemStatuses:
+#     return models.ProductItemStatuses(
+#         name=d_obj.value
+#     )
 
 
 def map_product_item_to_domain(orm_obj: models.ProductItem) -> domain.ProductItem:
@@ -51,11 +51,13 @@ def map_product_to_domain(orm_obj: models.Product) -> domain.Product:
         variants=variants,
         category_id=orm_obj.category_id,
         category=category,
-        image_url=orm_obj.image_url
+        image_url=orm_obj.image_url,
+        suggested_category=orm_obj.suggested_category
     )
 
 def map_product_to_orm(d_obj: domain.Product) -> models.Product:
     return models.Product(
+        suggested_category=d_obj.suggested_category,
         image_url=d_obj.image_url,
         id=d_obj.id,
         seller_id=d_obj.seller_id,
@@ -94,6 +96,6 @@ def map_product_variant_to_orm(d_obj: domain.ProductVariant) -> models.ProductVa
 
 
 registry.register(domain.ProductVariant, models.ProductVariant,to_orm=map_product_variant_to_orm, to_domain=map_product_variant_to_domain)
-registry.register(domain.ProductItemStatuses, models.ProductItemStatuses, to_orm=map_product_items_statuses_to_orm, to_domain=map_product_items_statuses_to_domain)
+#registry.register(domain.ProductItemStatuses, models.ProductItemStatuses, to_orm=map_product_items_statuses_to_orm, to_domain=map_product_items_statuses_to_domain)
 registry.register(domain.ProductItem, models.ProductItem, to_orm=map_product_item_to_orm, to_domain=map_product_item_to_domain)
 registry.register(domain.Product, models.Product, to_orm=map_product_to_orm, to_domain=map_product_to_domain,)

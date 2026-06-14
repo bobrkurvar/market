@@ -73,14 +73,14 @@ class ProductImage(BaseModel):
     def catalog_url(self) -> str | None:
         if not self.image_url:
             return None
-        return ProductImagesManager().get_product_catalog_image_path(self.image_url)
+        return "/" + ProductImagesManager().get_product_catalog_image_path(self.image_url)
 
     @computed_field
     @property
     def detail_url(self) -> str | None:
         if not self.image_url:
             return None
-        return ProductImagesManager().get_product_details_image_path(self.image_url)
+        return "/" + ProductImagesManager().get_product_details_image_path(self.image_url)
 
     class Config:
         from_attributes = True

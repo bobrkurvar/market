@@ -32,7 +32,7 @@ async def websocket_search(websocket: WebSocket, uow: UowDep):
                 continue
 
             async with uow:
-                categories = await uow.product.search_categories_by_product(query=query)
+                categories = await uow.category.search_categories_by_product(query=query)
 
                 suggestions = [
                     {

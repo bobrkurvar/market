@@ -10,7 +10,8 @@ log = logging.getLogger(__name__)
 class FileSystemStorage:
     @staticmethod
     async def save(path: Path | str, data: bytes):
-        upload_dir = Path(path).parent
+        path = Path(path)
+        upload_dir = path.parent
         if upload_dir:
             path.parent.mkdir(parents=True, exist_ok=True)
             async with aiofiles.open(path, "xb") as fw:
@@ -31,10 +32,10 @@ class FileSystemStorage:
 
 class FileManager:
     def __init__(
-        self, layers: dict | None = None, storage=None
+        self, layers: dict | None = None, storage=None, root=None
     ):
-        self._root = Path("media")
-        self._storage = storage if storage else FileSystemStorage()
+        self._root = Path(root) if root else Path("media")
+        self._storage = storage if storage is not None else FileSystemStorage()
         self._layers = layers if layers else {}
 
     def session(self):
@@ -46,7 +47,8 @@ class FileManager:
         return self._root / self._layers.get(layer, "") / file_name
 
     async def save(self, image_path: Path | str, img):
-        await self._storage.save(image_path, img)
+        path = Path(image_path).as_posix()
+        await self._storage.save(path, img)
         return image_path
 
     async def save_by_layer(self, file_name: str, img: bytes, layer: str):
@@ -54,30 +56,22 @@ class FileManager:
         await self.save(path, img)
         return path
 
-    async def save_by_layer_from_path(
-        self, base_path: Path | str, img: bytes, layer: str
-    ):
-        return await self.save_by_layer(Path(base_path).name, img, layer)
 
     async def delete_by_layers(self, base_path: str | Path, layers: list[str]) -> int:
         log.debug("deleted by layers: %s", layers)
         file_name = Path(base_path).name
         paths = [self.resolve_path(file_name, layer) for layer in layers]
         paths.append(base_path)  # type: ignore
-        # return await self.delete_async(paths)
         return await self.delete(paths)
 
     async def delete(self, paths: list[Path]) -> int:
         deleted = 0
         for path in paths:
             if isinstance(path, str):
-                path = Path(path)
+                path = Path(path).as_posix()
             await self._storage.delete(path)
             deleted += 1
         return deleted
-
-    async def get_directory(self, main_path: str | Path, other_path: str | Path) -> str:
-        return await self._storage.get_directory(main_path, other_path)
 
 
 class FileSession:

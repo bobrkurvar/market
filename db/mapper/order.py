@@ -42,17 +42,17 @@ def map_order_to_orm(d_obj: domain.Order) -> models.Order:
     )
 
 
-def map_order_statuses_to_domain(orm_obj: models.ProductItemStatuses) -> domain.ProductItemStatuses:
-    return models.ProductItemStatuses(
-        name=orm_obj.name
-    )
-
-def map_order_statuses_to_orm(d_obj: domain.OrderStatuses) -> models.OrderStatuses:
-    return models.OrderStatuses(
-        name=d_obj.value
-    )
+# def map_order_statuses_to_domain(orm_obj: models.ProductItemStatuses) -> domain.ProductItemStatuses:
+#     return models.ProductItemStatuses(
+#         name=orm_obj.name
+#     )
+#
+# def map_order_statuses_to_orm(d_obj: domain.OrderStatuses) -> models.OrderStatuses:
+#     return models.OrderStatuses(
+#         name=d_obj.value
+#     )
 
 
 registry.register(domain.Order, models.Order, to_orm=map_order_to_orm, to_domain=map_order_to_domain)
-registry.register(domain.OrderStatuses, models.OrderStatuses, to_orm=map_order_statuses_to_orm, to_domain=map_order_statuses_to_domain)
+#registry.register(domain.OrderStatuses, models.OrderStatuses, to_orm=map_order_statuses_to_orm, to_domain=map_order_statuses_to_domain)
 

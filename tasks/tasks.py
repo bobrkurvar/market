@@ -4,6 +4,7 @@ from taskiq import TaskiqDepends
 
 from domain import Order
 from services.order import cancel_unpaid_order
+from services.category import approve_suggested_category
 
 from .broker import broker
 from .deps import get_payment_service, get_uow
@@ -11,9 +12,9 @@ from .deps import get_payment_service, get_uow
 log = logging.getLogger(__name__)
 
 
-@broker.task
-async def cancel_unpaid_order_task(order_id: int, uow=TaskiqDepends(get_uow)):
-    await cancel_unpaid_order(uow, order_id=order_id)
+# @broker.task
+# async def cancel_unpaid_order_task(order_id: int, uow=TaskiqDepends(get_uow)):
+#     await cancel_unpaid_order(uow, order_id=order_id)
 
 
 @broker.task
@@ -44,7 +45,13 @@ async def sweep_expired_orders_task(uow=TaskiqDepends(get_uow)):
             minutes_ago=15
         )
     for order_id in expired_order_ids:
-        try:
-            await cancel_unpaid_order(uow, order_id=order_id)
-        except Exception as e:
-            log.error("Не удалось отменить заказ %s: %s", order_id, e)
+        async with uow.savepoint():
+            try:
+                await cancel_unpaid_order(uow, order_id=order_id)
+            except Exception as e:
+                log.error("Не удалось отменить заказ %s: %s", order_id, e)
+
+
+@broker.task(schedule=[{"cron": "0 3 * * *"}])
+async def check_suggested_categories(uow=TaskiqDepends(get_uow)):
+    await approve_suggested_category(uow=uow)

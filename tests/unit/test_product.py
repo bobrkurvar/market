@@ -85,13 +85,13 @@ def test_create_product_obj_without_seller():
 
 
 def test_create_product_obj_with_seller_without_id():
-    seller = Seller(username="username")
+    seller = Seller(username="username", password="password")
     with pytest.raises(ValueError, match="Товар не может существовать без продавца"):
         Product(title="title", seller=seller, category_id=1)
 
 
 def test_create_product_obj_with_seller_with_id():
-    seller = Seller(username="username", seller_id=1)
+    seller = Seller(username="username", seller_id=1, password="password")
     product = Product(title="title", seller=seller, category_id=1)
     assert product
 
@@ -102,6 +102,6 @@ def test_create_product_without_category_and_category_id():
 
 
 def test_create_product_with_category_without_id():
-    category = Category(name="name")
+    category = Category(name="name", is_folder=False)
     with pytest.raises(ValueError, match="Товар не может существовать без категории"):
         Product(title="title", seller_id=1, category=category)

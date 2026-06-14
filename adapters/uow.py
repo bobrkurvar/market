@@ -5,6 +5,7 @@ from adapters.repo.generic_repo import GenericRepository
 from adapters.repo.order_repo import OrderRepository
 from adapters.repo.product_repo import ProductRepository
 from adapters.repo.category_repo import CategoryRepository
+from contextlib import asynccontextmanager
 
 log = logging.getLogger(__name__)
 
@@ -50,3 +51,12 @@ class UnitOfWork:
 
     async def flush(self):
         await self.session.flush()
+
+    @asynccontextmanager
+    async def savepoint(self):
+        """
+        Создает точку сохранения (SAVEPOINT) внутри текущей транзакции UoW.
+        При ошибке откатывает только действия внутри своего блока.
+        """
+        async with self.session.begin_nested():
+            yield

@@ -21,14 +21,14 @@ class CategoryImageOut(BaseModel):
     def catalog_url(self) -> str | None:
         if not self.logo_url:
             return None
-        return CategoryImagesManager().get_category_catalog_image_path(self.logo_url)
+        return "/" + CategoryImagesManager().get_category_catalog_image_path(self.logo_url)
 
     @computed_field
     @property
     def search_url(self) -> str | None:
         if not self.logo_url:
             return None
-        return CategoryImagesManager().get_category_search_image_path(self.logo_url)
+        return "/" + CategoryImagesManager().get_category_search_image_path(self.logo_url)
 
     class Config:
         from_attributes = True
