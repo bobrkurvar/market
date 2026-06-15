@@ -149,5 +149,9 @@ class Product:
             raise ValueError("Товар без товарных позиций")
         return self._variants
 
+    def can_locate_in_category(self):
+        if self.category:
+            return not self.category.is_folder
+
     def __repr__(self):
         return f"<Product(id={self.id}, title='{self.title}')>"

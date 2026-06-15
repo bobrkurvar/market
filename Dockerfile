@@ -45,6 +45,7 @@ FROM base AS migrate
 COPY alembic.ini .
 COPY migrations migrations
 COPY db db
+COPY domain domain
 CMD ["alembic", "upgrade", "head"]
 
 FROM base AS runner

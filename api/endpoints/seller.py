@@ -4,6 +4,7 @@ from adapters.deps import UowDep, HttpClientDep, GetSellerDep, get_seller
 from adapters.images import ImageGenerator, ProductImagesManager
 from services.product import create_product
 from api.schemas import ProductCreate, ProductSellerListOut
+from infra.security import async_hash_calculate
 from typing import Annotated
 from domain import Category
 
@@ -29,7 +30,8 @@ async def seller_create_product(
         img=img,
         file_manager=ProductImagesManager(),
         img_generator=ImageGenerator(http_client),
-        uow=uow
+        uow=uow,
+        hash_calculator=async_hash_calculate
     )
 
 

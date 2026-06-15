@@ -5,6 +5,7 @@ from api.schemas import CategoryCreate, CategoryAdminOut
 from services.category import create_category
 from adapters.images import CategoryImagesManager, ImageGenerator
 from typing import Annotated
+from infra.security import async_hash_calculate
 
 router = APIRouter(prefix="/admin")
 
@@ -29,7 +30,8 @@ async def admin_create_category(
         category=category_dto.to_domain(),
         file_manager=CategoryImagesManager(),
         img_generator=ImageGenerator(http_client),
-        img=await file.read()
+        img=await file.read(),
+        hash_calculator=async_hash_calculate
     )
     return {"category": category}
 

@@ -131,7 +131,7 @@ const applySearch = () => {
   closeWebSocket()
   router.push({
     path: '/',
-    query: { q: searchInput.value || undefined, page: 1 }
+    query: { q: searchInput.value || undefined }
   })
 }
 
@@ -143,9 +143,16 @@ const clearSearch = () => {
 }
 
 const selectSuggestion = (item) => {
-  searchInput.value = item.name
   suggestions.value = []
-  applySearch()
+  closeWebSocket()
+
+  if (item.id && item.slug) {
+    searchInput.value = ''
+    router.push(`/categories/${item.slug}/${item.id}`)
+  } else {
+    searchInput.value = item.name
+    applySearch()
+  }
 }
 
 // --- WEBSOCKETS (ПОДСКАЗКИ) ---

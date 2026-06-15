@@ -10,17 +10,17 @@ class CategoryRepository:
         self.session = session
         self._registry = registry
 
-    async def get_popular_categories_by_orders(self, limit: int):
-        stmt = select(Category).outerjoin(Product, Product.category_id == Category.id)
-        stmt = apply_sold_items_filter(stmt, is_outer=True)
-        stmt = (
-            stmt
-            .group_by(Category.id)
-            .order_by(desc(func.count(ProductItem.id)))
-            .limit(limit)
-        )
-        result = (await self.session.execute(stmt)).scalars()
-        return tuple(self._registry.to_domain(cat) for cat in result)
+    # async def get_popular_categories_by_orders(self, limit: int):
+    #     stmt = select(Category).outerjoin(Product, Product.category_id == Category.id)
+    #     stmt = apply_sold_items_filter(stmt, is_outer=True)
+    #     stmt = (
+    #         stmt
+    #         .group_by(Category.id)
+    #         .order_by(desc(func.count(ProductItem.id)))
+    #         .limit(limit)
+    #     )
+    #     result = (await self.session.execute(stmt)).scalars()
+    #     return tuple(self._registry.to_domain(cat) for cat in result)
 
 
     async def get_leaf_categories(self) -> tuple:

@@ -25,7 +25,7 @@ def map_category_to_orm(d_obj: domain.Category) -> models.Category:
         parent_id=d_obj.parent_id,
         logo_url=d_obj.logo_url,
         is_folder=d_obj.is_folder,
-        children = [map_category_to_orm(child) for child in d_obj.children]
+        children=[map_category_to_orm(child) for child in d_obj.children]
     )
 
 

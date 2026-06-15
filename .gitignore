@@ -3,5 +3,7 @@
 .idea/
 .env
 media/
+scripts/seed_categories
+scripts/seed_products
 
 

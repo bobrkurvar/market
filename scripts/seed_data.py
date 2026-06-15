@@ -14,6 +14,7 @@ from adapters.uow import UnitOfWork
 from adapters.http_client import HttpClient
 from adapters.db_provider import DbProvider
 from adapters.images import ImageGenerator, ProductImagesManager, CategoryImagesManager
+from infra.security import async_hash_calculate
 
 setup_logging()
 
@@ -35,10 +36,10 @@ cat_images_pool = get_files_from_dir(SOURCE_CAT_DIR)
 prod_images_pool = get_files_from_dir(SOURCE_PROD_DIR)
 
 
-
 async def seed_data(uow, product_file_manager, category_file_manager, img_generator):
     log.info("Начинаем генерацию презентабельных данных...")
 
+    # --- 1. ГЕНЕРАЦИЯ ПРОДАВЦОВ ---
     log.info("Создаем продавцов...")
     sellers = []
 
@@ -53,25 +54,51 @@ async def seed_data(uow, product_file_manager, category_file_manager, img_genera
 
     log.info(f"✅ Создано продавцов: {len(sellers)}")
 
-    # --- 2. ГЕНЕРАЦИЯ КАТЕГОРИЙ
-    log.info("Создаем категории...")
-    categories = []
+    # --- 2. ГЕНЕРАЦИЯ КАТЕГОРИЙ (Папки и Листы) ---
+    log.info("Создаем корневые категории (Папки)...")
+    folder_categories = []
 
-    for _ in range(6):
+    # Создаем 2 папки
+    for _ in range(2):
         img_filename = random.choice(cat_images_pool)
         with open(os.path.join(SOURCE_CAT_DIR, img_filename), "rb") as f:
             img_bytes = f.read()
 
-        saved_cat = await create_category(
+        saved_folder = await create_category(
             uow=uow,
             img=img_bytes,
             file_manager=category_file_manager,
             img_generator=img_generator,
-            category=Category(name=fake['ru_RU'].word().capitalize())
+            category=Category(name=fake['ru_RU'].word().capitalize(), is_folder=True),
+            hash_calculator=async_hash_calculate
         )
-        categories.append(saved_cat)
+        folder_categories.append(saved_folder)
 
-    log.info(f"✅ Создано категорий: {len(categories)}")
+    log.info("Создаем конечные категории (Листы)...")
+    leaf_categories = []
+
+    # Создаем 4 листа и привязываем их к созданным папкам
+    for _ in range(4):
+        parent_folder = random.choice(folder_categories)
+        img_filename = random.choice(cat_images_pool)
+        with open(os.path.join(SOURCE_CAT_DIR, img_filename), "rb") as f:
+            img_bytes = f.read()
+
+        saved_leaf = await create_category(
+            uow=uow,
+            img=img_bytes,
+            file_manager=category_file_manager,
+            img_generator=img_generator,
+            category=Category(
+                name=fake['ru_RU'].word().capitalize(),
+                is_folder=False,
+                parent_id=parent_folder.id
+            ),
+            hash_calculator=async_hash_calculate
+        )
+        leaf_categories.append(saved_leaf)
+
+    log.info(f"✅ Создано папок: {len(folder_categories)}, листов: {len(leaf_categories)}")
 
     # --- 3. ГЕНЕРАЦИЯ ТОВАРОВ ---
     log.info("Создаем товары...")
@@ -79,7 +106,10 @@ async def seed_data(uow, product_file_manager, category_file_manager, img_genera
 
     for i in range(1, products_to_create + 1):
         seller = random.choice(sellers)
-        category = random.choice(categories)
+
+        # ВАЖНО: Товары можно класть только в листы!
+        category = random.choice(leaf_categories)
+
         img_filename = random.choice(prod_images_pool)
         with open(os.path.join(SOURCE_PROD_DIR, img_filename), "rb") as f:
             img_bytes = f.read()
@@ -117,11 +147,13 @@ async def seed_data(uow, product_file_manager, category_file_manager, img_genera
             img=img_bytes,
             file_manager=product_file_manager,
             img_generator=img_generator,
-            product=product
+            product=product,
+            hash_calculator=async_hash_calculate
         )
 
     log.info(f"✅ Создано товаров: {products_to_create}")
     log.info("🎉 Генерация полностью завершена!")
+
 
 if __name__ == "__main__":
     db_provider = DbProvider(conf.db_url)

@@ -36,7 +36,7 @@ def map_product_item_to_orm(d_obj: domain.ProductItem) -> models.ProductItem:
 
 def map_product_to_domain(orm_obj: models.Product) -> domain.Product:
     insp = inspect(orm_obj)
-    variants = []
+    variants = None
     if "variants" not in insp.unloaded:
         variants = [map_product_variant_to_domain(variant) for variant in orm_obj.variants]
     category = None

@@ -1,7 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import DECIMAL, BigInteger, ForeignKey, String, Text, func, Index, literal_column, CheckConstraint
+from sqlalchemy import DECIMAL, BigInteger, ForeignKey, String, Text, func, Index, CheckConstraint, UniqueConstraint
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import JSONB
@@ -36,7 +36,7 @@ class Product(Base):
         # 1. Полнотекстовый поиск (FTS) по заголовку и описанию (склонения)
         Index(
             "idx_product_fts",
-            func.to_tsvector(literal_column("'russian'"), title),
+            func.to_tsvector("russian", description),
             postgresql_using="gin",
         ),
         # 2. Индекс для Триграмм по заголовку
@@ -78,7 +78,7 @@ class ProductItem(Base):
     variant: Mapped["ProductVariant"] = relationship("ProductVariant", back_populates="items")
     __table_args__ = (
         CheckConstraint(
-            f"status_name IN ({', '.join(f"'{status}'" for status in ProductItemStatuses)})",
+            "status_name IN ({})".format(", ".join(f"'{status}'" for status in ProductItemStatuses)),
             name="check_product_item_status"
         ),
     )
@@ -161,7 +161,7 @@ class Order(Base):
     product_snapshot: Mapped[dict] = mapped_column(JSONB, default={}, server_default='{}')
     __table_args__ = (
         CheckConstraint(
-            f"status_name IN ({', '.join(f"'{status}'" for status in OrderStatuses)})",
+            "status_name IN ({})".format(", ".join(f"'{status}'" for status in OrderStatuses)),
             name="check_order_status"
         ),
     )
@@ -172,7 +172,7 @@ class Category(Base):
     __tablename__ = "categories"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(nullable=False)
     logo_url: Mapped[str]
     is_folder: Mapped[bool]
     parent_id: Mapped[int | None] = mapped_column(
@@ -198,6 +198,9 @@ class Category(Base):
         "Product",
         back_populates="category"
     )
+    __table_args__ = (
+        UniqueConstraint('name', 'parent_id', name='uix_name_parent_id'),
+    )
 
 
 class SuggestedCategory(Base):
@@ -206,10 +209,9 @@ class SuggestedCategory(Base):
     name: Mapped[str] = mapped_column(primary_key=True)
     products_count: Mapped[int]
     status_name: Mapped[str]
-
     __table_args__ = (
         CheckConstraint(
-            f"status_name IN ({', '.join(f"'{status}'" for status in SuggestionStatus)})",
+            "status_name IN ({})".format(", ".join(f"'{status}'" for status in SuggestionStatus)),
             name="check_suggested_category_status"
         ),
     )
