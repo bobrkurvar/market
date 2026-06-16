@@ -5,9 +5,14 @@ from sqlalchemy import inspect
 
 
 def map_category_to_domain(orm_obj: models.Category) -> domain.Category:
-    children = []
-    if "children" not in inspect(orm_obj).unloaded:
-        children = [map_category_to_domain(item) for item in orm_obj.children]
+    insp = inspect(orm_obj)
+    # children = None
+    # if "children" not in insp.unloaded and orm_obj.children:
+    #     children = [map_category_to_domain(item) for item in orm_obj.children]
+
+    parent = None
+    if "parent" not in insp.unloaded and orm_obj.parent is not None:
+        parent = map_category_to_domain(orm_obj.parent)
 
     return domain.Category(
         category_id=orm_obj.id,
@@ -15,7 +20,9 @@ def map_category_to_domain(orm_obj: models.Category) -> domain.Category:
         parent_id=orm_obj.parent_id,
         logo_url=orm_obj.logo_url,
         is_folder=orm_obj.is_folder,
-        children=children
+        #children=children,
+        parent=parent,
+        filter_config=orm_obj.filter_config
     )
 
 
@@ -25,7 +32,8 @@ def map_category_to_orm(d_obj: domain.Category) -> models.Category:
         parent_id=d_obj.parent_id,
         logo_url=d_obj.logo_url,
         is_folder=d_obj.is_folder,
-        children=[map_category_to_orm(child) for child in d_obj.children]
+        children=[map_category_to_orm(child) for child in d_obj.children],
+        filter_config=d_obj.filter_config
     )
 
 

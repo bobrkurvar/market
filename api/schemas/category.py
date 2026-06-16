@@ -1,16 +1,35 @@
-from pydantic import BaseModel, computed_field
+from pydantic import BaseModel, computed_field, Field
 from domain import Category
 from adapters.images import CategoryImagesManager
 from .base import BaseInput
 from slugify import slugify
+from enum import StrEnum
+
+class FilterType(StrEnum):
+    CHECKBOX = "checkbox"
+    SELECT = "select"
+    RADIO = "radio"
+    RANGE = "range"
+
+class FilterRule(BaseModel):
+    key: str
+    label: str
+    type: FilterType
+    options: list[str] | None = None
 
 
 class CategoryCreate(BaseInput):
     name: str
     parent_id: int | None = None
+    filter_config: list[FilterRule] = Field(default_factory=list)
 
     def to_domain(self):
-        return Category(name=self.name, parent_id=self.parent_id)
+        return Category(
+            name=self.name,
+            parent_id=self.parent_id,
+            is_folder=True,
+            filter_config=[fil.model_dump() for fil in  self.filter_config]
+        )
 
 
 class CategoryImageOut(BaseModel):
@@ -44,6 +63,8 @@ class CategoryAdminOut(CategoryImageOut):
 class CategoryOut(CategoryImageOut):
     id: int
     name: str
+    parent: "CategoryOut | None" = None
+    filter_config: list[FilterRule] | None = None
     @computed_field
     @property
     def slug(self) -> str:

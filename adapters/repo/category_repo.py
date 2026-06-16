@@ -1,4 +1,5 @@
-from sqlalchemy import select, exists, desc, func
+from sqlalchemy import select, exists, desc, func, literal
+from sqlalchemy.orm import aliased
 from db.models import Category, Product, ProductItem, SuggestedCategory as SuggestedCategoryORM
 from sqlalchemy.dialects.postgresql import insert
 from .query_utils import apply_sold_items_filter
@@ -59,7 +60,6 @@ class CategoryRepository:
 
     async def search_categories_by_product(self, query: str, limit: int = 10):
         trgm_sim = func.similarity(Product.title, query)
-
         stmt = (
             select(
                 Category,
@@ -114,3 +114,23 @@ class CategoryRepository:
             }
         )
         await self.session.execute(stmt)
+
+    async def get_category_branch(self, category_id: int):
+        base_query = (
+            select(Category.id, Category.parent_id, literal(0).label('lvl'))
+            .where(Category.id == category_id)
+            .cte(name="cat_tree", recursive=True)
+        )
+        parent_cat = aliased(Category)
+        recursive_query = (
+            select(parent_cat.id, parent_cat.parent_id, (base_query.c.lvl + 1).label('lvl'))
+            .join(base_query, parent_cat.id == base_query.c.parent_id)
+        )
+        tree_cte = base_query.union_all(recursive_query)
+        stmt = (
+            select(Category)
+            .join(tree_cte, Category.id == tree_cte.c.id)
+            .order_by(tree_cte.c.lvl.desc())
+        )
+        result = await self.session.execute(stmt)
+        return tuple(self._registry.to_domain(cat) for cat in result.scalars())

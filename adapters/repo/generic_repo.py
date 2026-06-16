@@ -146,15 +146,6 @@ class GenericRepository:
             return isinstance(obj, Collection) and not isinstance(obj, (str, bytes, bytearray))
 
         conditions = []
-        # operators_map = {
-        #     "exact": operator.eq,
-        #     "gte": operator.ge,
-        #     "lte": operator.le,
-        #     "gt": operator.gt,
-        #     "lt": operator.lt,
-        #     "ilike": lambda attr, value: attr.ilike(value),
-        #     "in": lambda attr, value: attr.in_(value),
-        # }
         operators_map = {
             Operations.exact: operator.eq,
             Operations.gte: operator.ge,

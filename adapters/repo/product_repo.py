@@ -1,11 +1,11 @@
 import logging
 
-from sqlalchemy import select, func, or_, desc
+from sqlalchemy import select, func, or_, desc, exists
 from sqlalchemy.orm import selectinload
 
-from db.models import ProductItem, Product, ProductVariant, Category
+from db.models import ProductItem, Product, ProductVariant
 from domain import ProductItemStatuses
-from .query_utils import apply_sold_items_filter
+#from .query_utils import apply_sold_items_filter
 
 log = logging.getLogger(__name__)
 
@@ -28,6 +28,35 @@ class ProductRepository:
         result = (await self.session.execute(query)).scalars()
         return tuple(self._registry.to_domain(r) for r in result)
 
+    async def get_filtered_products(
+        self,
+        category_id: int,
+        limit: int,
+        offset: int,
+        max_price: int | None = None,
+        min_price: int | None = None,
+        **filters
+    ):
+        stmt = select(Product).where(Product.category_id == category_id)
+        if min_price is not None:
+            stmt = stmt.where(
+                exists().where(
+                    (ProductVariant.product_id == Product.id) &
+                    (ProductVariant.price >= min_price)
+                )
+            )
+
+        if max_price is not None:
+            stmt = stmt.where(
+                exists().where(
+                    (ProductVariant.product_id == Product.id) &
+                    (ProductVariant.price <= max_price)
+                )
+            )
+
+
+        stmt = stmt.limit(limit).offset(offset)
+        # доработать логику
 
     # async def get_popular_products_by_orders(self, limit: int):
     #     stmt = select(Product)

@@ -199,11 +199,11 @@ const isSearchActive = computed(() => !!route.query.q)
 const homeLimit = 8 // Лимит и для категорий, и для товаров
 const searchLimit = 8
 
-// Функция маскировки "Прочее" под имя родителя
 const getDisplayCategoryName = (category) => {
   if (!category) return '';
-  if (category.name === 'Прочее' && category.parent) {
-    return category.parent.name;
+  // Если это подкатегория "Прочее", выводим "Родитель — Прочее"
+  if (category.name.toLowerCase() === 'прочее' && category.parent) {
+    return `${category.parent.name} — Прочее`;
   }
   return category.name;
 }
@@ -241,14 +241,18 @@ if (homeData.value) {
 const loadMoreCategories = async () => {
   isLoadingCats.value = true;
   try {
-    const res = await $api('/api/home', {
+    // Меняем эндпоинт на профильный
+    const res = await $api('/api/categories', {
       query: { limit: homeLimit, offset: catOffset.value }
     });
 
-    if (res.categories && res.categories.length > 0) {
-      homeCategories.value.push(...res.categories);
+    // В зависимости от того, как отвечает твой API категорий (список или объект с items)
+    const newCategories = res.items || res;
+
+    if (newCategories && newCategories.length > 0) {
+      homeCategories.value.push(...newCategories);
       catOffset.value += homeLimit;
-      if (res.categories.length < homeLimit) hasMoreCategories.value = false;
+      if (newCategories.length < homeLimit) hasMoreCategories.value = false;
     } else {
       hasMoreCategories.value = false;
     }
@@ -263,14 +267,18 @@ const loadMoreCategories = async () => {
 const loadMoreProducts = async () => {
   isLoadingProds.value = true;
   try {
-    const res = await $api('/api/home', {
+    // Меняем эндпоинт на профильный
+    const res = await $api('/api/products', {
       query: { limit: homeLimit, offset: prodOffset.value }
     });
 
-    if (res.products && res.products.length > 0) {
-      homeProducts.value.push(...res.products);
+    // Эндпоинт товаров возвращает объект с массивом items
+    const newProducts = res.items;
+
+    if (newProducts && newProducts.length > 0) {
+      homeProducts.value.push(...newProducts);
       prodOffset.value += homeLimit;
-      if (res.products.length < homeLimit) hasMoreProducts.value = false;
+      if (newProducts.length < homeLimit) hasMoreProducts.value = false;
     } else {
       hasMoreProducts.value = false;
     }

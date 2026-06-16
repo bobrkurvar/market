@@ -1,7 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import DECIMAL, BigInteger, ForeignKey, String, Text, func, Index, CheckConstraint, UniqueConstraint
+from sqlalchemy import DECIMAL, BigInteger, ForeignKey, String, Text, func, Index, CheckConstraint, UniqueConstraint, literal_column
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import JSONB
@@ -36,7 +36,7 @@ class Product(Base):
         # 1. Полнотекстовый поиск (FTS) по заголовку и описанию (склонения)
         Index(
             "idx_product_fts",
-            func.to_tsvector("russian", description),
+            func.to_tsvector(literal_column("'russian'"), description),
             postgresql_using="gin",
         ),
         # 2. Индекс для Триграмм по заголовку
@@ -150,9 +150,6 @@ class Order(Base):
     )
     payment_link: Mapped[str | None] = mapped_column(default=None, nullable=True)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
-    # status_name: Mapped[str] = mapped_column(
-    #     ForeignKey("order_statuses.name"),
-    # )
     status_name: Mapped[str]
     items: Mapped[list["ProductItem"]] = relationship("ProductItem")
     client: Mapped["Client"] = relationship("Client")
@@ -180,6 +177,7 @@ class Category(Base):
         nullable=True,
         index=True
     )
+    filter_config: Mapped[list[dict]] = mapped_column(JSONB, nullable=True, default=list)
 
     parent: Mapped["Category | None"] = relationship(
         "Category",

@@ -9,14 +9,18 @@ class Category:
         logo_url: str | None = None,
         category_id: int | None = None,
         parent_id: int | None = None,
+        parent: "Category" = None,
         children: list["Category"] | None = None,
+        filter_config: list[dict] | None = None
     ):
         self.name = name
         self.id = category_id
-        self.parent_id = parent_id
+        self.parent = parent
+        self.parent_id = parent.id if parent else parent_id
         self.logo_url = logo_url
         self.is_folder = is_folder
         self.children = children or []
+        self.filter_config = filter_config or []
 
     def validate_parent(self, parent_category: "Category") -> None:
         """Проверяет, может ли переданная категория быть родителем для текущей."""
@@ -37,7 +41,8 @@ class Category:
             Category(
                 name="Прочее",
                 is_folder=False,
-                logo_url=self.logo_url
+                logo_url=self.logo_url,
+                filter_config=self.filter_config
             )
         )
 

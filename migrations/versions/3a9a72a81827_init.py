@@ -1,8 +1,8 @@
 """init
 
-Revision ID: c2dbdafdafd2
+Revision ID: 3a9a72a81827
 Revises: 
-Create Date: 2026-06-15 12:20:23.836156
+Create Date: 2026-06-16 13:48:28.378321
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = 'c2dbdafdafd2'
+revision: str = '3a9a72a81827'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -26,6 +26,7 @@ def upgrade() -> None:
     sa.Column('logo_url', sa.String(), nullable=False),
     sa.Column('is_folder', sa.Boolean(), nullable=False),
     sa.Column('parent_id', sa.Integer(), nullable=True),
+    sa.Column('filter_config', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.ForeignKeyConstraint(['parent_id'], ['categories.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('name', 'parent_id', name='uix_name_parent_id')
@@ -70,7 +71,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['seller_id'], ['sellers.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index('idx_product_fts', 'products', [sa.literal_column("to_tsvector('russian', title)")], unique=False, postgresql_using='gin')
+    op.create_index('idx_product_fts', 'products', [sa.literal_column("to_tsvector('russian', description)")], unique=False, postgresql_using='gin')
     op.create_index('idx_product_title_trgm', 'products', ['title'], unique=False, postgresql_using='gin', postgresql_ops={'title': 'gin_trgm_ops'})
     op.create_table('product_variants',
     sa.Column('id', sa.BigInteger(), nullable=False),
