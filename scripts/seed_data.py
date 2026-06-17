@@ -13,7 +13,8 @@ from adapters.uow import UnitOfWork
 from core import conf
 from core.logger import setup_logging
 from db.mapper import registry
-from domain import Category, Product, ProductItem, ProductVariant, UserRole
+# ОБРАТИ ВНИМАНИЕ: Убедись, что CategoryAttr импортируется из правильного места (domain или schema)
+from domain import Category, Product, ProductItem, ProductVariant, UserRole, CategoryAttr
 from infra.security import async_hash_calculate
 from services.auth import create_user
 from services.category import create_category
@@ -27,54 +28,60 @@ fake = Faker(["ru_RU", "en_US"])
 SOURCE_CAT_DIR = "scripts/seed_categories"
 SOURCE_PROD_DIR = "scripts/seed_products"
 
-
+# --- ИЗМЕНЕНИЕ 1: Используем CategoryAttr вместо словарей ---
 FOLDER_FILTERS_POOL = [
     [
-        {
-            "key": "platform",
-            "label": "Платформа",
-            "type": "checkbox",
-            "options": ["Steam", "Epic Games", "Origin"],
-        },
-        {
-            "key": "region",
-            "label": "Регион активации",
-            "type": "select",
-            "options": ["Global", "Turkey", "CIS"],
-        },
+        CategoryAttr(
+            key="platform",
+            label="Платформа",
+            attr_type="checkbox",
+            options=["Steam", "Epic Games", "Origin"],
+            strict_options=True
+        ),
+        CategoryAttr(
+            key="region",
+            label="Регион активации",
+            attr_type="select",
+            options=["Global", "Turkey", "CIS"],
+            strict_options=True
+        ),
     ],
     [
-        {
-            "key": "os",
-            "label": "Операционная система",
-            "type": "radio",
-            "options": ["Windows 11", "Windows 10", "macOS"],
-        },
-        {
-            "key": "duration",
-            "label": "Срок действия",
-            "type": "select",
-            "options": ["1 месяц", "12 месяцев", "Навсегда"],
-        },
+        CategoryAttr(
+            key="os",
+            label="Операционная система",
+            attr_type="radio",
+            options=["Windows 11", "Windows 10", "macOS"],
+            strict_options=True
+        ),
+        CategoryAttr(
+            key="duration",
+            label="Срок действия",
+            attr_type="select",
+            options=["1 месяц", "12 месяцев", "Навсегда"],
+            strict_options=True
+        ),
     ],
 ]
 
 LEAF_FILTERS_POOL = [
     [
-        {
-            "key": "edition",
-            "label": "Издание",
-            "type": "checkbox",
-            "options": ["Standard", "Deluxe", "Ultimate"],
-        }
+        CategoryAttr(
+            key="edition",
+            label="Издание",
+            attr_type="checkbox",
+            options=["Standard", "Deluxe", "Ultimate"],
+            strict_options=True
+        )
     ],
     [
-        {
-            "key": "language",
-            "label": "Язык",
-            "type": "select",
-            "options": ["Русский", "English", "Multilanguage"],
-        }
+        CategoryAttr(
+            key="language",
+            label="Язык",
+            attr_type="select",
+            options=["Русский", "English", "Multilanguage"],
+            strict_options=True
+        )
     ],
     [],  # Лист может и не иметь уникальных фильтров, наследуя только родительские
 ]
@@ -176,13 +183,11 @@ async def seed_data(uow, product_file_manager, category_file_manager, img_genera
         seller = random.choice(sellers)
         category = random.choice(leaf_categories)
 
-        # Находим папку-родителя, чтобы собрать ключи для атрибутов (имитация слияния фильтров)
+        # Находим папку-родителя
         parent_folder = next(f for f in folder_categories if f.id == category.parent_id)
 
-        # Собираем ключи, которые обязаны быть в варианте, чтобы он отобразился в фильтрах
-        expected_keys = [f["key"] for f in parent_folder.filter_config] + [
-            f["key"] for f in category.filter_config
-        ]
+        # --- ИЗМЕНЕНИЕ 2: Собираем ОБЪЕКТЫ обязательных атрибутов (а не просто их ключи) ---
+        expected_attrs = parent_folder.filter_config + category.filter_config
 
         img_filename = random.choice(prod_images_pool)
         with open(os.path.join(SOURCE_PROD_DIR, img_filename), "rb") as f:
@@ -203,33 +208,15 @@ async def seed_data(uow, product_file_manager, category_file_manager, img_genera
                 item = ProductItem(content=key_content)
                 product_items.append(item)
 
-            # Формируем реалистичные атрибуты варианта на основе ключей категории
+            # --- ИЗМЕНЕНИЕ 3: Динамически генерируем значения на основе опций атрибута ---
             variant_attributes = {}
-            for key in expected_keys:
-                if key == "platform":
-                    variant_attributes[key] = random.choice(
-                        ["Steam", "Epic Games", "Origin"]
-                    )
-                elif key == "region":
-                    variant_attributes[key] = random.choice(["Global", "Turkey", "CIS"])
-                elif key == "os":
-                    variant_attributes[key] = random.choice(
-                        ["Windows 11", "Windows 10", "macOS"]
-                    )
-                elif key == "duration":
-                    variant_attributes[key] = random.choice(
-                        ["1 месяц", "12 месяцев", "Навсегда"]
-                    )
-                elif key == "edition":
-                    variant_attributes[key] = random.choice(
-                        ["Standard", "Deluxe", "Ultimate"]
-                    )
-                elif key == "language":
-                    variant_attributes[key] = random.choice(
-                        ["Русский", "English", "Multilanguage"]
-                    )
+            for attr in expected_attrs:
+                # Если у атрибута есть заранее заготовленные опции - выбираем случайную из них
+                if attr.options:
+                    variant_attributes[attr.key] = random.choice(attr.options)
                 else:
-                    variant_attributes[key] = fake.word().capitalize()
+                    # Если опций нет (свободный ввод), придумываем случайное слово
+                    variant_attributes[attr.key] = fake.word().capitalize()
 
             # Добавляем свободный "информационный" атрибут, который не участвует в фильтрах
             variant_attributes["Доставка"] = "Моментальная"

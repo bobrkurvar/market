@@ -1,6 +1,6 @@
 import logging
 
-from sqlalchemy import desc, exists, func, or_, select
+from sqlalchemy import desc, exists, func, or_, and_, select
 from sqlalchemy.orm import selectinload
 
 from db.models import Product, ProductItem, ProductVariant
@@ -31,32 +31,51 @@ class ProductRepository:
 
     async def get_filtered_products(
         self,
-        category_id: int,
         limit: int,
         offset: int,
-        max_price: int | None = None,
-        min_price: int | None = None,
+        category_id: int | None = None,
+        max_price: float | None = None,
+        min_price: float | None = None,
         **filters
     ):
-        stmt = select(Product).where(Product.category_id == category_id)
+        stmt = select(Product)
+
+        if category_id:
+            stmt = stmt.where(Product.category_id == category_id)
+
+        variant_conditions = [ProductVariant.product_id == Product.id]
+
         if min_price is not None:
-            stmt = stmt.where(
-                exists().where(
-                    (ProductVariant.product_id == Product.id)
-                    & (ProductVariant.price >= min_price)
+            variant_conditions.append(ProductVariant.price >= min_price)
+        if max_price is not None:
+            variant_conditions.append(ProductVariant.price <= max_price)
+
+        for key, value in filters.items():
+            if not value:
+                continue
+
+            if isinstance(value, list):
+                variant_conditions.append(
+                    ProductVariant.attributes[key].astext.in_(value)
                 )
+            else:
+                variant_conditions.append(
+                    ProductVariant.attributes[key].astext == str(value)
+                )
+
+        if len(variant_conditions) > 1:
+            stmt = stmt.where(
+                exists().where(and_(*variant_conditions))
             )
 
-        if max_price is not None:
-            stmt = stmt.where(
-                exists().where(
-                    (ProductVariant.product_id == Product.id)
-                    & (ProductVariant.price <= max_price)
-                )
-            )
+        stmt = stmt.options(selectinload(Product.variants))
+
+        count_stmt = select(func.count()).select_from(stmt.subquery())
+        total_count = await self.session.scalar(count_stmt)
 
         stmt = stmt.limit(limit).offset(offset)
-        # доработать логику
+        result = (await self.session.scalars(stmt)).unique()
+        return [self._registry.to_domain(r) for r in result], total_count
 
     # async def get_popular_products_by_orders(self, limit: int):
     #     stmt = select(Product)

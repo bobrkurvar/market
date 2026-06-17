@@ -18,36 +18,37 @@ async def get_products(
     limit: int,
     offset: int,
     request: Request,
-    min_price: int | None = None,
-    max_price: int | None = None,
+    min_price: float | None = None,
+    max_price: float | None = None,
     category_id: int | None = None,
     q: str | None = None,
 ):
+    # После фильтров должен автоматически выбраться вариант первый подходящий под все фильтры и
+    # при нажатии на продукт перво наперво должен быть выбран этот вариант, в том числе и его цена
     raw_params = dict(request.query_params)
-    filters: dict[str, Any] = {
-        k: v
-        for k, v in raw_params.items()
-        if k not in ("limit", "offset", "q", "max_price", "min_price")
-    }
+    filters: dict[str, Any] = {}
+
+    for k, v in raw_params.items():
+        if k not in ("limit", "offset", "q", "max_price", "min_price", "category_id"):
+            if isinstance(v, str) and "," in v:
+                filters[k] = v.split(",")
+            else:
+                filters[k] = v
+
     async with uow:
         if q:
             products, count = await uow.product.search_products(
-                query=q, limit=limit, offset=offset
+                query=q, limit=limit, offset=offset, min_price=min_price, max_price=max_price
             )
         else:
-            # filters = {}
-            if min_price is not None:
-                filters.update(price=Operation(value=min_price, op=Operations.gte))
-            if max_price is not None:
-                filters.update(price=Operation(value=max_price, op=Operations.lte))
-            if category_id:
-                filters.update(category_id=category_id)
-
-            products = await uow.db.read(
-                Product, loaded="variants", **filters, limit=limit, offset=offset
+            products, count = await uow.product.get_filtered_products(
+                category_id=category_id,
+                limit=limit,
+                offset=offset,
+                min_price=min_price,
+                max_price=max_price,
+                **filters
             )
-            count = await uow.db.count(Product, **filters)
-
     return {"items": products, "total": count}
 
 

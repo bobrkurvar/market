@@ -30,14 +30,16 @@ async def get_category(uow: UowDep, slug: str, category_id: int):
     async with uow:
         ancestors = await uow.category.get_category_branch(category_id)
         target_category = ancestors[-1]
-        merged_filters: dict[str, FilterRule] = {
-            "price": FilterRule(key="price", label="Цена", type=FilterType.RANGE)
-        }
+
+        merged_filters: dict[str, FilterRule] = {}
         for cat in ancestors:
             for f_rule in cat.filter_config:
                 merged_filters[f_rule.key] = f_rule
 
+        merged_filters["price"] = FilterRule(key="price", label="Цена", type=FilterType.RANGE)
+
         target_category.filter_config = list(merged_filters.values())
+
         if target_category.is_folder:
             target_category.children = await uow.db.read(Category, parent_id=category_id)
         else:
