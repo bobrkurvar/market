@@ -134,59 +134,64 @@
         </UButton>
       </div>
 
-      <div v-if="isInitialLoad" class="flex justify-center py-20">
-        <UIcon name="i-heroicons-arrow-path" class="animate-spin w-10 h-10 text-primary-500" />
-      </div>
+      <div class="flex flex-col md:flex-row gap-8 flex-grow pb-10">
 
-      <div v-else-if="searchResults.length > 0" class="flex-grow flex flex-col pb-10">
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          <NuxtLink
-            v-for="product in searchResults"
-            :key="product.id"
-            :to="`/products/${product.slug}/${product.id}`"
-            class="block outline-none"
-          >
-            <UCard
-              class="flex flex-col h-full cursor-pointer transition-all duration-200 hover:ring-2 hover:ring-primary-500 hover:shadow-md overflow-hidden"
-              :ui="{ header: { padding: 'p-0 sm:p-0' }, body: { padding: 'p-4 sm:p-4 flex-grow flex flex-col' } }"
-            >
-              <template #header>
-                <div class="aspect-video w-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden relative">
-                  <img v-if="product.catalog_url" :src="product.catalog_url" @error="$event.target.style.display='none'" :alt="product.title" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105" />
-                  <img v-else-if="product.image_url" :src="product.image_url" @error="$event.target.style.display='none'" :alt="product.title" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105" />
-                  <UIcon v-else name="i-heroicons-photo" class="w-12 h-12 text-gray-300 dark:text-gray-600" />
-                </div>
-              </template>
+        <ProductFilters v-if="searchResults.length > 0 || hasActiveSearchFilters" />
 
-              <div v-if="product.category" class="flex items-center gap-1.5 text-xs text-primary-500 font-medium mb-1">
-                <img v-if="product.category.search_url" :src="product.category.search_url" :alt="product.category.name" class="w-4 h-4 object-contain" />
-                <span>{{ getDisplayCategoryName(product.category) }}</span>
-              </div>
+        <main class="flex-grow flex flex-col min-w-0">
+          <div v-if="isInitialLoad" class="flex justify-center py-20">
+            <UIcon name="i-heroicons-arrow-path" class="animate-spin w-10 h-10 text-primary-500" />
+          </div>
 
-              <div class="font-bold text-lg truncate" :title="product.title">{{ product.title }}</div>
-              <p class="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mt-2 flex-grow">{{ product.description }}</p>
-              <template #footer>
-                <div class="flex items-center justify-between">
-                  <span class="text-xl font-bold text-green-600 dark:text-green-400">{{ product.price }} ₽</span>
-                  <UButton color="primary" size="sm" icon="i-heroicons-shopping-cart" pointer-events-none>Купить</UButton>
-                </div>
-              </template>
-            </UCard>
-          </NuxtLink>
-        </div>
+          <div v-else-if="searchResults.length > 0" class="flex-grow flex flex-col">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
+              <NuxtLink
+                v-for="product in searchResults"
+                :key="product.id"
+                :to="`/products/${product.slug}/${product.id}`"
+                class="block outline-none"
+              >
+                <UCard
+                  class="flex flex-col h-full cursor-pointer transition-all duration-200 hover:ring-2 hover:ring-primary-500 hover:shadow-md overflow-hidden"
+                  :ui="{ header: { padding: 'p-0 sm:p-0' }, body: { padding: 'p-4 sm:p-4 flex-grow flex flex-col' } }"
+                >
+                  <template #header>
+                    <div class="aspect-video w-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden relative">
+                      <img v-if="product.catalog_url" :src="product.catalog_url" @error="$event.target.style.display='none'" :alt="product.title" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105" />
+                      <img v-else-if="product.image_url" :src="product.image_url" @error="$event.target.style.display='none'" :alt="product.title" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105" />
+                      <UIcon v-else name="i-heroicons-photo" class="w-12 h-12 text-gray-300 dark:text-gray-600" />
+                    </div>
+                  </template>
 
-        <div v-if="isLoadingMore" class="flex justify-center mt-8">
-          <UIcon name="i-heroicons-arrow-path" class="animate-spin w-8 h-8 text-primary-500" />
-        </div>
-      </div>
+                  <div v-if="product.category" class="flex items-center gap-1.5 text-xs text-primary-500 font-medium mb-1">
+                    <img v-if="product.category.search_url" :src="product.category.search_url" :alt="product.category.name" class="w-4 h-4 object-contain" />
+                    <span>{{ getDisplayCategoryName(product.category) }}</span>
+                  </div>
 
-      <div v-else class="text-center py-20 flex-grow">
-        <UIcon name="i-heroicons-face-frown" class="w-16 h-16 text-gray-400 mx-auto mb-4" />
-        <h3 class="text-xl font-bold">Ничего не найдено</h3>
-        <p class="text-gray-500 mt-2">Попробуйте изменить поисковой запрос</p>
-        <UButton class="mt-4" color="primary" variant="soft" @click="router.push('/')">
-          Сбросить поиск
-        </UButton>
+                  <div class="font-bold text-lg truncate" :title="product.title">{{ product.title }}</div>
+                  <p class="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mt-2 flex-grow">{{ product.description }}</p>
+                  <template #footer>
+                    <div class="flex items-center justify-between">
+                      <span class="text-xl font-bold text-green-600 dark:text-green-400">{{ product.price }} ₽</span>
+                      <UButton color="primary" size="sm" icon="i-heroicons-shopping-cart" pointer-events-none>Купить</UButton>
+                    </div>
+                  </template>
+                </UCard>
+              </NuxtLink>
+            </div>
+
+            <div v-if="isLoadingMore" class="flex justify-center mt-8">
+              <UIcon name="i-heroicons-arrow-path" class="animate-spin w-8 h-8 text-primary-500" />
+            </div>
+          </div>
+
+          <div v-else class="text-center py-20 flex-grow bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <UIcon name="i-heroicons-face-frown" class="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h3 class="text-xl font-bold">Ничего не найдено</h3>
+            <p v-if="hasActiveSearchFilters" class="text-gray-500 mt-2">Попробуйте сбросить фильтр по цене.</p>
+            <p v-else class="text-gray-500 mt-2">Попробуйте изменить поисковой запрос.</p>
+          </div>
+        </main>
       </div>
     </div>
 
@@ -205,6 +210,9 @@ const { $api } = useNuxtApp()
 const isSearchActive = computed(() => !!route.query.q)
 const homeLimit = 8
 const searchLimit = 8
+
+// Вычисляем, есть ли активные фильтры цены (для отображения правильного текста "Ничего не найдено")
+const hasActiveSearchFilters = computed(() => !!route.query.min_price || !!route.query.max_price)
 
 const getDisplayCategoryName = (category) => {
   if (!category) return '';
@@ -286,7 +294,7 @@ const loadMoreProducts = async () => {
   }
 }
 
-// --- 2. ЛОГИКА ПОИСКА (Бесконечная подгрузка при скролле) ---
+// --- 2. ЛОГИКА ПОИСКА (С поддержкой фильтров цены) ---
 const searchResults = ref([])
 const searchTotal = ref(0)
 const page = ref(1)
@@ -304,13 +312,16 @@ const fetchSearchData = async (isLoadMore = false) => {
   }
 
   try {
-    const res = await $api('/api/products', {
-      query: {
-        limit: searchLimit,
-        offset: (page.value - 1) * searchLimit,
-        q: route.query.q
-      }
-    });
+    // ВАЖНО: Добавили проброс min_price и max_price из URL
+    const params = {
+      limit: searchLimit,
+      offset: (page.value - 1) * searchLimit,
+      q: route.query.q,
+      min_price: route.query.min_price || undefined,
+      max_price: route.query.max_price || undefined
+    };
+
+    const res = await $api('/api/products', { query: params });
 
     if (isLoadMore) {
       searchResults.value.push(...res.items);
@@ -326,8 +337,10 @@ const fetchSearchData = async (isLoadMore = false) => {
   }
 }
 
-watch(() => route.query.q, (newQuery) => {
-  if (newQuery) {
+// ВАЖНО: Теперь мы следим за всем объектом route.query,
+// чтобы реагировать на изменение цены из компонента ProductFilters
+watch(() => route.query, (newQuery) => {
+  if (newQuery.q) {
     page.value = 1;
     searchResults.value = [];
     fetchSearchData();
@@ -335,7 +348,7 @@ watch(() => route.query.q, (newQuery) => {
     searchResults.value = [];
     searchTotal.value = 0;
   }
-}, { immediate: true })
+}, { immediate: true, deep: true })
 
 const handleScroll = () => {
   if (!isSearchActive.value || isInitialLoad.value || isLoadingMore.value) return;

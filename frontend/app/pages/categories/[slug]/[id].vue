@@ -41,79 +41,11 @@
       </div>
 
       <div v-else class="flex flex-col md:flex-row gap-8 flex-grow">
-        <aside
+
+        <ProductFilters
           v-if="category.filter_config?.length && (productsTotal > 0 || hasActiveFilters)"
-          class="w-full md:w-64 flex-shrink-0"
-        >
-          <UCard :ui="{ body: { padding: 'p-4 sm:p-5' } }">
-            <template #header>
-              <div class="flex justify-between items-center">
-                <h3 class="font-bold text-lg">Фильтры</h3>
-                <UButton
-                  v-if="hasActiveFilters"
-                  color="gray"
-                  variant="ghost"
-                  size="xs"
-                  @click="clearFilters"
-                >
-                  Сбросить
-                </UButton>
-              </div>
-            </template>
-
-            <div class="space-y-6">
-              <div v-for="filter in category.filter_config" :key="filter.key" class="border-b border-gray-100 dark:border-gray-800 pb-4 last:border-0 last:pb-0">
-                <h4 class="font-medium text-sm mb-3">{{ filter.label }}</h4>
-
-                <div v-if="filter.type === 'checkbox'" class="space-y-2">
-                  <UCheckbox
-                    v-for="option in filter.options"
-                    :key="option"
-                    :label="option"
-                    :model-value="activeFilters[filter.key]?.includes(option)"
-                    @update:model-value="toggleCheckbox(filter.key, option)"
-                  />
-                </div>
-
-                <div v-else-if="filter.type === 'radio'" class="space-y-2">
-                  <URadio
-                    v-for="option in filter.options"
-                    :key="option"
-                    v-model="activeFilters[filter.key]"
-                    :value="option"
-                    :label="option"
-                  />
-                </div>
-
-                <div v-else-if="filter.type === 'select'">
-                  <USelectMenu
-                    v-model="activeFilters[filter.key]"
-                    :options="filter.options"
-                    placeholder="Выберите..."
-                    clearable
-                  />
-                </div>
-
-                <div v-else-if="filter.type === 'range'" class="flex items-center space-x-2">
-                  <UInput
-                    v-model="activeFilters[`${filter.key}_min`]"
-                    type="number"
-                    placeholder="От"
-                    class="w-full"
-                  />
-                  <span class="text-gray-400">-</span>
-                  <UInput
-                    v-model="activeFilters[`${filter.key}_max`]"
-                    type="number"
-                    placeholder="До"
-                    class="w-full"
-                  />
-                </div>
-
-              </div>
-            </div>
-          </UCard>
-        </aside>
+          :config="category.filter_config"
+        />
 
         <main class="flex-grow flex flex-col min-w-0">
           <div v-if="isInitialLoad" class="flex justify-center py-10">
@@ -187,8 +119,7 @@ const { $api } = useNuxtApp()
 const categorySlug = route.params.slug
 const categoryId = route.params.id
 
-// --- СОСТОЯНИЕ ФИЛЬТРОВ И СКРОЛЛА ---
-const activeFilters = ref({})
+// --- СОСТОЯНИЕ СКРОЛЛА И ТОВАРОВ ---
 const products = ref([])
 const productsTotal = ref(0)
 const offset = ref(0)
@@ -197,47 +128,21 @@ const itemsPerPage = 12
 const isInitialLoad = ref(false)
 const isLoadingMore = ref(false)
 
-// --- 1. Загрузка категории и инициализация фильтров ---
+// --- 1. Загрузка категории ---
 const { data: category, pending: categoryPending } = await useFetch(`/api/categories/${categorySlug}/${categoryId}`, {
-  $fetch: $api,
-  onResponse({ response }) {
-    const catData = response._data
-    if (catData && catData.filter_config) {
-      catData.filter_config.forEach(filter => {
-        if (filter.type === 'checkbox') {
-          let urlVal = route.query[filter.key]
-          if (urlVal) {
-            activeFilters.value[filter.key] = typeof urlVal === 'string' ? urlVal.split(',') : urlVal
-          } else {
-            activeFilters.value[filter.key] = []
-          }
-        } else if (filter.type === 'range') {
-          activeFilters.value[`${filter.key}_min`] = route.query[`${filter.key}_min`] || undefined
-          activeFilters.value[`${filter.key}_max`] = route.query[`${filter.key}_max`] || undefined
-        } else {
-          activeFilters.value[filter.key] = route.query[filter.key] || undefined
-        }
-      })
-    }
-  }
+  $fetch: $api
 })
 
-// Проверяем статус напрямую через флаг от бэкенда
 const isFolder = computed(() => {
   return category.value?.is_folder === true
 })
 
-// --- 2. Ручное управление массивами для UCheckbox ---
-const toggleCheckbox = (filterKey, option) => {
-  const currentArray = activeFilters.value[filterKey] || []
-  if (currentArray.includes(option)) {
-    activeFilters.value[filterKey] = currentArray.filter(v => v !== option)
-  } else {
-    activeFilters.value[filterKey] = [...currentArray, option]
-  }
-}
+// Простая проверка, есть ли параметры в URL (для вывода текста "Ничего не найдено")
+const hasActiveFilters = computed(() => {
+  return Object.keys(route.query).length > 0
+})
 
-// --- 3. Универсальная функция подгрузки товаров ---
+// --- 2. Универсальная функция подгрузки товаров ---
 const fetchProducts = async (isLoadMore = false) => {
   if (isFolder.value) return
 
@@ -249,20 +154,13 @@ const fetchProducts = async (isLoadMore = false) => {
   }
 
   try {
+    // Вся магия фильтров теперь происходит здесь:
+    // Мы просто берем параметры из URL (route.query) и отправляем их на бэкенд
     const params = {
       category_id: categoryId,
       limit: itemsPerPage,
-      offset: offset.value
-    }
-
-    for (const [key, value] of Object.entries(activeFilters.value)) {
-      if (value !== undefined && value !== null && value !== '') {
-        if (Array.isArray(value)) {
-          if (value.length > 0) params[key] = value
-        } else {
-          params[key] = value
-        }
-      }
+      offset: offset.value,
+      ...route.query
     }
 
     const res = await $api('/api/products', { query: params })
@@ -284,45 +182,15 @@ const fetchProducts = async (isLoadMore = false) => {
 
 await fetchProducts()
 
-// --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
-const hasActiveFilters = computed(() => {
-  return Object.values(activeFilters.value).some(val => {
-    if (Array.isArray(val)) return val.length > 0
-    return val !== undefined && val !== null && val !== ''
-  })
-})
-
-const clearFilters = () => {
-  for (const key in activeFilters.value) {
-    if (Array.isArray(activeFilters.value[key])) {
-      activeFilters.value[key] = []
-    } else {
-      activeFilters.value[key] = undefined
-    }
-  }
-}
-
-watch(() => activeFilters.value, (newFilters, oldFilters) => {
-  if (isFolder.value) return
-
-  if (Object.keys(oldFilters).length > 0) {
-    const query = {}
-
-    for (const [key, value] of Object.entries(newFilters)) {
-       if (value !== undefined && value !== null && value !== '') {
-          if (Array.isArray(value)) {
-            if (value.length > 0) query[key] = value.join(',')
-          } else {
-            query[key] = value
-          }
-       }
-    }
-
-    router.replace({ query })
+// --- 3. Следим за URL ---
+// Компонент ProductFilters меняет URL -> мы это видим и перезагружаем товары
+watch(() => route.query, () => {
+  if (!isFolder.value) {
     fetchProducts(false)
   }
 }, { deep: true })
 
+// --- ЛОГИКА БЕСКОНЕЧНОГО СКРОЛЛА ---
 const handleScroll = () => {
   if (isFolder.value || isInitialLoad.value || isLoadingMore.value) return
   if (products.value.length >= productsTotal.value) return
