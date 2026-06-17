@@ -14,7 +14,9 @@ async def make_order(
     amount: int = 1,
 ):
     async with uow:
-        product_variant = await uow.db.read_one(ProductVariant, id=product_variant_id, loaded="product")
+        product_variant = await uow.db.read_one(
+            ProductVariant, id=product_variant_id, loaded="product"
+        )
         product = product_variant.product
         # Внутри read_available_items лежит подзапрос SKIP LOCKED.
         items = await uow.product.read_available_items(
@@ -27,7 +29,7 @@ async def make_order(
         snapshot = {
             "title": product.title,
             "description": product.description,
-            "attributes": product_variant.attributes
+            "attributes": product_variant.attributes,
         }
 
         order = Order(
@@ -35,14 +37,14 @@ async def make_order(
             amount=amount,
             price=product_variant.price,
             product_variant_id=product_variant.id,
-            product_snapshot=snapshot
+            product_snapshot=snapshot,
         )
         order = await uow.db.create(order)
         order.reserve_items(items)
         for item in items:
             await uow.db.save(item)
 
-        #order.product = product
+        # order.product = product
         event_bus.publish(
             OrderCreatedEvent(
                 order_id=order.id,

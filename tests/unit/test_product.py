@@ -1,6 +1,7 @@
 import pytest
 
-from domain import Product, ProductItem, ProductItemStatuses, ProductVariant, Seller, Category
+from domain import (Category, Product, ProductItem, ProductItemStatuses,
+                    ProductVariant, Seller)
 
 
 def test_product_item_reserve():

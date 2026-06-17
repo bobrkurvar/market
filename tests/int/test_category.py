@@ -1,9 +1,11 @@
-import pytest
-from services.category import create_category
-from domain import Category, NotFoundError
-from tests.fakes import FakeImgGenerator
-from infra.security import async_hash_calculate
 import logging
+
+import pytest
+
+from domain import Category, NotFoundError
+from infra.security import async_hash_calculate
+from services.category import create_category
+from tests.fakes import FakeImgGenerator
 
 log = logging.getLogger(__name__)
 
@@ -16,14 +18,12 @@ async def test_create_is_folder_root_category(uow, category_images_manager):
         img=b"a",
         file_manager=category_images_manager,
         img_generator=FakeImgGenerator(),
-        hash_calculator=async_hash_calculate
+        hash_calculator=async_hash_calculate,
     )
     async with uow:
-        child_category = await uow.db.read_one(Category, parent_id=category.id, name="Прочее", with_raise=True)
+        child_category = await uow.db.read_one(
+            Category, parent_id=category.id, name="Прочее", with_raise=True
+        )
     assert child_category.logo_url == category.logo_url
     assert category is not None
     assert category.logo_url != "url"
-
-
-
-

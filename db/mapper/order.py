@@ -2,9 +2,10 @@ from sqlalchemy import inspect
 
 import domain
 from db import models
+
 from .product import map_product_item_to_domain, map_product_item_to_orm
-from .user import map_client_to_domain
 from .registry import registry
+from .user import map_client_to_domain
 
 
 def map_order_to_domain(orm_obj: models.Order) -> domain.Order:
@@ -26,8 +27,9 @@ def map_order_to_domain(orm_obj: models.Order) -> domain.Order:
         items=items,
         price=orm_obj.price,
         amount=orm_obj.amount,
-        product_snapshot=orm_obj.product_snapshot
+        product_snapshot=orm_obj.product_snapshot,
     )
+
 
 def map_order_to_orm(d_obj: domain.Order) -> models.Order:
     return models.Order(
@@ -38,7 +40,11 @@ def map_order_to_orm(d_obj: domain.Order) -> models.Order:
         product_snapshot=d_obj.product_snapshot,
         price=d_obj.price,
         amount=d_obj.amount,
-        items=[map_product_item_to_orm(item) for item in d_obj._items] if d_obj._items else []
+        items=(
+            [map_product_item_to_orm(item) for item in d_obj._items]
+            if d_obj._items
+            else []
+        ),
     )
 
 
@@ -53,6 +59,7 @@ def map_order_to_orm(d_obj: domain.Order) -> models.Order:
 #     )
 
 
-registry.register(domain.Order, models.Order, to_orm=map_order_to_orm, to_domain=map_order_to_domain)
-#registry.register(domain.OrderStatuses, models.OrderStatuses, to_orm=map_order_statuses_to_orm, to_domain=map_order_statuses_to_domain)
-
+registry.register(
+    domain.Order, models.Order, to_orm=map_order_to_orm, to_domain=map_order_to_domain
+)
+# registry.register(domain.OrderStatuses, models.OrderStatuses, to_orm=map_order_statuses_to_orm, to_domain=map_order_statuses_to_domain)

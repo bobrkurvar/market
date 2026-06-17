@@ -1,12 +1,13 @@
 import logging
 from datetime import datetime, timedelta, timezone
 
-from domain import (CredentialsValidateError, RefreshTokenFamilyExpiredError,
-                    RefreshTokenMissingError,
+from domain import (Client, CredentialsValidateError, MissingRoleError,
+                    RefreshTokenFamilyExpiredError, RefreshTokenMissingError,
                     RefreshTokenReusedCompromisedError,
-                    RefreshTokenRotationRaceConditionError, User,
-                    UserLoginNotFoundError, UserRole, Client, Seller, MissingRoleError)
-from infra.auth import check_refresh_token, data_encode_to_jwt, check_access_token, get_data_from_token
+                    RefreshTokenRotationRaceConditionError, Seller, User,
+                    UserLoginNotFoundError, UserRole)
+from infra.auth import (check_access_token, check_refresh_token,
+                        data_encode_to_jwt, get_data_from_token)
 from infra.security import create_token_family_id, create_token_jti, get_hash
 
 log = logging.getLogger(__name__)
@@ -31,6 +32,7 @@ def create_refresh_token(
     expire, data = datetime.now(timezone.utc) + expires_delta, data.copy()
     data.update(family_id=family_id, jti=jti)
     return create_token(data, expire, "refresh")
+
 
 async def delete_redis_keys(redis, jti: str, family_id: str):
     await redis.delete(f"rtfam:{family_id}")
@@ -59,7 +61,9 @@ async def check_rotate(payload: dict, redis):
 
 async def check_role(uow, token_data: dict):
     if token_data["role"] == UserRole.seller:
-        await uow.db.read(User, type=token_data["role"], id=int(token_data["sub"]), with_raise=True)
+        await uow.db.read(
+            User, type=token_data["role"], id=int(token_data["sub"]), with_raise=True
+        )
 
 
 async def create_tokens_from_refresh(refresh_token: str | None, redis, uow):
@@ -130,14 +134,18 @@ async def user_register(redis, uow, username: str, password: str, role: UserRole
     return tokens, user_data
 
 
-async def get_user_from_token(access_token: str | None, refresh_token: str | None, redis, uow):
+async def get_user_from_token(
+    access_token: str | None, refresh_token: str | None, redis, uow
+):
     if access_token:
         log.debug("access token exists")
         check_access_token(access_token)
         log.debug("access token approve")
         return get_data_from_token(access_token), None
     else:
-        new_tokens = await create_tokens_from_refresh(refresh_token=refresh_token, redis=redis, uow=uow)
+        new_tokens = await create_tokens_from_refresh(
+            refresh_token=refresh_token, redis=redis, uow=uow
+        )
         return get_data_from_token(new_tokens["access_token"]), new_tokens
 
 

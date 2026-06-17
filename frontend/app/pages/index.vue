@@ -23,16 +23,21 @@
               v-for="category in homeCategories"
               :key="category.id"
               :to="`/categories/${category.slug}/${category.id}`"
-              class="block outline-none"
+              class="block outline-none group"
             >
               <UCard
-                class="cursor-pointer hover:ring-2 hover:ring-primary-500 hover:shadow-md transition-all flex items-center justify-center text-center h-20"
-                :ui="{ body: { padding: 'p-2 sm:p-4' } }"
+                class="flex flex-col h-full cursor-pointer transition-all duration-200 hover:ring-2 hover:ring-primary-500 hover:shadow-md text-center"
+                :ui="{ body: { padding: 'p-4 sm:p-5 flex flex-col items-center justify-center' } }"
               >
-                <span class="font-semibold line-clamp-2">{{ getDisplayCategoryName(category) }}</span>
+                <div class="w-14 h-14 mb-3 flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-full group-hover:scale-110 transition-transform duration-300">
+                  <img v-if="category.catalog_url" :src="category.catalog_url" :alt="category.name" class="w-8 h-8 object-contain" />
+                  <UIcon v-else name="i-heroicons-folder" class="w-7 h-7 text-primary-500" />
+                </div>
+                <span class="font-semibold text-sm line-clamp-2">{{ getDisplayCategoryName(category) }}</span>
               </UCard>
             </NuxtLink>
           </div>
+
           <div class="mt-6 flex justify-center" v-if="hasMoreCategories">
             <UButton
               :loading="isLoadingCats"
@@ -68,8 +73,9 @@
                   </div>
                 </template>
 
-                <div v-if="product.category" class="text-xs text-primary-500 font-medium mb-1">
-                  {{ getDisplayCategoryName(product.category) }}
+                <div v-if="product.category" class="flex items-center gap-1.5 text-xs text-primary-500 font-medium mb-1">
+                  <img v-if="product.category.search_url" :src="product.category.search_url" :alt="product.category.name" class="w-4 h-4 object-contain" />
+                  <span>{{ getDisplayCategoryName(product.category) }}</span>
                 </div>
 
                 <div class="font-bold text-lg truncate" :title="product.title">{{ product.title }}</div>
@@ -152,8 +158,9 @@
                 </div>
               </template>
 
-              <div v-if="product.category" class="text-xs text-primary-500 font-medium mb-1">
-                {{ getDisplayCategoryName(product.category) }}
+              <div v-if="product.category" class="flex items-center gap-1.5 text-xs text-primary-500 font-medium mb-1">
+                <img v-if="product.category.search_url" :src="product.category.search_url" :alt="product.category.name" class="w-4 h-4 object-contain" />
+                <span>{{ getDisplayCategoryName(product.category) }}</span>
               </div>
 
               <div class="font-bold text-lg truncate" :title="product.title">{{ product.title }}</div>
@@ -196,14 +203,13 @@ const { $api } = useNuxtApp()
 
 // --- ОБЩАЯ ЛОГИКА ---
 const isSearchActive = computed(() => !!route.query.q)
-const homeLimit = 8 // Лимит и для категорий, и для товаров
+const homeLimit = 8
 const searchLimit = 8
 
 const getDisplayCategoryName = (category) => {
   if (!category) return '';
-  // Если это подкатегория "Прочее", выводим "Родитель — Прочее"
-  if (category.name.toLowerCase() === 'прочее' && category.parent) {
-    return `${category.parent.name} — Прочее`;
+  if (category.name.toLowerCase() === 'прочее' && category.parent_name) {
+    return `${category.parent_name} — Прочее`;
   }
   return category.name;
 }
@@ -221,32 +227,26 @@ const hasMoreProducts = ref(true)
 const isLoadingCats = ref(false)
 const isLoadingProds = ref(false)
 
-// Первичная загрузка
 const { data: homeData, pending: homePending } = await useFetch('/api/home', {
   $fetch: $api,
   query: { limit: homeLimit, offset: 0 }
 })
 
-// Синхронизируем полученные данные с нашими реактивными переменными
 if (homeData.value) {
   homeCategories.value = homeData.value.categories || []
   homeProducts.value = homeData.value.products || []
 
-  // Если пришло меньше элементов, чем лимит — значит больше в базе нет
   if (homeCategories.value.length < homeLimit) hasMoreCategories.value = false
   if (homeProducts.value.length < homeLimit) hasMoreProducts.value = false
 }
 
-// Подгрузка категорий по кнопке
 const loadMoreCategories = async () => {
   isLoadingCats.value = true;
   try {
-    // Меняем эндпоинт на профильный
     const res = await $api('/api/categories', {
       query: { limit: homeLimit, offset: catOffset.value }
     });
 
-    // В зависимости от того, как отвечает твой API категорий (список или объект с items)
     const newCategories = res.items || res;
 
     if (newCategories && newCategories.length > 0) {
@@ -263,16 +263,13 @@ const loadMoreCategories = async () => {
   }
 }
 
-// Подгрузка товаров по кнопке
 const loadMoreProducts = async () => {
   isLoadingProds.value = true;
   try {
-    // Меняем эндпоинт на профильный
     const res = await $api('/api/products', {
       query: { limit: homeLimit, offset: prodOffset.value }
     });
 
-    // Эндпоинт товаров возвращает объект с массивом items
     const newProducts = res.items;
 
     if (newProducts && newProducts.length > 0) {

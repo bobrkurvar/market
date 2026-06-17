@@ -1,9 +1,10 @@
 from pydantic import BaseModel, Field, computed_field
-from domain import ProductVariant, ProductItem, Product, Seller
-from adapters.images import ProductImagesManager
 from slugify import slugify
-from .base import BaseInput
 
+from adapters.images import ProductImagesManager
+from domain import Product, ProductItem, ProductVariant, Seller
+
+from .base import BaseInput
 
 
 class ProductItemCreate(BaseInput):
@@ -16,14 +17,9 @@ class ProductVariantCreate(BaseInput):
     items: list[ProductItemCreate] | None
 
     def to_domain(self) -> ProductVariant:
-        domain_items = [
-            ProductItem(content=item.content)
-            for item in self.items
-        ]
+        domain_items = [ProductItem(content=item.content) for item in self.items]
         return ProductVariant(
-            price=self.price,
-            attributes=self.attributes,
-            items=domain_items
+            price=self.price, attributes=self.attributes, items=domain_items
         )
 
 
@@ -43,6 +39,7 @@ class ProductCreate(BaseInput):
             variants=domain_variants,
             category_id=self.category_id,
         )
+
 
 class ProductVariantOut(BaseModel):
     id: int | None
@@ -66,21 +63,25 @@ class ProductSellerListOut(BaseModel):
 
 
 class ProductImage(BaseModel):
-    image_url: str
+    image_url: str = Field(exclude=True)
 
     @computed_field
     @property
     def catalog_url(self) -> str | None:
         if not self.image_url:
             return None
-        return "/" + ProductImagesManager().get_product_catalog_image_path(self.image_url)
+        return "/" + ProductImagesManager().get_product_catalog_image_path(
+            self.image_url
+        )
 
     @computed_field
     @property
     def detail_url(self) -> str | None:
         if not self.image_url:
             return None
-        return "/" + ProductImagesManager().get_product_details_image_path(self.image_url)
+        return "/" + ProductImagesManager().get_product_details_image_path(
+            self.image_url
+        )
 
     class Config:
         from_attributes = True

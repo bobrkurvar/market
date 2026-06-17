@@ -1,5 +1,6 @@
 from domain import NotFoundError
 
+
 class FakeStorage:
     def __init__(self):
         self.fs = {}
@@ -31,8 +32,12 @@ class FakeDB:
         kwargs.pop("loaded", None)
 
         obj = next(
-            (item for item in self.storage if all(getattr(item, k, None) == v for k, v in kwargs.items())),
-            None
+            (
+                item
+                for item in self.storage
+                if all(getattr(item, k, None) == v for k, v in kwargs.items())
+            ),
+            None,
         )
 
         if obj is not None:
@@ -41,6 +46,7 @@ class FakeDB:
         if with_raise:
             raise NotFoundError("Not found in FakeDB")
         return None
+
 
 class FakeUoW:
     def __init__(self):

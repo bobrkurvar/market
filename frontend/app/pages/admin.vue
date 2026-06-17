@@ -84,41 +84,95 @@
             </h3>
           </template>
 
-          <form @submit.prevent="submitCategory" class="space-y-6">
-            <UFormGroup label="Название категории" required>
-              <UInput
-                v-model="categoryForm.name"
-                placeholder="Например: Ключи Steam..."
-                autofocus
-                required
-              />
-            </UFormGroup>
+          <form @submit.prevent="submitCategory" class="space-y-8">
+            <div class="space-y-4">
+              <h4 class="font-medium text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-800 pb-2">Основные настройки</h4>
 
-            <div>
-              <span class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                Логотип (иконка)
-              </span>
-              <div class="flex items-center gap-4 mt-1">
-                <UButton color="white" icon="i-heroicons-arrow-up-tray" @click="$refs.fileInputRef.click()">
-                  Выбрать файл
-                </UButton>
-                <span class="text-sm text-gray-500 truncate max-w-[200px]">
-                  {{ categoryForm.file ? categoryForm.file.name : 'Файл не выбран' }}
+              <UFormGroup label="Название категории" required>
+                <UInput
+                  v-model="categoryForm.name"
+                  placeholder="Например: Ключи Steam..."
+                  autofocus
+                  required
+                />
+              </UFormGroup>
+
+              <div>
+                <span class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                  Логотип (иконка)
                 </span>
+                <div class="flex items-center gap-4 mt-1">
+                  <UButton color="white" icon="i-heroicons-arrow-up-tray" @click="$refs.fileInputRef.click()">
+                    Выбрать файл
+                  </UButton>
+                  <span class="text-sm text-gray-500 truncate max-w-[200px]">
+                    {{ categoryForm.file ? categoryForm.file.name : 'Файл не выбран' }}
+                  </span>
+                </div>
+                <input
+                  type="file"
+                  accept="image/png, image/jpeg, image/webp, image/svg+xml"
+                  class="hidden"
+                  @change="handleFileChange"
+                  ref="fileInputRef"
+                />
+                <p class="text-xs text-gray-500 mt-2">Форматы: PNG, WebP, SVG. Фон должен быть прозрачным.</p>
               </div>
-              <input
-                type="file"
-                accept="image/png, image/jpeg, image/webp, image/svg+xml"
-                class="hidden"
-                @change="handleFileChange"
-                ref="fileInputRef"
-              />
-              <p class="text-xs text-gray-500 mt-2">Форматы: PNG, WebP, SVG. Фон должен быть прозрачным.</p>
+            </div>
+
+            <div class="space-y-4">
+              <div class="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 pb-2">
+                <h4 class="font-medium text-gray-700 dark:text-gray-300">Атрибуты и фильтры</h4>
+                <UButton size="xs" color="indigo" variant="soft" icon="i-heroicons-plus" @click="addFilter">
+                  Добавить свойство
+                </UButton>
+              </div>
+
+              <div v-if="categoryForm.filter_config.length === 0" class="text-sm text-gray-400 italic text-center py-4 bg-white dark:bg-gray-900 rounded-lg border border-dashed border-gray-300 dark:border-gray-700">
+                Специфичных фильтров нет. Продавцы смогут указывать только базовую цену.
+              </div>
+
+              <div class="space-y-4">
+                <div v-for="(filter, index) in categoryForm.filter_config" :key="index" class="bg-white dark:bg-gray-900 p-4 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm relative group">
+                  <UButton
+                    icon="i-heroicons-x-mark"
+                    color="red"
+                    variant="ghost"
+                    size="xs"
+                    class="absolute top-2 right-2 opacity-50 group-hover:opacity-100 transition-opacity"
+                    @click="removeFilter(index)"
+                  />
+
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                    <UFormGroup label="Название (Label)" required>
+                      <UInput v-model="filter.label" placeholder="Напр: Платформа" required />
+                    </UFormGroup>
+                    <UFormGroup label="Системный ключ (Key)" required>
+                      <UInput v-model="filter.key" placeholder="Напр: platform" required />
+                    </UFormGroup>
+                  </div>
+
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                    <UFormGroup label="Тип интерфейса (UI)" required>
+                      <USelect v-model="filter.type" :options="uiTypeOptions" required />
+                    </UFormGroup>
+                    <div class="pb-2">
+                      <UCheckbox v-model="filter.strict_options" label="Строгая валидация (продавцу нельзя вводить свое)" />
+                    </div>
+                  </div>
+
+                  <div class="mt-4" v-if="['select', 'checkbox', 'radio'].includes(filter.type)">
+                    <UFormGroup label="Доступные варианты (через запятую)">
+                      <UInput v-model="filter.optionsText" placeholder="Напр: Steam, Epic Games, Origin" />
+                    </UFormGroup>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-800">
               <UButton color="gray" variant="ghost" @click="showCreateForm = false">Отмена</UButton>
-              <UButton type="submit" color="primary" :loading="isSubmittingCategory">Создать</UButton>
+              <UButton type="submit" color="primary" :loading="isSubmittingCategory">Создать категорию</UButton>
             </div>
           </form>
         </UCard>
@@ -143,7 +197,6 @@
                    <img v-if="cat.search_url" :src="cat.search_url" :alt="cat.name" class="w-full h-full object-contain p-1" />
                    <UIcon v-else :name="cat.has_children ? 'i-heroicons-folder-open' : 'i-heroicons-document-text'" :class="cat.has_children ? 'text-amber-500 w-5 h-5' : 'text-gray-400 w-4 h-4'" />
                 </div>
-
                 <span :class="{ 'font-bold text-gray-900 dark:text-white': cat.level === 0, 'text-gray-700 dark:text-gray-300': cat.level > 0 }">
                   {{ cat.name }}
                 </span>
@@ -187,6 +240,13 @@ const tabs = [
   { id: 'products', name: 'Модерация товаров', icon: 'i-heroicons-shield-check' }
 ]
 
+const uiTypeOptions = [
+  { label: 'Выпадающий список (Select)', value: 'select' },
+  { label: 'Множественный выбор (Checkbox)', value: 'checkbox' },
+  { label: 'Одиночный выбор (Radio)', value: 'radio' },
+  { label: 'Диапазон ОТ и ДО (Range)', value: 'range' }
+]
+
 const mockStats = [
   { title: 'Оборот платформы', value: '1 245 000 ₽', icon: 'i-heroicons-banknotes', iconColor: 'text-green-500', bgColor: 'bg-green-50 dark:bg-green-950/40' },
   { title: 'Всего продавцов', value: '342 акк.', icon: 'i-heroicons-users', iconColor: 'text-blue-500', bgColor: 'bg-blue-50 dark:bg-blue-950/40' }
@@ -198,11 +258,13 @@ const showCreateForm = ref(false)
 const isSubmittingCategory = ref(false)
 const fileInputRef = ref(null)
 
+// Форма создания категории теперь включает filter_config
 const categoryForm = ref({
   name: '',
   parent_id: null,
   parent_name: '',
-  file: null
+  file: null,
+  filter_config: []
 })
 
 const fetchCategories = async () => {
@@ -217,7 +279,6 @@ const fetchCategories = async () => {
 }
 
 const toggleCreateForm = (parentCategory = null) => {
-  // Если форма открыта и кликнули на ту же кнопку отмены/создания корня
   if (showCreateForm.value && !parentCategory && !categoryForm.value.parent_id) {
     showCreateForm.value = false
     return
@@ -225,6 +286,7 @@ const toggleCreateForm = (parentCategory = null) => {
 
   categoryForm.value.name = ''
   categoryForm.value.file = null
+  categoryForm.value.filter_config = []
   if (fileInputRef.value) fileInputRef.value.value = ''
 
   if (parentCategory) {
@@ -236,7 +298,6 @@ const toggleCreateForm = (parentCategory = null) => {
   }
 
   showCreateForm.value = true
-  // Плавно скроллим наверх, чтобы форма точно была в поле зрения
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
@@ -249,15 +310,54 @@ const handleFileChange = (event) => {
   }
 }
 
+// Управление фильтрами
+const addFilter = () => {
+  categoryForm.value.filter_config.push({
+    label: '',
+    key: '',
+    type: 'select',
+    strict_options: true, // По умолчанию заставляем продавцов соблюдать правила
+    optionsText: '' // Временное поле для ввода через запятую
+  })
+}
+
+const removeFilter = (index) => {
+  categoryForm.value.filter_config.splice(index, 1)
+}
+
 const submitCategory = async () => {
   if (!categoryForm.value.name.trim()) return
   isSubmittingCategory.value = true
 
   try {
+    // 1. Собираем JSON данные согласно Pydantic схеме (CategoryCreate.model_validate_json)
+    const categoryData = {
+      name: categoryForm.value.name,
+      parent_id: categoryForm.value.parent_id || null,
+      filter_config: categoryForm.value.filter_config.map(f => {
+        // Разбиваем строку optionsText в массив строк (убираем лишние пробелы)
+        const optionsArray = f.optionsText
+          ? f.optionsText.split(',').map(s => s.trim()).filter(Boolean)
+          : null
+
+        return {
+          label: f.label,
+          key: f.key,
+          type: f.type,
+          strict_options: f.strict_options,
+          options: optionsArray
+        }
+      })
+    }
+
     const formData = new FormData()
-    formData.append('name', categoryForm.value.name)
-    if (categoryForm.value.parent_id) formData.append('parent_id', categoryForm.value.parent_id)
-    if (categoryForm.value.file) formData.append('file', categoryForm.value.file)
+    // 2. Кладем весь сложный объект в 'data'
+    formData.append('data', JSON.stringify(categoryData))
+
+    // 3. Отдельно прикрепляем файл
+    if (categoryForm.value.file) {
+      formData.append('file', categoryForm.value.file)
+    }
 
     await $api('/api/admin/categories', {
       method: 'POST',
@@ -268,7 +368,8 @@ const submitCategory = async () => {
     showCreateForm.value = false
     await fetchCategories()
   } catch (error) {
-    toast.add({ title: 'Ошибка', description: 'Не удалось создать', color: 'red' })
+    const errorMsg = error.data?.detail || error.response?._data?.detail || 'Не удалось создать категорию'
+    toast.add({ title: 'Ошибка', description: Array.isArray(errorMsg) ? errorMsg[0].msg : errorMsg, color: 'red' })
   } finally {
     isSubmittingCategory.value = false
   }

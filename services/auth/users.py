@@ -1,11 +1,10 @@
 import logging
 
-from domain import (CredentialsValidateError, User,
-                    UserLoginNotFoundError, UserRole, Client, Seller, MissingRoleError)
+from domain import (Client, CredentialsValidateError, MissingRoleError, Seller,
+                    User, UserLoginNotFoundError, UserRole)
 from infra.security import get_hash
 
 log = logging.getLogger(__name__)
-
 
 
 async def check_user(uow, verify, username: str, password: str):
@@ -21,8 +20,9 @@ async def check_user(uow, verify, username: str, password: str):
 
 async def check_role(uow, token_data: dict):
     if token_data["role"] == UserRole.seller:
-        await uow.db.read(User, type=token_data["role"], id=int(token_data["sub"]), with_raise=True)
-
+        await uow.db.read(
+            User, type=token_data["role"], id=int(token_data["sub"]), with_raise=True
+        )
 
 
 async def create_user(uow, username: str, password: str, role: UserRole):
@@ -36,7 +36,6 @@ async def create_user(uow, username: str, password: str, role: UserRole):
         raise ValueError("Неизвестная роль")
     async with uow:
         return await uow.db.create(new_account)
-
 
 
 def get_user_id_from_payload(payload: dict, expected_role: str) -> int:

@@ -1,17 +1,26 @@
 import logging
-
-from domain import Category
 # import asyncio
 # from infra.security import calculate_file_hash
-from typing import Callable, Awaitable
+from typing import Awaitable, Callable
+
+from domain import Category
 
 log = logging.getLogger(__name__)
 
 
-async def create_category(uow, img: bytes, file_manager, img_generator, category: Category, hash_calculator: Callable[[bytes], Awaitable[str]]):
+async def create_category(
+    uow,
+    img: bytes,
+    file_manager,
+    img_generator,
+    category: Category,
+    hash_calculator: Callable[[bytes], Awaitable[str]],
+):
     if category.parent_id is not None:
         async with uow:
-            parent_category = await uow.db.read_one(Category, id=category.parent_id, with_raise=True, with_for_update=True)
+            parent_category = await uow.db.read_one(
+                Category, id=category.parent_id, with_raise=True, with_for_update=True
+            )
             category.validate_parent(parent_category)
     async with file_manager.session() as files:
         file_name = await hash_calculator(img)

@@ -1,12 +1,13 @@
 from fastapi import APIRouter
-from .products import router as catalog_router
+
+from .admin import router as admin_router
+from .auth import router as auth_router
+from .category import router as category_router
 from .client import router as client_router
 from .order import router as order_router
-from .seller import router as seller_router
-from .auth import router as auth_router
-from .admin import router as admin_router
 from .pages import router as pages_router
-from .category import router as category_router
+from .products import router as catalog_router
+from .seller import router as seller_router
 
 main_router = APIRouter(prefix="/api")
 main_router.include_router(catalog_router)

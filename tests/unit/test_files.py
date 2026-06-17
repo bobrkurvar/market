@@ -1,7 +1,8 @@
 from pathlib import Path
 
 import pytest
-from shared import DETAILS, PRODUCTS, CATEGORY_CATALOG, CATEGORY_SEARCH
+
+from shared import CATEGORY_CATALOG, CATEGORY_SEARCH, DETAILS, PRODUCTS
 
 
 @pytest.mark.asyncio
@@ -30,11 +31,14 @@ def test_base_catalog_path(category_images_manager):
     expected_path = Path(f"{category_images_manager._root}/base/categories/{file_name}")
     assert path == expected_path
 
+
 def test_resolve_path_for_category_catalog_layer(category_images_manager):
     file_name = "abcdef123456.jpg"
     layer = CATEGORY_CATALOG
     path = category_images_manager.resolve_path(file_name, layer)
-    expected_path = Path(f"{category_images_manager._root}/categories/catalog/{file_name}")
+    expected_path = Path(
+        f"{category_images_manager._root}/categories/catalog/{file_name}"
+    )
     assert path == expected_path
 
 
@@ -42,7 +46,9 @@ def test_resolve_path_for_category_search_layer(category_images_manager):
     file_name = "abcdef123456.jpg"
     layer = CATEGORY_SEARCH
     path = category_images_manager.resolve_path(file_name, layer)
-    expected_path = Path(f"{category_images_manager._root}/categories/search/{file_name}")
+    expected_path = Path(
+        f"{category_images_manager._root}/categories/search/{file_name}"
+    )
     assert path == expected_path
 
 
@@ -66,7 +72,9 @@ def test_resolve_path_for_product_details_layer(product_images_manager):
 async def test_save_file_product_catalog_path(product_images_manager):
     file_name, img, layer = "abcdef123456.jpg", b"aaa", PRODUCTS
     await product_images_manager.save_by_layer(file_name, img, layer)
-    expected_path = Path(f"{product_images_manager._root}/products/catalog/{file_name}").as_posix()
+    expected_path = Path(
+        f"{product_images_manager._root}/products/catalog/{file_name}"
+    ).as_posix()
     assert expected_path in product_images_manager._storage.fs
 
 
@@ -74,5 +82,7 @@ async def test_save_file_product_catalog_path(product_images_manager):
 async def test_save_file_product_details_path(product_images_manager):
     file_name, img, layer = "abcdef123456.jpg", b"aaa", DETAILS
     await product_images_manager.save_by_layer(file_name, img, layer)
-    expected_path = Path(f"{product_images_manager._root}/products/details/{file_name}").as_posix()
+    expected_path = Path(
+        f"{product_images_manager._root}/products/details/{file_name}"
+    ).as_posix()
     assert expected_path in product_images_manager._storage.fs

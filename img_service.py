@@ -9,7 +9,7 @@ from PIL import Image, ImageOps
 from pydantic import BaseModel
 
 from core.logger import setup_logging
-from shared import DETAILS, PRODUCTS, CATEGORY_SEARCH, CATEGORY_CATALOG
+from shared import CATEGORY_CATALOG, CATEGORY_SEARCH, DETAILS, PRODUCTS
 
 setup_logging()
 
@@ -25,15 +25,11 @@ executor = ProcessPoolExecutor(max_workers=NUM_WORKERS)
 IMAGE_PRESETS = {
     # Квадратные миниатюры для ровной сетки каталога (весят мало, грузятся мгновенно)
     PRODUCTS: {"size": (600, 600), "mode": "cover"},
-
     # Большие изображения для страницы товара (достаточно для Retina-экранов)
     DETAILS: {"size": (1200, 1200), "mode": "fit"},
-
     CATEGORY_CATALOG: {"size": (256, 256), "mode": "fit"},
-
     # Микро-иконки для выпадающего поиска (Search) и бокового меню
     CATEGORY_SEARCH: {"size": (64, 64), "mode": "fit"},
-
 }
 
 
@@ -87,10 +83,12 @@ def generate_image_variant(image_bytes: bytes, target: str):
     width, height = preset["size"]
     mode = preset["mode"]
     with Image.open(BytesIO(image_bytes)) as img:
-        if img.mode in ('RGBA', 'LA') or (img.mode == 'P' and 'transparency' in img.info):
-            img = img.convert('RGBA')
+        if img.mode in ("RGBA", "LA") or (
+            img.mode == "P" and "transparency" in img.info
+        ):
+            img = img.convert("RGBA")
         else:
-            img = img.convert('RGB')
+            img = img.convert("RGB")
         smaller_width = width is not None and img.width < width
         smaller_height = height is not None and img.height < height
         # защита от апскейла

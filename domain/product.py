@@ -1,7 +1,8 @@
-from enum import StrEnum
 from collections.abc import Collection
-from .user import Seller
+from enum import StrEnum
+
 from .category import Category
+from .user import Seller
 
 
 class ProductItemStatuses(StrEnum):
@@ -48,7 +49,6 @@ class ProductItem:
             raise ValueError("Можно скомпрометировать только проданный товар")
         self.status = ProductItemStatuses.compromised
 
-
     def __repr__(self):
         return f"<ProductItem(id={self.id}, status='{self.status}', order_id={self.order_id})>"
 
@@ -61,7 +61,7 @@ class ProductVariant:
         product: "Product" = None,
         product_variant_id: int | None = None,
         items: Collection[ProductItem] | ProductItem = None,
-        attributes: dict | None = None
+        attributes: dict | None = None,
     ):
         self.product = product
         self.product_id = product.id if product else product_id
@@ -80,7 +80,6 @@ class ProductVariant:
         if self._items is None:
             raise ValueError("Товар без товарных позиций")
         return self._items
-
 
     def change_price(self, new_price: int):
         if new_price < 0:
@@ -139,7 +138,9 @@ class Product:
         return min(variant.price for variant in self.variants)
 
     def add_variants(self, variants: Collection[ProductVariant] | ProductVariant):
-        new_variants = [variants] if isinstance(variants, ProductVariant) else list(variants)
+        new_variants = (
+            [variants] if isinstance(variants, ProductVariant) else list(variants)
+        )
         self._variants = list(self._variants) if self._variants else []
         self._variants += new_variants
 

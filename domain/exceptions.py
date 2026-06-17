@@ -1,5 +1,6 @@
 from .user import User
 
+
 class RepositoryError(Exception):
     """Базовое исключение репозитория"""
 
@@ -42,6 +43,7 @@ class ForeignKeyViolationError(RepositoryError):
 
 # ОШИБКИ АВТОРИЗАЦИИ
 
+
 class UnauthorizedError(Exception):
     """Базовое исключение для всех проблем с доступом (HTTP 401)"""
 
@@ -64,9 +66,9 @@ class UserLoginNotFoundError(NotFoundError):
 
 class MissingRoleError(UnauthorizedError):
     """Ошибка неправильной роли пользователя - доступ запрещён"""
+
     def __init__(self, user_id: int | str, role: str):
         super().__init__(f"У пользователя с id {user_id} нет данной роли: {role}")
-
 
 
 # БАЗОВЫЕ ОШИБКИ ТОКЕНОВ

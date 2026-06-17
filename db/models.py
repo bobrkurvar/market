@@ -1,11 +1,14 @@
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import DECIMAL, BigInteger, ForeignKey, String, Text, func, Index, CheckConstraint, UniqueConstraint, literal_column
+from sqlalchemy import (DECIMAL, BigInteger, CheckConstraint, ForeignKey,
+                        Index, String, Text, UniqueConstraint, func,
+                        literal_column)
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from sqlalchemy.dialects.postgresql import JSONB
-from domain import SuggestionStatus, ProductItemStatuses, OrderStatuses
+
+from domain import OrderStatuses, ProductItemStatuses, SuggestionStatus
 
 
 class Base(AsyncAttrs, DeclarativeBase):
@@ -31,7 +34,6 @@ class Product(Base):
     )
     seller: Mapped["Seller"] = relationship("Seller", back_populates="products")
 
-
     __table_args__ = (
         # 1. Полнотекстовый поиск (FTS) по заголовку и описанию (склонения)
         Index(
@@ -53,7 +55,9 @@ class ProductVariant(Base):
     __tablename__ = "product_variants"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    product_id: Mapped[int] = mapped_column(ForeignKey("products.id", ondelete="CASCADE"))
+    product_id: Mapped[int] = mapped_column(
+        ForeignKey("products.id", ondelete="CASCADE")
+    )
     price: Mapped[float]
     attributes: Mapped[dict] = mapped_column(JSONB, nullable=True, default=dict)
     product: Mapped["Product"] = relationship("Product", back_populates="variants")
@@ -69,17 +73,23 @@ class ProductItem(Base):
     __tablename__ = "product_items"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    product_variant_id: Mapped[int] = mapped_column(ForeignKey("product_variants.id", ondelete="CASCADE"))
+    product_variant_id: Mapped[int] = mapped_column(
+        ForeignKey("product_variants.id", ondelete="CASCADE")
+    )
     order_id: Mapped[int] = mapped_column(ForeignKey("orders.id"), nullable=True)
 
     content: Mapped[str] = mapped_column(Text)
-    #status_name: Mapped[str] = mapped_column(ForeignKey("product_item_statuses.name"))
+    # status_name: Mapped[str] = mapped_column(ForeignKey("product_item_statuses.name"))
     status_name: Mapped[str]
-    variant: Mapped["ProductVariant"] = relationship("ProductVariant", back_populates="items")
+    variant: Mapped["ProductVariant"] = relationship(
+        "ProductVariant", back_populates="items"
+    )
     __table_args__ = (
         CheckConstraint(
-            "status_name IN ({})".format(", ".join(f"'{status}'" for status in ProductItemStatuses)),
-            name="check_product_item_status"
+            "status_name IN ({})".format(
+                ", ".join(f"'{status}'" for status in ProductItemStatuses)
+            ),
+            name="check_product_item_status",
         ),
     )
 
@@ -87,7 +97,6 @@ class ProductItem(Base):
 # class ProductItemStatuses(Base):
 #     __tablename__ = "product_item_statuses"
 #     name: Mapped[str] = mapped_column(primary_key=True)
-
 
 
 class User(Base):
@@ -155,14 +164,17 @@ class Order(Base):
     client: Mapped["Client"] = relationship("Client")
     price: Mapped[float]
     amount: Mapped[int]
-    product_snapshot: Mapped[dict] = mapped_column(JSONB, default={}, server_default='{}')
+    product_snapshot: Mapped[dict] = mapped_column(
+        JSONB, default={}, server_default="{}"
+    )
     __table_args__ = (
         CheckConstraint(
-            "status_name IN ({})".format(", ".join(f"'{status}'" for status in OrderStatuses)),
-            name="check_order_status"
+            "status_name IN ({})".format(
+                ", ".join(f"'{status}'" for status in OrderStatuses)
+            ),
+            name="check_order_status",
         ),
     )
-
 
 
 class Category(Base):
@@ -173,32 +185,27 @@ class Category(Base):
     logo_url: Mapped[str]
     is_folder: Mapped[bool]
     parent_id: Mapped[int | None] = mapped_column(
-        ForeignKey("categories.id", ondelete="CASCADE"),
-        nullable=True,
-        index=True
+        ForeignKey("categories.id", ondelete="CASCADE"), nullable=True, index=True
     )
-    filter_config: Mapped[list[dict]] = mapped_column(JSONB, nullable=True, default=list)
+    filter_config: Mapped[list[dict]] = mapped_column(
+        JSONB, nullable=True, default=list
+    )
 
     parent: Mapped["Category | None"] = relationship(
-        "Category",
-        back_populates="children",
-        remote_side=[id]
+        "Category", back_populates="children", remote_side=[id]
     )
 
     children: Mapped[list["Category"]] = relationship(
         "Category",
         back_populates="parent",
         cascade="all, delete-orphan",
-        passive_deletes=True
+        passive_deletes=True,
     )
 
     products: Mapped[list["Product"]] = relationship(
-        "Product",
-        back_populates="category"
+        "Product", back_populates="category"
     )
-    __table_args__ = (
-        UniqueConstraint('name', 'parent_id', name='uix_name_parent_id'),
-    )
+    __table_args__ = (UniqueConstraint("name", "parent_id", name="uix_name_parent_id"),)
 
 
 class SuggestedCategory(Base):
@@ -209,7 +216,9 @@ class SuggestedCategory(Base):
     status_name: Mapped[str]
     __table_args__ = (
         CheckConstraint(
-            "status_name IN ({})".format(", ".join(f"'{status}'" for status in SuggestionStatus)),
-            name="check_suggested_category_status"
+            "status_name IN ({})".format(
+                ", ".join(f"'{status}'" for status in SuggestionStatus)
+            ),
+            name="check_suggested_category_status",
         ),
     )

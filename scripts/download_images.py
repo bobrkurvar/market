@@ -1,7 +1,6 @@
 import os
-import urllib.request
 import time
-
+import urllib.request
 
 CAT_DIR = "scripts/seed_categories"
 PROD_DIR = "scripts/seed_products"
@@ -24,13 +23,13 @@ for i, kw in enumerate(cat_keywords, start=1):
     try:
         urllib.request.urlretrieve(url, filename)
         print(f" ✅ Сохранено: {filename}")
-        time.sleep(1) # Небольшая пауза, чтобы сервис не заблокировал
+        time.sleep(1)  # Небольшая пауза, чтобы сервис не заблокировал
     except Exception as e:
         print(f" ❌ Ошибка при скачивании {url}: {e}")
 
 # 2. Скачиваем картинки для товаров (постеры 600x800 или 800x450)
 print(f"\nСкачиваем обложки товаров в {PROD_DIR}...")
-for i in range(1, 16): # Скачаем 15 разных картинок
+for i in range(1, 16):  # Скачаем 15 разных картинок
     kw = prod_keywords[i % len(prod_keywords)]
     # Используем соотношение 16:9, так как в твоем Vue-шаблоне стоит aspect-video
     url = f"https://loremflickr.com/800/450/{kw}?lock={i+100}"

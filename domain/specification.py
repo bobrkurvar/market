@@ -1,18 +1,19 @@
 from dataclasses import dataclass
-from typing import Any
 from enum import StrEnum
+from typing import Any
+
 
 class Operations(StrEnum):
-    exact="exact"
-    gte="gte"
-    lte="lte"
-    gt="gt"
-    lt="lt"
-    ilike="ilike"
-    in_="in"
-    ne="ne"
-    is_="is"
-    is_not="is_not"
+    exact = "exact"
+    gte = "gte"
+    lte = "lte"
+    gt = "gt"
+    lt = "lt"
+    ilike = "ilike"
+    in_ = "in"
+    ne = "ne"
+    is_ = "is"
+    is_not = "is_not"
 
 
 @dataclass
@@ -25,5 +26,5 @@ class DomainFilter:
 @dataclass
 class Operation:
     value: Any
-    #op: str = "exact"  # По умолчанию обычное равенство
+    # op: str = "exact"  # По умолчанию обычное равенство
     op: Operations

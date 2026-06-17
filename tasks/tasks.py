@@ -3,8 +3,8 @@ import logging
 from taskiq import TaskiqDepends
 
 from domain import Order
-from services.order import cancel_unpaid_order
 from services.category import approve_suggested_category
+from services.order import cancel_unpaid_order
 
 from .broker import broker
 from .deps import get_payment_service, get_uow

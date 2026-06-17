@@ -1,17 +1,20 @@
+import logging
+
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
-from adapters.deps import UowDep, RedisDep, GetUserDep
-from services.auth import create_tokens_from_login, create_tokens_from_refresh, user_register, delete_redis_keys
 from adapters.cookies import AuthCookies
-from infra.security import verify
-from infra.auth import get_data_from_token
-
+from adapters.deps import GetUserDep, RedisDep, UowDep
 from api.schemas import UserLogin, UserRegister
-import logging
+from infra.auth import get_data_from_token
+from infra.security import verify
+from services.auth import (create_tokens_from_login,
+                           create_tokens_from_refresh, delete_redis_keys,
+                           user_register)
 
 router = APIRouter()
 log = logging.getLogger(__name__)
+
 
 @router.post("/logout")
 async def logout(request: Request, redis: RedisDep):
@@ -28,9 +31,9 @@ async def logout(request: Request, redis: RedisDep):
 
 @router.get("/me")
 async def get_user_profile(user: GetUserDep):
-    #cookie_manager = AuthCookies()
-    #access_token = cookie_manager.get_access_token(request=request)
-    #log.debug("access_token: %s", access_token)
+    # cookie_manager = AuthCookies()
+    # access_token = cookie_manager.get_access_token(request=request)
+    # log.debug("access_token: %s", access_token)
     return {"user": user}
 
 
@@ -41,7 +44,9 @@ async def refresh_tokens(request: Request, redis: RedisDep, uow: UowDep):
     # access_token = cookie_manager.get_access_token(request=request)
     # log.debug("access_token: %s", access_token)
     # log.debug("refresh_token: %s", refresh_token)
-    tokens = await create_tokens_from_refresh(redis=redis, uow=uow, refresh_token=refresh_token)
+    tokens = await create_tokens_from_refresh(
+        redis=redis, uow=uow, refresh_token=refresh_token
+    )
     cookie_manager = AuthCookies()
     response = JSONResponse(content="success")
     cookie_manager.set_tokens(**tokens, response=response)
@@ -50,7 +55,9 @@ async def refresh_tokens(request: Request, redis: RedisDep, uow: UowDep):
 
 @router.post("/login")
 async def user_login(user: UserLogin, uow: UowDep, redis: RedisDep):
-    tokens, user_data = await create_tokens_from_login(uow, username=user.username, password=user.password, verify=verify, redis=redis)
+    tokens, user_data = await create_tokens_from_login(
+        uow, username=user.username, password=user.password, verify=verify, redis=redis
+    )
     cookie_manager = AuthCookies()
     response = JSONResponse(content={"user": user_data})
     cookie_manager.set_tokens(**tokens, response=response)

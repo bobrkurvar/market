@@ -1,6 +1,6 @@
+import asyncio
 import hashlib
 from uuid import uuid4
-import asyncio
 
 import bcrypt
 
@@ -34,6 +34,6 @@ def create_token_jti() -> str:
 def calculate_file_hash(file_bytes: bytes) -> str:
     return hashlib.md5(file_bytes).hexdigest()
 
+
 async def async_hash_calculate(img: bytes):
     return await asyncio.to_thread(calculate_file_hash, img)
-

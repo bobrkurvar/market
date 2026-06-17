@@ -31,9 +31,7 @@ class FileSystemStorage:
 
 
 class FileManager:
-    def __init__(
-        self, layers: dict | None = None, storage=None, root=None
-    ):
+    def __init__(self, layers: dict | None = None, storage=None, root=None):
         self._root = Path(root) if root else Path("media")
         self._storage = storage if storage is not None else FileSystemStorage()
         self._layers = layers if layers else {}
@@ -55,7 +53,6 @@ class FileManager:
         path = self.resolve_path(file_name, layer)
         await self.save(path, img)
         return path
-
 
     async def delete_by_layers(self, base_path: str | Path, layers: list[str]) -> int:
         log.debug("deleted by layers: %s", layers)

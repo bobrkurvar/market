@@ -12,12 +12,35 @@
 
     <template v-else-if="category">
       <div class="mb-8">
-        <h1 class="text-3xl font-bold">{{ category.name }}</h1>
+        <h1 class="text-3xl font-bold">
+          {{ category.parent_name ? `${category.parent_name} — ${category.name}` : category.name }}
+        </h1>
         <p v-if="category.description" class="text-gray-500 mt-2">{{ category.description }}</p>
       </div>
 
-      <div class="flex flex-col md:flex-row gap-8 flex-grow">
+      <div v-if="isFolder" class="flex-grow">
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+          <NuxtLink
+            v-for="child in category.children"
+            :key="child.id"
+            :to="`/categories/${child.slug}/${child.id}`"
+            class="block outline-none group"
+          >
+            <UCard
+              class="flex flex-col h-full cursor-pointer transition-all duration-200 hover:ring-2 hover:ring-primary-500 hover:shadow-md text-center"
+              :ui="{ body: { padding: 'p-6 flex flex-col items-center justify-center' } }"
+            >
+              <div class="w-16 h-16 mb-4 flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-full group-hover:scale-110 transition-transform duration-300">
+                <img v-if="child.catalog_url" :src="child.catalog_url" :alt="child.name" class="w-10 h-10 object-contain" />
+                <UIcon v-else name="i-heroicons-folder" class="w-8 h-8 text-primary-500" />
+              </div>
+              <span class="font-bold text-gray-900 dark:text-white">{{ child.name }}</span>
+            </UCard>
+          </NuxtLink>
+        </div>
+      </div>
 
+      <div v-else class="flex flex-col md:flex-row gap-8 flex-grow">
         <aside
           v-if="category.filter_config?.length && (productsTotal > 0 || hasActiveFilters)"
           class="w-full md:w-64 flex-shrink-0"
@@ -184,7 +207,6 @@ const { data: category, pending: categoryPending } = await useFetch(`/api/catego
         if (filter.type === 'checkbox') {
           let urlVal = route.query[filter.key]
           if (urlVal) {
-            // Если в URL лежат значения через запятую (например ?edition=Standard,Deluxe), разбиваем их в массив
             activeFilters.value[filter.key] = typeof urlVal === 'string' ? urlVal.split(',') : urlVal
           } else {
             activeFilters.value[filter.key] = []
@@ -200,6 +222,11 @@ const { data: category, pending: categoryPending } = await useFetch(`/api/catego
   }
 })
 
+// Проверяем статус напрямую через флаг от бэкенда
+const isFolder = computed(() => {
+  return category.value?.is_folder === true
+})
+
 // --- 2. Ручное управление массивами для UCheckbox ---
 const toggleCheckbox = (filterKey, option) => {
   const currentArray = activeFilters.value[filterKey] || []
@@ -212,6 +239,8 @@ const toggleCheckbox = (filterKey, option) => {
 
 // --- 3. Универсальная функция подгрузки товаров ---
 const fetchProducts = async (isLoadMore = false) => {
+  if (isFolder.value) return
+
   if (isLoadMore) {
     isLoadingMore.value = true
   } else {
@@ -226,11 +255,9 @@ const fetchProducts = async (isLoadMore = false) => {
       offset: offset.value
     }
 
-    // Собираем фильтры для отправки на бэкенд
     for (const [key, value] of Object.entries(activeFilters.value)) {
       if (value !== undefined && value !== null && value !== '') {
         if (Array.isArray(value)) {
-          // Отправляем массив на сервер, библиотека $fetch сама превратит его в правильный формат для API
           if (value.length > 0) params[key] = value
         } else {
           params[key] = value
@@ -275,15 +302,15 @@ const clearFilters = () => {
   }
 }
 
-// Реактивное обновление при изменении фильтров
 watch(() => activeFilters.value, (newFilters, oldFilters) => {
+  if (isFolder.value) return
+
   if (Object.keys(oldFilters).length > 0) {
     const query = {}
 
     for (const [key, value] of Object.entries(newFilters)) {
        if (value !== undefined && value !== null && value !== '') {
           if (Array.isArray(value)) {
-            // КРАСОТА В URL: Склеиваем массивы через запятую для адресной строки
             if (value.length > 0) query[key] = value.join(',')
           } else {
             query[key] = value
@@ -296,9 +323,8 @@ watch(() => activeFilters.value, (newFilters, oldFilters) => {
   }
 }, { deep: true })
 
-// --- ЛОГИКА БЕСКОНЕЧНОГО СКРОЛЛА ---
 const handleScroll = () => {
-  if (isInitialLoad.value || isLoadingMore.value) return
+  if (isFolder.value || isInitialLoad.value || isLoadingMore.value) return
   if (products.value.length >= productsTotal.value) return
 
   const bottomOfWindow = window.innerHeight + window.scrollY >= document.documentElement.offsetHeight - 300

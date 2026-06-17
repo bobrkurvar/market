@@ -40,13 +40,14 @@
           <ul class="max-h-60 overflow-y-auto">
             <li
               v-for="item in suggestions"
-              :key="item.id"
-              @click="selectSuggestion(item)"
+              :key="(item.data && item.data.id) ? item.data.id : item.name"
+              @mousedown="selectSuggestion(item)"
               class="px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer flex justify-between items-center transition-colors"
             >
               <div class="flex items-center gap-2">
-                <UIcon name="i-heroicons-folder" class="text-gray-400 w-5 h-5" />
-                <span class="font-medium">{{ item.name }}</span>
+                <img v-if="item.data && item.data.search_url" :src="item.data.search_url" :alt="item.data.name" class="w-5 h-5 object-contain" />
+                <UIcon v-else name="i-heroicons-folder" class="text-gray-400 w-5 h-5" />
+                <span class="font-medium">{{ item.data ? item.data.name : item.name }}</span>
               </div>
               <span v-if="item.match_count" class="text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-full">
                 {{ item.match_count }}
@@ -123,7 +124,7 @@ let idleTimeout = null
 const IDLE_TIME_MS = 30000
 
 const goHome = () => {
-  clearSearch() // Очищаем поиск при клике на логотип
+  clearSearch()
 }
 
 const applySearch = () => {
@@ -146,11 +147,31 @@ const selectSuggestion = (item) => {
   suggestions.value = []
   closeWebSocket()
 
-  if (item.id && item.slug) {
-    searchInput.value = ''
-    router.push(`/categories/${item.slug}/${item.id}`)
+  // Если прилетел ожидаемый "конверт"
+  if (item && item.data) {
+    const targetData = item.data
+    const targetId = targetData.id || targetData.category_id
+
+    // Если это категория и у нас есть все нужные данные
+    if (item.type === 'category' && targetId && targetData.slug) {
+      searchInput.value = ''
+      router.push(`/categories/${targetData.slug}/${targetId}`)
+      return
+    }
+
+    // Если это продукт (на будущее)
+    if (item.type === 'product' && targetId && targetData.slug) {
+       searchInput.value = ''
+       router.push(`/products/${targetData.slug}/${targetId}`)
+       return
+    }
+
+    // Фолбэк для текстового поиска, если что-то пошло не так
+    searchInput.value = targetData.name || searchInput.value
+    applySearch()
   } else {
-    searchInput.value = item.name
+    // Страховка на случай старого формата данных
+    searchInput.value = item.name || searchInput.value
     applySearch()
   }
 }
@@ -217,7 +238,6 @@ watch(searchInput, (newVal) => {
   }
 })
 
-// Синхронизация поиска при навигации (например, кнопка "Назад" в браузере)
 watch(() => route.query.q, (newQ) => {
   if (searchInput.value !== newQ) {
     searchInput.value = newQ || ''

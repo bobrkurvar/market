@@ -1,11 +1,12 @@
 import logging
 
-from sqlalchemy import select, func, or_, desc, exists
+from sqlalchemy import desc, exists, func, or_, select
 from sqlalchemy.orm import selectinload
 
-from db.models import ProductItem, Product, ProductVariant
+from db.models import Product, ProductItem, ProductVariant
 from domain import ProductItemStatuses
-#from .query_utils import apply_sold_items_filter
+
+# from .query_utils import apply_sold_items_filter
 
 log = logging.getLogger(__name__)
 
@@ -41,19 +42,18 @@ class ProductRepository:
         if min_price is not None:
             stmt = stmt.where(
                 exists().where(
-                    (ProductVariant.product_id == Product.id) &
-                    (ProductVariant.price >= min_price)
+                    (ProductVariant.product_id == Product.id)
+                    & (ProductVariant.price >= min_price)
                 )
             )
 
         if max_price is not None:
             stmt = stmt.where(
                 exists().where(
-                    (ProductVariant.product_id == Product.id) &
-                    (ProductVariant.price <= max_price)
+                    (ProductVariant.product_id == Product.id)
+                    & (ProductVariant.price <= max_price)
                 )
             )
-
 
         stmt = stmt.limit(limit).offset(offset)
         # доработать логику
@@ -70,7 +70,6 @@ class ProductRepository:
     #
     #     result = (await self.session.execute(stmt)).scalars()
     #     return tuple(self._registry.to_domain(prod) for prod in result)
-
 
     async def read_products_with_variants_and_items(self, seller_id: int):
         items_subq = (
@@ -99,9 +98,9 @@ class ProductRepository:
         return domain_products
 
     async def search_products(self, query: str, limit: int = 8, offset: int = 0):
-        fts_query = func.websearch_to_tsquery('russian', query)
-        ts_vector = func.to_tsvector('russian', Product.description)
-        fts_match = ts_vector.op('@@')(fts_query)
+        fts_query = func.websearch_to_tsquery("russian", query)
+        ts_vector = func.to_tsvector("russian", Product.description)
+        fts_match = ts_vector.op("@@")(fts_query)
         fts_rank = func.ts_rank(ts_vector, fts_query)
 
         trgm_sim = func.similarity(Product.title, query)
@@ -120,4 +119,7 @@ class ProductRepository:
 
         result = await self.session.execute(stmt)
         count_result = await self.session.execute(count_stmt)
-        return tuple(self._registry.to_domain(p) for p in result.scalars()), count_result.scalar_one()
+        return (
+            tuple(self._registry.to_domain(p) for p in result.scalars()),
+            count_result.scalar_one(),
+        )

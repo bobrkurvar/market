@@ -1,7 +1,8 @@
 from collections.abc import Collection
-from enum import StrEnum
 from datetime import datetime
-from .product import ProductVariant, ProductItem
+from enum import StrEnum
+
+from .product import ProductItem, ProductVariant
 from .user import Client
 
 
@@ -32,7 +33,9 @@ class Order:
         self.client = client
         self.client_id = client.id if client else client_id
         self.product_variant = product_variant
-        self.product_variant_id = product_variant.id if product_variant else product_variant_id
+        self.product_variant_id = (
+            product_variant.id if product_variant else product_variant_id
+        )
         self.status = status
         self.amount = amount
         self._items = [items] if isinstance(items, ProductItem) else items
@@ -101,7 +104,6 @@ class Order:
     @property
     def total_cost(self) -> float:
         return self.price * self.amount
-
 
     def is_paid(self):
         return self.status == OrderStatuses.paid

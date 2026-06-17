@@ -1,7 +1,8 @@
 from pydantic import BaseModel
-from domain import UserRole
-from .base import BaseInput
 
+from domain import UserRole
+
+from .base import BaseInput
 
 
 class UserLogin(BaseInput):

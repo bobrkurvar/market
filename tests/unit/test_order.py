@@ -1,6 +1,6 @@
 import pytest
 
-from domain import Client, Order, OrderStatuses, ProductVariant, ProductItem
+from domain import Client, Order, OrderStatuses, ProductItem, ProductVariant
 
 
 def test_create_order_obj_without_client_and_client_id():

@@ -1,8 +1,10 @@
-from adapters.deps import UowDep
-from api.schemas import HomePageOut
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import logging
-from domain import Product, Category
+
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+
+from adapters.deps import UowDep
+from api.schemas import HomePageOut, CategoryShortOut
+from domain import Category, Product
 
 log = logging.getLogger(__name__)
 
@@ -14,7 +16,7 @@ async def get_home_page(uow: UowDep, limit: int = 8):
     async with uow:
         # categories = await uow.category.get_popular_categories_by_orders(6)
         # products = await uow.product.get_popular_products_by_orders(8)
-        #categories, products = await asyncio.gather(*(categories_cor, products_cor))
+        # categories, products = await asyncio.gather(*(categories_cor, products_cor))
         products = await uow.db.read(Product, limit=limit, loaded="variants")
         categories = await uow.db.read(Category, limit=limit, loaded="parent")
     return {"products": products, "categories": categories}
@@ -35,19 +37,19 @@ async def websocket_search(websocket: WebSocket, uow: UowDep):
                 continue
 
             async with uow:
-                categories = await uow.category.search_categories_by_product(query=query)
+                categories = await uow.category.search_categories_by_product(
+                    query=query
+                )
 
-                suggestions = [
-                    {
-                        "id": category.id,
-                        "name": category.name,
-                        "type": "category"
-                    }
-                    for category in categories
-                ]
+                suggestions = []
+                for cat in categories:
+                    cat_data = CategoryShortOut.model_validate(cat).model_dump()
+                    suggestions.append({
+                        "type": "category",
+                        "data": cat_data
+                    })
 
                 await websocket.send_json({"suggestions": suggestions})
-
     except WebSocketDisconnect:
         log.debug("search connection closed")
         pass

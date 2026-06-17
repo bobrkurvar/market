@@ -4,10 +4,11 @@ from binascii import Error
 from functools import wraps
 from pathlib import Path
 
-from adapters.file_layers import ORIGINAL_PRODUCT, PRODUCT_IMAGE_LAYERS, CATEGORY_IMAGE_LAYERS, ORIGINAL_CATEGORY
+from adapters.file_layers import (CATEGORY_IMAGE_LAYERS, ORIGINAL_CATEGORY,
+                                  ORIGINAL_PRODUCT, PRODUCT_IMAGE_LAYERS)
 from adapters.files import FileManager
 from services.exceptions import ImageProcessingError
-from shared import DETAILS, PRODUCTS, CATEGORY_CATALOG, CATEGORY_SEARCH
+from shared import CATEGORY_CATALOG, CATEGORY_SEARCH, DETAILS, PRODUCTS
 
 # import aiofiles # type: ignore
 
@@ -75,13 +76,16 @@ class ProductImagesManager(FileManager):
         name = base_path.name
         return str(self.resolve_path(name, DETAILS))
 
+
 class CategoryImagesManager(FileManager):
 
     def __init__(self, storage=None, root=None):
         super().__init__(CATEGORY_IMAGE_LAYERS, storage=storage, root=root)
 
     async def delete_category(self, base_path: str | Path) -> int:
-        return await self.delete_by_layers(base_path, [CATEGORY_CATALOG, CATEGORY_SEARCH])
+        return await self.delete_by_layers(
+            base_path, [CATEGORY_CATALOG, CATEGORY_SEARCH]
+        )
 
     def base_category_path(self, file_name: str) -> Path:
         return self.resolve_path(file_name, ORIGINAL_CATEGORY)
@@ -95,6 +99,3 @@ class CategoryImagesManager(FileManager):
         base_path = Path(base_path)
         name = base_path.name
         return str(self.resolve_path(name, CATEGORY_SEARCH))
-
-
-

@@ -1,25 +1,28 @@
+import asyncio
+import logging
 import os
 import random
-import logging
-import asyncio
+
 from faker import Faker
-from db.mapper import registry
-from domain import Category, Product, UserRole, ProductVariant, ProductItem
+
+from adapters.db_provider import DbProvider
+from adapters.http_client import HttpClient
+from adapters.images import (CategoryImagesManager, ImageGenerator,
+                             ProductImagesManager)
+from adapters.uow import UnitOfWork
+from core import conf
 from core.logger import setup_logging
+from db.mapper import registry
+from domain import Category, Product, ProductItem, ProductVariant, UserRole
+from infra.security import async_hash_calculate
+from services.auth import create_user
 from services.category import create_category
 from services.product import create_product
-from services.auth import create_user
-from core import conf
-from adapters.uow import UnitOfWork
-from adapters.http_client import HttpClient
-from adapters.db_provider import DbProvider
-from adapters.images import ImageGenerator, ProductImagesManager, CategoryImagesManager
-from infra.security import async_hash_calculate
 
 setup_logging()
 
 log = logging.getLogger(__name__)
-fake = Faker(['ru_RU', 'en_US'])
+fake = Faker(["ru_RU", "en_US"])
 
 SOURCE_CAT_DIR = "scripts/seed_categories"
 SOURCE_PROD_DIR = "scripts/seed_products"
@@ -27,27 +30,64 @@ SOURCE_PROD_DIR = "scripts/seed_products"
 
 FOLDER_FILTERS_POOL = [
     [
-        {"key": "platform", "label": "Платформа", "type": "checkbox", "options": ["Steam", "Epic Games", "Origin"]},
-        {"key": "region", "label": "Регион активации", "type": "select", "options": ["Global", "Turkey", "CIS"]}
+        {
+            "key": "platform",
+            "label": "Платформа",
+            "type": "checkbox",
+            "options": ["Steam", "Epic Games", "Origin"],
+        },
+        {
+            "key": "region",
+            "label": "Регион активации",
+            "type": "select",
+            "options": ["Global", "Turkey", "CIS"],
+        },
     ],
     [
-        {"key": "os", "label": "Операционная система", "type": "radio", "options": ["Windows 11", "Windows 10", "macOS"]},
-        {"key": "duration", "label": "Срок действия", "type": "select", "options": ["1 месяц", "12 месяцев", "Навсегда"]}
-    ]
+        {
+            "key": "os",
+            "label": "Операционная система",
+            "type": "radio",
+            "options": ["Windows 11", "Windows 10", "macOS"],
+        },
+        {
+            "key": "duration",
+            "label": "Срок действия",
+            "type": "select",
+            "options": ["1 месяц", "12 месяцев", "Навсегда"],
+        },
+    ],
 ]
 
 LEAF_FILTERS_POOL = [
-    [{"key": "edition", "label": "Издание", "type": "checkbox", "options": ["Standard", "Deluxe", "Ultimate"]}],
-    [{"key": "language", "label": "Язык", "type": "select", "options": ["Русский", "English", "Multilanguage"]}],
-    []  # Лист может и не иметь уникальных фильтров, наследуя только родительские
+    [
+        {
+            "key": "edition",
+            "label": "Издание",
+            "type": "checkbox",
+            "options": ["Standard", "Deluxe", "Ultimate"],
+        }
+    ],
+    [
+        {
+            "key": "language",
+            "label": "Язык",
+            "type": "select",
+            "options": ["Русский", "English", "Multilanguage"],
+        }
+    ],
+    [],  # Лист может и не иметь уникальных фильтров, наследуя только родительские
 ]
-
 
 
 def get_files_from_dir(directory: str) -> list[str]:
     """Безопасно получает список файлов из папки"""
     if os.path.exists(directory):
-        return [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
+        return [
+            f
+            for f in os.listdir(directory)
+            if os.path.isfile(os.path.join(directory, f))
+        ]
     return []
 
 
@@ -64,10 +104,10 @@ async def seed_data(uow, product_file_manager, category_file_manager, img_genera
 
     for _ in range(5):
         seller = await create_user(
-            username=fake['en_US'].user_name(),
+            username=fake["en_US"].user_name(),
             password="password",
             role=UserRole.seller,
-            uow=uow
+            uow=uow,
         )
         sellers.append(seller)
 
@@ -90,11 +130,11 @@ async def seed_data(uow, product_file_manager, category_file_manager, img_genera
             file_manager=category_file_manager,
             img_generator=img_generator,
             category=Category(
-                name=fake['ru_RU'].word().capitalize(),
+                name=fake["ru_RU"].word().capitalize(),
                 is_folder=True,
-                filter_config=filter_config
+                filter_config=filter_config,
             ),
-            hash_calculator=async_hash_calculate
+            hash_calculator=async_hash_calculate,
         )
         folder_categories.append(saved_folder)
 
@@ -115,16 +155,18 @@ async def seed_data(uow, product_file_manager, category_file_manager, img_genera
             file_manager=category_file_manager,
             img_generator=img_generator,
             category=Category(
-                name=fake['ru_RU'].word().capitalize(),
+                name=fake["ru_RU"].word().capitalize(),
                 is_folder=False,
                 parent_id=parent_folder.id,
-                filter_config=filter_config
+                filter_config=filter_config,
             ),
-            hash_calculator=async_hash_calculate
+            hash_calculator=async_hash_calculate,
         )
         leaf_categories.append(saved_leaf)
 
-    log.info(f"✅ Создано папок: {len(folder_categories)}, листов: {len(leaf_categories)}")
+    log.info(
+        f"✅ Создано папок: {len(folder_categories)}, листов: {len(leaf_categories)}"
+    )
 
     # --- 3. ГЕНЕРАЦИЯ ТОВАРОВ ---
     log.info("Создаем товары...")
@@ -138,7 +180,9 @@ async def seed_data(uow, product_file_manager, category_file_manager, img_genera
         parent_folder = next(f for f in folder_categories if f.id == category.parent_id)
 
         # Собираем ключи, которые обязаны быть в варианте, чтобы он отобразился в фильтрах
-        expected_keys = [f["key"] for f in parent_folder.filter_config] + [f["key"] for f in category.filter_config]
+        expected_keys = [f["key"] for f in parent_folder.filter_config] + [
+            f["key"] for f in category.filter_config
+        ]
 
         img_filename = random.choice(prod_images_pool)
         with open(os.path.join(SOURCE_PROD_DIR, img_filename), "rb") as f:
@@ -152,7 +196,10 @@ async def seed_data(uow, product_file_manager, category_file_manager, img_genera
             product_items = []
 
             for _ in range(keys_to_create):
-                key_content = fake.bothify(text='?????-?????-?????', letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
+                key_content = fake.bothify(
+                    text="?????-?????-?????",
+                    letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+                )
                 item = ProductItem(content=key_content)
                 product_items.append(item)
 
@@ -160,17 +207,27 @@ async def seed_data(uow, product_file_manager, category_file_manager, img_genera
             variant_attributes = {}
             for key in expected_keys:
                 if key == "platform":
-                    variant_attributes[key] = random.choice(["Steam", "Epic Games", "Origin"])
+                    variant_attributes[key] = random.choice(
+                        ["Steam", "Epic Games", "Origin"]
+                    )
                 elif key == "region":
                     variant_attributes[key] = random.choice(["Global", "Turkey", "CIS"])
                 elif key == "os":
-                    variant_attributes[key] = random.choice(["Windows 11", "Windows 10", "macOS"])
+                    variant_attributes[key] = random.choice(
+                        ["Windows 11", "Windows 10", "macOS"]
+                    )
                 elif key == "duration":
-                    variant_attributes[key] = random.choice(["1 месяц", "12 месяцев", "Навсегда"])
+                    variant_attributes[key] = random.choice(
+                        ["1 месяц", "12 месяцев", "Навсегда"]
+                    )
                 elif key == "edition":
-                    variant_attributes[key] = random.choice(["Standard", "Deluxe", "Ultimate"])
+                    variant_attributes[key] = random.choice(
+                        ["Standard", "Deluxe", "Ultimate"]
+                    )
                 elif key == "language":
-                    variant_attributes[key] = random.choice(["Русский", "English", "Multilanguage"])
+                    variant_attributes[key] = random.choice(
+                        ["Русский", "English", "Multilanguage"]
+                    )
                 else:
                     variant_attributes[key] = fake.word().capitalize()
 
@@ -180,16 +237,16 @@ async def seed_data(uow, product_file_manager, category_file_manager, img_genera
             variant = ProductVariant(
                 price=float(random.randint(99, 4999)),
                 attributes=variant_attributes,
-                items=product_items
+                items=product_items,
             )
             product_variants.append(variant)
 
         product = Product(
             title=f"{fake['en_US'].word().capitalize()} {fake['en_US'].word().capitalize()}",
-            description=fake['ru_RU'].text(max_nb_chars=400),
+            description=fake["ru_RU"].text(max_nb_chars=400),
             seller_id=seller.id,
             category_id=category.id,
-            variants=product_variants
+            variants=product_variants,
         )
 
         await create_product(
@@ -198,7 +255,7 @@ async def seed_data(uow, product_file_manager, category_file_manager, img_genera
             file_manager=product_file_manager,
             img_generator=img_generator,
             product=product,
-            hash_calculator=async_hash_calculate
+            hash_calculator=async_hash_calculate,
         )
 
     log.info(f"✅ Создано товаров: {products_to_create}")
@@ -209,9 +266,11 @@ if __name__ == "__main__":
     db_provider = DbProvider(conf.db_url)
     uow = UnitOfWork(provider=db_provider, registry=registry)
     img_generator = ImageGenerator(HttpClient(conf.image_api_url))
-    asyncio.run(seed_data(
-        uow=uow,
-        img_generator=img_generator,
-        product_file_manager=ProductImagesManager(),
-        category_file_manager=CategoryImagesManager()
-    ))
+    asyncio.run(
+        seed_data(
+            uow=uow,
+            img_generator=img_generator,
+            product_file_manager=ProductImagesManager(),
+            category_file_manager=CategoryImagesManager(),
+        )
+    )

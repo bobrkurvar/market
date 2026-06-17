@@ -1,4 +1,4 @@
-from shared import DETAILS, PRODUCTS, CATEGORY_SEARCH, CATEGORY_CATALOG
+from shared import CATEGORY_CATALOG, CATEGORY_SEARCH, DETAILS, PRODUCTS
 
 ORIGINAL_PRODUCT = "original_product"
 
@@ -13,5 +13,5 @@ ORIGINAL_CATEGORY = "original_category"
 CATEGORY_IMAGE_LAYERS = {
     ORIGINAL_CATEGORY: "base/categories",
     CATEGORY_CATALOG: "categories/catalog",
-    CATEGORY_SEARCH: "categories/search"
+    CATEGORY_SEARCH: "categories/search",
 }

@@ -2,9 +2,7 @@
   <div class="min-h-screen bg-gray-50 font-sans text-gray-900">
     <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-      <!-- Список товаров -->
       <div v-if="currentView === 'list'" class="space-y-6 animate-fadeIn">
-
         <div class="flex justify-between items-center">
           <h1 class="text-2xl font-bold text-gray-900">Мои товары</h1>
           <button
@@ -62,9 +60,7 @@
         </div>
       </div>
 
-      <!-- Форма создания товара -->
       <div v-else-if="currentView === 'create'" class="max-w-4xl mx-auto animate-fadeIn">
-
         <button
           @click="currentView = 'list'"
           class="flex items-center text-gray-500 hover:text-gray-900 mb-6 font-medium transition"
@@ -76,12 +72,9 @@
           <h2 class="text-2xl font-bold mb-8">Создание нового товара</h2>
 
           <form @submit.prevent="submitProduct" class="space-y-8">
-
-            <!-- Основная информация -->
             <section>
               <h3 class="text-lg font-semibold mb-4 border-b pb-2">Основная информация</h3>
               <div class="space-y-4">
-
                 <div>
                   <label class="block text-sm font-medium mb-1">Название товара <span class="text-red-500">*</span></label>
                   <input v-model="form.title" type="text" required placeholder="Например: Подписка Spotify Premium" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
@@ -91,15 +84,12 @@
                   <label class="block text-sm font-medium mb-1">Категория товара <span class="text-red-500">*</span></label>
                   <select
                     v-model="form.category_id"
+                    @change="onCategoryChange"
                     required
                     class="w-full border border-gray-300 rounded-lg p-3 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   >
                     <option value="" disabled>Выберите категорию...</option>
-                    <option
-                      v-for="cat in categories"
-                      :key="cat.id"
-                      :value="cat.id"
-                    >
+                    <option v-for="cat in categories" :key="cat.id" :value="cat.id">
                       {{ cat.name }}
                     </option>
                   </select>
@@ -110,7 +100,6 @@
                   <textarea v-model="form.description" rows="3" placeholder="Подробное описание товара..." class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
                 </div>
 
-                <!-- Поле загрузки изображения -->
                 <div>
                   <label class="block text-sm font-medium mb-1">Изображение товара <span class="text-red-500">*</span></label>
                   <input
@@ -121,11 +110,9 @@
                   />
                   <p v-if="imageFile" class="text-sm text-gray-500 mt-1">Выбран: {{ imageFile.name }}</p>
                 </div>
-
               </div>
             </section>
 
-            <!-- Опции и ключи -->
             <section>
               <div class="flex justify-between items-center mb-4 border-b pb-2">
                 <h3 class="text-lg font-semibold">Опции и ключи</h3>
@@ -136,7 +123,6 @@
 
               <div class="space-y-6">
                 <div v-for="(variant, index) in form.variants" :key="index" class="bg-gray-50 p-6 rounded-lg border border-gray-200 relative group">
-
                   <button v-if="form.variants.length > 1" type="button" @click="removeVariant(index)" class="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition opacity-0 group-hover:opacity-100" title="Удалить опцию">
                     ✕
                   </button>
@@ -148,42 +134,51 @@
                     <input v-model.number="variant.price" type="number" min="0" required class="w-full md:w-1/2 border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
                   </div>
 
-                  <div class="mb-5">
-                    <div class="flex justify-between items-center mb-2">
-                      <label class="block text-sm font-medium text-gray-700">Характеристики варианта</label>
-                      <button type="button" @click="addAttribute(variant)" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium bg-indigo-50 px-2 py-1 rounded transition">
-                        + Добавить свойство
-                      </button>
+                  <div class="mb-5 grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                    <div v-if="strictFilters.length > 0" class="bg-white p-4 rounded-lg border shadow-sm">
+                      <h5 class="text-sm font-semibold text-gray-700 mb-3 border-b pb-1">Системные характеристики</h5>
+                      <div class="space-y-4">
+                        <div v-for="filter in strictFilters" :key="filter.key">
+                          <label class="block text-xs font-medium text-gray-600 mb-1">
+                            {{ filter.label }} <span class="text-red-500">*</span>
+                          </label>
+
+                          <div v-if="filter.type === 'checkbox'" class="flex flex-wrap gap-2">
+                            <label v-for="opt in filter.options" :key="opt" class="flex items-center space-x-1 bg-gray-50 border px-2 py-1 rounded text-sm cursor-pointer hover:bg-gray-100">
+                              <input type="checkbox" :value="opt" v-model="variant.systemAttributes[filter.key]" class="text-indigo-600 focus:ring-indigo-500 rounded-sm">
+                              <span>{{ opt }}</span>
+                            </label>
+                          </div>
+
+                          <select v-else v-model="variant.systemAttributes[filter.key]" required class="w-full border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="" disabled>Выберите...</option>
+                            <option v-for="opt in filter.options" :key="opt" :value="opt">{{ opt }}</option>
+                          </select>
+                        </div>
+                      </div>
                     </div>
 
-                    <div class="space-y-2">
-                      <div v-if="variant.attributes.length === 0" class="text-sm text-gray-400 italic bg-white p-3 rounded border border-dashed">
-                        Без характеристик (базовый товар)
-                      </div>
-
-                      <div v-for="(attr, attrIdx) in variant.attributes" :key="attrIdx" class="flex gap-2 items-center">
-                        <input
-                          v-model="attr.key"
-                          type="text"
-                          placeholder="Название (напр. Регион)"
-                          class="w-1/2 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                        />
-                        <input
-                          v-model="attr.value"
-                          type="text"
-                          placeholder="Значение (напр. Global)"
-                          class="w-1/2 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                        />
-                        <button
-                          type="button"
-                          @click="removeAttribute(variant, attrIdx)"
-                          class="text-gray-400 hover:text-red-500 p-2"
-                          title="Удалить"
-                        >
-                          ✕
+                    <div class="bg-white p-4 rounded-lg border shadow-sm flex flex-col">
+                      <div class="flex justify-between items-center mb-3 border-b pb-1">
+                        <h5 class="text-sm font-semibold text-gray-700">Свои характеристики</h5>
+                        <button type="button" @click="addCustomAttribute(variant)" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium bg-indigo-50 px-2 py-1 rounded transition">
+                          + Добавить
                         </button>
                       </div>
+
+                      <div class="space-y-2 flex-grow">
+                        <div v-if="variant.customAttributes.length === 0" class="text-xs text-gray-400 italic mt-4 text-center">
+                          Нет дополнительных характеристик
+                        </div>
+                        <div v-for="(attr, attrIdx) in variant.customAttributes" :key="attrIdx" class="flex gap-2 items-center">
+                          <input v-model="attr.key" type="text" placeholder="Название (напр. Язык)" class="w-1/2 border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+                          <input v-model="attr.value" type="text" placeholder="Значение (напр. Русский)" class="w-1/2 border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+                          <button type="button" @click="removeCustomAttribute(variant, attrIdx)" class="text-gray-400 hover:text-red-500" title="Удалить">✕</button>
+                        </div>
+                      </div>
                     </div>
+
                   </div>
 
                   <div>
@@ -219,15 +214,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 
-// Проверка роли продавца
 definePageMeta({
   middleware: [
     async function () {
       const currentUser = useState('user')
       const { $api } = useNuxtApp()
-
       if (!currentUser.value) {
         try {
           const res = await $api('/api/me')
@@ -236,7 +229,6 @@ definePageMeta({
           currentUser.value = null
         }
       }
-
       if (currentUser.value?.role !== 'seller') {
         return navigateTo('/')
       }
@@ -250,10 +242,27 @@ const { $api } = useNuxtApp()
 // Состояния
 const currentView = ref('list')
 const products = ref([])
-const categories = ref([]) // Список категорий (листьев)
-const imageFile = ref(null) // Файл изображения
+const categories = ref([])
+const imageFile = ref(null)
+const selectedCategoryData = ref(null) // Подробные данные выбранной категории
 
-// Загрузка товаров продавца
+// Вычисляем строгие фильтры из выбранной категории
+const strictFilters = computed(() => {
+  if (!selectedCategoryData.value?.filter_config) return []
+  return selectedCategoryData.value.filter_config.filter(f => f.strict_options)
+})
+
+// Базовая инициализация системных атрибутов для варианта
+const buildDefaultSystemAttributes = () => {
+  const attrs = {}
+  strictFilters.value.forEach(f => {
+    // Если это чекбокс (множественный выбор), инициализируем массив. Иначе - пустую строку.
+    attrs[f.key] = f.type === 'checkbox' ? [] : ''
+  })
+  return attrs
+}
+
+// Загрузка товаров
 const fetchProducts = async () => {
   try {
     products.value = await $api('/api/seller/products')
@@ -262,7 +271,7 @@ const fetchProducts = async () => {
   }
 }
 
-// Загрузка категорий (листьев) для выпадающего списка
+// Загрузка списка категорий
 const fetchCategories = async () => {
   try {
     categories.value = await $api('/api/seller/categories')
@@ -271,65 +280,109 @@ const fetchCategories = async () => {
   }
 }
 
-// Выполняется при загрузке страницы
+// Подгрузка деталей категории (чтобы вытащить filter_config) при смене селекта
+const onCategoryChange = async () => {
+  if (!form.value.category_id) return
+
+  try {
+    // 1. Находим выбранную категорию в загруженном массиве
+    const selectedCat = categories.value.find(c => c.id === form.value.category_id)
+
+    // 2. Достаем slug (если по какой-то причине его нет, ставим заглушку 'catalog')
+    const slug = selectedCat?.slug || 'catalog'
+
+    // 3. Делаем правильный запрос
+    selectedCategoryData.value = await $api(`/api/categories/${slug}/${form.value.category_id}`)
+
+    // Перестраиваем системные атрибуты у всех существующих вариантов в форме
+    form.value.variants.forEach(variant => {
+      variant.systemAttributes = buildDefaultSystemAttributes()
+    })
+  } catch (error) {
+    toast.add({ title: 'Ошибка', description: 'Не удалось загрузить фильтры категории', color: 'red' })
+  }
+}
+
 onMounted(() => {
   fetchProducts()
   fetchCategories()
 })
 
-// Обработчик выбора файла
 const onFileChange = (event) => {
   const file = event.target.files?.[0] || null
   imageFile.value = file
 }
 
-// Сброс формы
+// Сброс формы (теперь с разделением атрибутов)
 const resetForm = () => {
   imageFile.value = null
+  selectedCategoryData.value = null
   return {
     title: '',
     description: '',
     category_id: '',
-    variants: [{ price: null, attributes: [{ key: '', value: '' }], rawKeys: '' }]
+    variants: [{
+      price: null,
+      systemAttributes: {},
+      customAttributes: [{ key: '', value: '' }],
+      rawKeys: ''
+    }]
   }
 }
 
 const form = ref(resetForm())
 
-// Управление вариантами и атрибутами
-const addVariant = () => form.value.variants.push({ price: null, attributes: [{ key: '', value: '' }], rawKeys: '' })
+const addVariant = () => {
+  form.value.variants.push({
+    price: null,
+    systemAttributes: buildDefaultSystemAttributes(), // сразу добавляем актуальные системные поля
+    customAttributes: [{ key: '', value: '' }],
+    rawKeys: ''
+  })
+}
 const removeVariant = (index) => form.value.variants.splice(index, 1)
 
-const addAttribute = (variant) => variant.attributes.push({ key: '', value: '' })
-const removeAttribute = (variant, index) => variant.attributes.splice(index, 1)
+const addCustomAttribute = (variant) => variant.customAttributes.push({ key: '', value: '' })
+const removeCustomAttribute = (variant, index) => variant.customAttributes.splice(index, 1)
 
 const countKeys = (rawText) => rawText ? rawText.split('\n').filter(k => k.trim()).length : 0
 
-// Отправка формы (создание товара) с файлом
 const submitProduct = async () => {
-  // Валидация наличия файла
   if (!imageFile.value) {
-    toast.add({
-      title: 'Ошибка',
-      description: 'Пожалуйста, загрузите изображение товара',
-      color: 'red'
-    })
+    toast.add({ title: 'Ошибка', description: 'Пожалуйста, загрузите изображение товара', color: 'red' })
     return
   }
 
+  // Небольшая клиентская валидация системных атрибутов
+  for (const v of form.value.variants) {
+    for (const f of strictFilters.value) {
+      const val = v.systemAttributes[f.key]
+      if (!val || (Array.isArray(val) && val.length === 0)) {
+        toast.add({ title: 'Ошибка', description: `Заполните обязательное поле: ${f.label}`, color: 'red' })
+        return
+      }
+    }
+  }
+
   try {
-    // Формируем JSON-данные товара
     const payload = {
       title: form.value.title,
       description: form.value.description,
       category_id: form.value.category_id,
       variants: form.value.variants.map(v => {
-        const validAttrs = v.attributes.filter(a => a.key.trim() && a.value.trim())
+        // 1. Копируем системные атрибуты (выбранные галочки и селекты)
+        const finalAttributes = { ...v.systemAttributes }
+
+        // 2. Добавляем валидные кастомные атрибуты поверх системных
+        v.customAttributes.forEach(attr => {
+          if (attr.key.trim() && attr.value.trim()) {
+            finalAttributes[attr.key.trim()] = attr.value.trim()
+          }
+        })
+
         return {
           price: v.price,
-          attributes: validAttrs.length
-            ? Object.fromEntries(validAttrs.map(a => [a.key.trim(), a.value.trim()]))
-            : null,
+          attributes: Object.keys(finalAttributes).length ? finalAttributes : null,
           items: v.rawKeys
             .split('\n')
             .map(k => k.trim())
@@ -339,12 +392,10 @@ const submitProduct = async () => {
       })
     }
 
-    // Собираем FormData: поле data (JSON) и поле file (изображение)
     const formData = new FormData()
     formData.append('data', JSON.stringify(payload))
     formData.append('file', imageFile.value)
 
-    // Отправляем multipart/form-data запрос
     await $api('/api/seller/products', {
       method: 'POST',
       body: formData
@@ -352,7 +403,6 @@ const submitProduct = async () => {
 
     toast.add({ title: 'Успешно', description: 'Товар сохранен и опубликован', color: 'green' })
 
-    // Возвращаемся в список и обновляем данные
     currentView.value = 'list'
     form.value = resetForm()
     fetchProducts()

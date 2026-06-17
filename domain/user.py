@@ -9,7 +9,13 @@ class UserRole(StrEnum):
 
 
 class User:
-    def __init__(self, username: str,role: UserRole, user_id: int | None = None, password: str | None = None):
+    def __init__(
+        self,
+        username: str,
+        role: UserRole,
+        user_id: int | None = None,
+        password: str | None = None,
+    ):
         self.id = user_id
         self.username = username
         self.password = password
@@ -17,7 +23,9 @@ class User:
 
     def _validate(self):
         if self.id is None and self.password is None:
-            raise ValueError("Для создания нового пользователя придумайте для него пароль")
+            raise ValueError(
+                "Для создания нового пользователя придумайте для него пароль"
+            )
 
 
 class Seller(User):

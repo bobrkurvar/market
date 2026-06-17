@@ -2,20 +2,20 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
 from adapters.db_provider import DbProvider
+from adapters.http_client import HttpClient
+from adapters.redis import RedisProvider
 from api.endpoints import main_router
+from api.err_handlers import *
 from core import conf
 from core.logger import setup_logging
 from domain import *
-from api.err_handlers import *
 from infra.event_bus import EventBus
 from tasks.handlers import generate_payment_link
-from adapters.redis import RedisProvider
-from fastapi.middleware.cors import CORSMiddleware
-from adapters.http_client import HttpClient
 
 setup_logging()
-
 
 
 @asynccontextmanager
@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI):
     event_bus = EventBus()
     event_bus.subscribe(OrderCreatedEvent, generate_payment_link)
     app.state.event_bus = event_bus
-    #app.state.image_api = HttpClient(url=f"http://{conf.image_service_url}/")
+    # app.state.image_api = HttpClient(url=f"http://{conf.image_service_url}/")
     app.state.image_api = HttpClient(url=conf.image_api_url)
     app.state.redis = await RedisProvider.create(conf.redis_host)
 
@@ -41,13 +41,13 @@ origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://127.0.0.1",
-    "http://localhost"
+    "http://localhost",
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,       # <-- Указываем точный список, никаких звездочек
-    allow_credentials=True,      # <-- Обязательно True, так как фронт шлет credentials
+    allow_origins=origins,  # <-- Указываем точный список, никаких звездочек
+    allow_credentials=True,  # <-- Обязательно True, так как фронт шлет credentials
     allow_methods=["*"],
     allow_headers=["*"],
 )

@@ -143,7 +143,9 @@ class GenericRepository:
         """Применяет стандартные WHERE-условия с поддержкой объектов Operation"""
 
         def is_iterable_not_string(obj) -> bool:
-            return isinstance(obj, Collection) and not isinstance(obj, (str, bytes, bytearray))
+            return isinstance(obj, Collection) and not isinstance(
+                obj, (str, bytes, bytearray)
+            )
 
         conditions = []
         operators_map = {

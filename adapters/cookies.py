@@ -45,11 +45,9 @@ class AuthCookies:
             max_age=ttl,
             samesite="strict",
             secure=self.cookie_secret,
-            path="/"
+            path="/",
         )
 
     def set_tokens(self, access_token: str, refresh_token: str, response: Response):
         self.set_access_token(value=access_token, response=response)
         self.set_refresh_token(value=refresh_token, response=response)
-
-

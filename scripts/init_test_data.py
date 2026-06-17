@@ -120,12 +120,12 @@ import logging
 import random
 import string
 
-from domain import Category, Product, ProductVariant, ProductItem, Seller
 from adapters.db_provider import DbProvider
 from adapters.uow import UnitOfWork
-from db.mapper import registry
-from core.logger import setup_logging
 from core import conf
+from core.logger import setup_logging
+from db.mapper import registry
+from domain import Category, Product, ProductItem, ProductVariant, Seller
 
 setup_logging()
 log = logging.getLogger(__name__)
@@ -136,11 +136,25 @@ VARIANTS_PER_PRODUCT = (1, 3)
 KEYS_PER_VARIANT = (5, 20)
 
 # Сгенерируем немного осмысленных слов для теста поиска
-SEARCH_KEYWORDS = ["Steam", "Epic", "Global", "RU", "Premium", "Gold", "Edition", "Key", "Account", "Gift"]
+SEARCH_KEYWORDS = [
+    "Steam",
+    "Epic",
+    "Global",
+    "RU",
+    "Premium",
+    "Gold",
+    "Edition",
+    "Key",
+    "Account",
+    "Gift",
+]
 
 
 def generate_random_key():
-    return '-'.join(''.join(random.choices(string.ascii_uppercase + string.digits, k=4)) for _ in range(3))
+    return "-".join(
+        "".join(random.choices(string.ascii_uppercase + string.digits, k=4))
+        for _ in range(3)
+    )
 
 
 async def seed_mass_data(uow):
@@ -159,7 +173,7 @@ async def seed_mass_data(uow):
         async with uow:
             cat = Category(
                 name=f"Категория {c}",
-                logo_url="media/dummy_category.png"  # Просто фейковый путь
+                logo_url="media/dummy_category.png",  # Просто фейковый путь
             )
             saved_cat = await uow.db.create(cat)
             created_categories.append(saved_cat)
@@ -177,7 +191,9 @@ async def seed_mass_data(uow):
 
             for v in range(1, num_variants + 1):
                 num_keys = random.randint(*KEYS_PER_VARIANT)
-                items = [ProductItem(content=generate_random_key()) for _ in range(num_keys)]
+                items = [
+                    ProductItem(content=generate_random_key()) for _ in range(num_keys)
+                ]
                 total_keys += num_keys
 
                 variants.append(
@@ -185,9 +201,9 @@ async def seed_mass_data(uow):
                         price=float(random.randint(50, 9990)),
                         attributes={
                             "Издание": f"Вариант {v}",
-                            "Регион": random.choice(["Global", "RU/CIS", "EU", "USA"])
+                            "Регион": random.choice(["Global", "RU/CIS", "EU", "USA"]),
                         },
-                        items=items
+                        items=items,
                     )
                 )
 
@@ -200,7 +216,7 @@ async def seed_mass_data(uow):
                 category_id=cat.id,
                 seller_id=seller.id,
                 variants=variants,
-                image_url="media/dummy_product.png"  # Фейковый путь
+                image_url="media/dummy_product.png",  # Фейковый путь
             )
 
             # Сохраняем напрямую в базу, МИНУЯ сервисы картинок!

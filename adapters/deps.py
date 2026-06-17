@@ -1,16 +1,18 @@
+import logging
 from typing import Annotated
 
 from fastapi import Depends, Request, Response
 from starlette.requests import HTTPConnection
-from db.mapper import registry
-from infra.event_bus import EventBus
-from adapters.redis import RedisService
-from adapters.http_client import HttpClient
-from .cookies import AuthCookies
-import logging
-from domain import Client, Seller
-from services.auth import resolve_session_payload, get_client_from_user, get_seller_from_user
 
+from adapters.http_client import HttpClient
+from adapters.redis import RedisService
+from db.mapper import registry
+from domain import Client, Seller
+from infra.event_bus import EventBus
+from services.auth import (get_client_from_user, get_seller_from_user,
+                           resolve_session_payload)
+
+from .cookies import AuthCookies
 from .uow import UnitOfWork
 
 log = logging.getLogger(__name__)
@@ -36,6 +38,7 @@ def get_redis(request: HTTPConnection) -> RedisService:
         raise RuntimeError("Redis connection is not initialized")
     return RedisService(redis=provider.client)
 
+
 def get_image_api(request: Request) -> HttpClient:
     client = request.app.state.image_api
     if client is None:
@@ -43,12 +46,19 @@ def get_image_api(request: Request) -> HttpClient:
     return client
 
 
-
 async def get_user(
-    request: Request, response: Response, cookies: "authCookiesDep", redis: "RedisDep", uow: "UowDep"
+    request: Request,
+    response: Response,
+    cookies: "authCookiesDep",
+    redis: "RedisDep",
+    uow: "UowDep",
 ):
-    access_token, refresh_token = cookies.get_access_token(request), cookies.get_refresh_token(request)
-    payload, new_tokens = await resolve_session_payload(access_token=access_token, refresh_token=refresh_token, uow=uow, redis=redis)
+    access_token, refresh_token = cookies.get_access_token(
+        request
+    ), cookies.get_refresh_token(request)
+    payload, new_tokens = await resolve_session_payload(
+        access_token=access_token, refresh_token=refresh_token, uow=uow, redis=redis
+    )
     if new_tokens:
         cookies.set_tokens(response=response, **new_tokens)
     return payload
@@ -56,6 +66,7 @@ async def get_user(
 
 async def get_client(payload: "GetUserDep", uow: "UowDep") -> Client:
     return await get_client_from_user(payload, uow)
+
 
 async def get_seller(payload: "GetUserDep", uow: "UowDep") -> Seller:
     return await get_seller_from_user(payload, uow)

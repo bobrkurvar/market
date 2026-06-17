@@ -1,22 +1,21 @@
-from fastapi import APIRouter, Depends, Form, UploadFile, File
-from adapters.deps import UowDep, HttpClientDep
-from domain import Category
-from api.schemas import CategoryCreate, CategoryAdminOut
-from services.category import create_category
-from adapters.images import CategoryImagesManager, ImageGenerator
+import json
 from typing import Annotated
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+
+from adapters.deps import HttpClientDep, UowDep
+from adapters.images import CategoryImagesManager, ImageGenerator
+from api.schemas import CategoryAdminOut, CategoryCreate
+from domain import Category
 from infra.security import async_hash_calculate
+from services.category import create_category
 
 router = APIRouter(prefix="/admin")
 
-def get_category_form(
-    name: Annotated[str, Form()],
-    parent_id: Annotated[int | None, Form()] = None
-) -> CategoryCreate:
-    return CategoryCreate(
-        name=name,
-        parent_id=parent_id,
-    )
+
+def get_category_form(data: Annotated[str, Form()]) -> CategoryCreate:
+    return CategoryCreate.model_validate_json(data)
+
 
 @router.post("/categories")
 async def admin_create_category(
@@ -31,7 +30,7 @@ async def admin_create_category(
         file_manager=CategoryImagesManager(),
         img_generator=ImageGenerator(http_client),
         img=await file.read(),
-        hash_calculator=async_hash_calculate
+        hash_calculator=async_hash_calculate,
     )
     return {"category": category}
 
@@ -42,9 +41,10 @@ async def get_admin_categories(uow: UowDep):
         return await uow.category.get_all_categories_tree_flat()
 
 
-
 @router.delete("/categories/{category_id}")
 async def admin_delete_category(category_id: int, uow: UowDep):
     async with uow:
-        deleted_category = await uow.db.delete(Category, id=category_id, with_raise=True)
+        deleted_category = await uow.db.delete(
+            Category, id=category_id, with_raise=True
+        )
         return {"category": deleted_category}
