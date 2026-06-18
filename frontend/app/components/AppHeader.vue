@@ -1,25 +1,109 @@
 <template>
-  <header class="sticky top-0 z-50 backdrop-blur-md bg-slate-950/70 border-b border-gray-100/10">
-    <UContainer class="flex items-center justify-between h-16 gap-4">
+  <header class="sticky top-0 z-50 border-b border-gray-200/70 bg-white/85 backdrop-blur-xl dark:border-gray-800 dark:bg-gray-950/80">
+    <UContainer class="py-3">
+      <div class="flex items-center justify-between gap-4">
+        <button
+          type="button"
+          class="group flex flex-shrink-0 items-center gap-2 rounded-2xl outline-none transition-transform hover:scale-[1.02]"
+          @click="goHome"
+        >
+          <span class="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary-500 text-white shadow-lg shadow-primary-500/20">
+            <UIcon name="i-heroicons-shopping-bag" class="h-6 w-6" />
+          </span>
+          <span class="text-xl font-black tracking-tight text-gray-950 dark:text-white">
+            my<span class="text-primary-500">Market</span>
+          </span>
+        </button>
 
-      <div
-        class="text-xl font-black tracking-wider text-primary-500 cursor-pointer flex items-center gap-1 flex-shrink-0 outline-none"
-        @click="goHome"
-      >
-        my<span class="text-white">Market</span>
+        <div class="relative hidden max-w-2xl flex-1 md:block">
+          <UInput
+            v-model="searchInput"
+            icon="i-heroicons-magnifying-glass"
+            placeholder="Найти игру, подписку, аккаунт или ключ..."
+            size="lg"
+            :ui="{ icon: { trailing: { pointer: '' } } }"
+            autocomplete="off"
+            class="w-full"
+            @keyup.enter="applySearch"
+            @blur="handleBlur"
+          >
+            <template #trailing>
+              <UButton
+                v-show="searchInput !== ''"
+                color="gray"
+                variant="link"
+                icon="i-heroicons-x-mark"
+                :padded="false"
+                @click="clearSearch"
+              />
+            </template>
+          </UInput>
+
+          <div
+            v-if="suggestions.length > 0"
+            class="absolute z-50 mt-2 w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900"
+          >
+            <div class="border-b border-gray-100 px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-gray-400 dark:border-gray-800">
+              Быстрые подсказки
+            </div>
+            <ul class="max-h-80 overflow-y-auto p-2">
+              <li
+                v-for="item in suggestions"
+                :key="(item.data && item.data.id) ? item.data.id : item.name"
+                class="flex cursor-pointer items-center justify-between rounded-xl px-3 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
+                @mousedown="selectSuggestion(item)"
+              >
+                <div class="flex min-w-0 items-center gap-3">
+                  <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800">
+                    <img v-if="item.data && item.data.search_url" :src="item.data.search_url" :alt="item.data.name" class="h-6 w-6 object-contain" />
+                    <UIcon v-else name="i-heroicons-folder" class="h-5 w-5 text-gray-400" />
+                  </span>
+                  <div class="min-w-0">
+                    <div class="truncate font-semibold text-gray-950 dark:text-white">{{ item.data ? item.data.name : item.name }}</div>
+                    <div class="text-xs text-gray-500">{{ item.type === 'category' ? 'Категория' : 'Товар' }}</div>
+                  </div>
+                </div>
+                <span v-if="item.match_count" class="rounded-full bg-primary-50 px-2.5 py-1 text-xs font-bold text-primary-500 dark:bg-primary-950/40">
+                  {{ item.match_count }}
+                </span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="flex flex-shrink-0 items-center gap-2 sm:gap-3">
+          <UButton
+            :icon="colorMode.value === 'dark' ? 'i-heroicons-sun-20-solid' : 'i-heroicons-moon-20-solid'"
+            color="gray"
+            variant="soft"
+            aria-label="Theme"
+            class="rounded-xl"
+            @click="colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark'"
+          />
+
+          <UButton v-if="!currentUser" to="/login" color="primary" variant="soft" class="rounded-xl px-4 font-semibold">
+            Войти
+          </UButton>
+
+          <UDropdownMenu v-else :items="dropdownItems">
+            <UButton color="gray" variant="soft" class="rounded-xl font-semibold" trailing-icon="i-heroicons-chevron-down-20-solid">
+              <UAvatar :alt="currentUser.username" size="xs" class="mr-1 bg-primary-500 text-white font-bold" />
+              <span class="hidden sm:inline">{{ currentUser.username }}</span>
+              <span class="hidden text-xs text-gray-400 lg:inline">{{ currentUser.role === 'seller' ? 'Продавец' : 'Клиент' }}</span>
+            </UButton>
+          </UDropdownMenu>
+        </div>
       </div>
 
-      <div class="relative flex-1 max-w-2xl hidden md:block">
+      <div class="relative mt-3 md:hidden">
         <UInput
           v-model="searchInput"
           icon="i-heroicons-magnifying-glass"
-          placeholder="Найти игру, подписку, аккаунт или ключ..."
-          size="md"
-          :ui="{ icon: { trailing: { pointer: '' } } }"
+          placeholder="Найти товар..."
+          size="lg"
+          autocomplete="off"
           @keyup.enter="applySearch"
           @blur="handleBlur"
-          autocomplete="off"
-          class="w-full shadow-sm"
         >
           <template #trailing>
             <UButton
@@ -35,50 +119,24 @@
 
         <div
           v-if="suggestions.length > 0"
-          class="absolute w-full mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-50 overflow-hidden text-gray-900 dark:text-white"
+          class="absolute z-50 mt-2 w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900"
         >
-          <ul class="max-h-60 overflow-y-auto">
+          <ul class="max-h-72 overflow-y-auto p-2">
             <li
               v-for="item in suggestions"
               :key="(item.data && item.data.id) ? item.data.id : item.name"
+              class="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
               @mousedown="selectSuggestion(item)"
-              class="px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer flex justify-between items-center transition-colors"
             >
-              <div class="flex items-center gap-2">
-                <img v-if="item.data && item.data.search_url" :src="item.data.search_url" :alt="item.data.name" class="w-5 h-5 object-contain" />
-                <UIcon v-else name="i-heroicons-folder" class="text-gray-400 w-5 h-5" />
-                <span class="font-medium">{{ item.data ? item.data.name : item.name }}</span>
-              </div>
-              <span v-if="item.match_count" class="text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-full">
-                {{ item.match_count }}
+              <span class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800">
+                <img v-if="item.data && item.data.search_url" :src="item.data.search_url" :alt="item.data.name" class="h-5 w-5 object-contain" />
+                <UIcon v-else name="i-heroicons-folder" class="h-5 w-5 text-gray-400" />
               </span>
+              <span class="truncate font-semibold text-gray-950 dark:text-white">{{ item.data ? item.data.name : item.name }}</span>
             </li>
           </ul>
         </div>
       </div>
-
-      <div class="flex items-center gap-3 flex-shrink-0">
-        <UButton
-          :icon="colorMode.value === 'dark' ? 'i-heroicons-sun-20-solid' : 'i-heroicons-moon-20-solid'"
-          color="neutral"
-          variant="ghost"
-          aria-label="Theme"
-          @click="colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark'"
-        />
-
-        <UButton v-if="!currentUser" to="/login" color="neutral" variant="subtle" class="font-medium px-4">
-          Войти
-        </UButton>
-
-        <UDropdownMenu v-else :items="dropdownItems">
-          <UButton color="neutral" variant="ghost" class="text-gray-200 hover:bg-slate-900" trailing-icon="i-heroicons-chevron-down-20-solid">
-            <UAvatar :alt="currentUser.username" size="xs" class="mr-1 bg-primary-500 text-white font-bold" />
-            {{ currentUser.username }}
-            <span class="text-xs text-gray-400 ml-1">({{ currentUser.role === 'seller' ? 'Продавец' : 'Клиент' }})</span>
-          </UButton>
-        </UDropdownMenu>
-      </div>
-
     </UContainer>
   </header>
 </template>
@@ -99,8 +157,8 @@ const dropdownItems = [
     label: 'Панель управления',
     icon: 'i-heroicons-cog-8-tooth',
     onSelect: () => {
-       const path = currentUser.value.role === 'seller' ? '/seller' : '/profile'
-       router.push(path)
+      const path = currentUser.value.role === 'seller' ? '/seller' : '/profile'
+      router.push(path)
     }
   }],
   [{
@@ -161,9 +219,9 @@ const selectSuggestion = (item) => {
 
     // Если это продукт (на будущее)
     if (item.type === 'product' && targetId && targetData.slug) {
-       searchInput.value = ''
-       router.push(`/products/${targetData.slug}/${targetId}`)
-       return
+      searchInput.value = ''
+      router.push(`/products/${targetData.slug}/${targetId}`)
+      return
     }
 
     // Фолбэк для текстового поиска, если что-то пошло не так
@@ -197,8 +255,8 @@ const connectWebSocket = () => {
     return
   }
 
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = `${protocol}//${window.location.host}/api/ws/search`;
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const wsUrl = `${protocol}//${window.location.host}/api/ws/search`
   ws = new WebSocket(wsUrl)
 
   ws.onopen = () => {

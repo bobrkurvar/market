@@ -77,3 +77,6 @@ class RedisService:
     async def expire(self, key: str, ttl: int):
         key = f"{self.prefix}:{key}"
         await self.conn.expire(key, ttl)
+
+    async def publish(self, channel_name: str, value):
+        await self.conn.publish(channel_name, value)

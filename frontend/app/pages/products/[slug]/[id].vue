@@ -7,9 +7,7 @@
     <div v-else-if="product" class="grid grid-cols-1 lg:grid-cols-12 gap-10">
 
       <div class="lg:col-span-7 space-y-8">
-
         <div class="flex flex-col sm:flex-row gap-6">
-
           <div class="w-full sm:w-64 md:w-72 flex-shrink-0 aspect-square rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-800 shadow-sm relative group flex items-center justify-center">
             <img
               v-if="product.detail_url"
@@ -39,7 +37,6 @@
               </p>
             </div>
           </div>
-
         </div>
 
         <div class="prose dark:prose-invert max-w-none bg-white dark:bg-gray-900 p-6 sm:p-8 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
@@ -108,7 +105,6 @@
             color="primary"
             icon="i-heroicons-shopping-bag"
             :disabled="!selectedVariant"
-            :loading="isOrdering"
             @click="buyProduct"
             class="font-bold text-base shadow-sm"
           >
@@ -129,16 +125,63 @@
       <p class="text-gray-500 mt-2 mb-6">Возможно, он был удален или ссылка недействительна.</p>
       <UButton to="/" size="lg" color="gray" variant="solid">Вернуться в каталог</UButton>
     </div>
+
+    <Teleport to="body">
+      <div v-if="isPaymentModalOpen" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <UCard class="w-full max-w-md shadow-2xl" :ui="{ ring: '', divide: 'divide-y divide-gray-100 dark:divide-gray-800' }">
+          <div class="text-center py-8 px-4">
+
+            <div v-if="paymentStep === 'creating' || paymentStep === 'waiting'">
+              <UIcon name="i-heroicons-arrow-path" class="w-16 h-16 animate-spin text-primary-500 mx-auto mb-6" />
+              <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                {{ paymentStep === 'creating' ? 'Создаем заказ...' : 'Связываемся с банком...' }}
+              </h3>
+              <p class="text-gray-500 dark:text-gray-400 animate-pulse">
+                Пожалуйста, не закрывайте страницу.
+              </p>
+            </div>
+
+            <div v-else-if="paymentStep === 'ready'">
+              <div class="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                <UIcon name="i-heroicons-check" class="w-10 h-10 text-green-600 dark:text-green-400" />
+              </div>
+              <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Заказ успешно создан!</h3>
+              <p class="text-gray-500 dark:text-gray-400 mb-8">Платежная ссылка сгенерирована и готова к оплате.</p>
+
+              <UButton size="xl" color="green" block :to="paymentLink" target="_blank" icon="i-heroicons-credit-card">
+                Перейти к оплате
+              </UButton>
+              <UButton variant="ghost" color="gray" block class="mt-3" @click="isPaymentModalOpen = false">
+                Закрыть
+              </UButton>
+            </div>
+
+            <div v-else-if="paymentStep === 'error'">
+              <div class="w-20 h-20 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                <UIcon name="i-heroicons-x-mark" class="w-10 h-10 text-red-600 dark:text-red-400" />
+              </div>
+              <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Произошла ошибка</h3>
+              <p class="text-gray-500 dark:text-gray-400 mb-8">{{ paymentErrorMsg }}</p>
+
+              <UButton size="lg" color="primary" block @click="isPaymentModalOpen = false">
+                Попробовать снова
+              </UButton>
+            </div>
+
+          </div>
+        </UCard>
+      </div>
+    </Teleport>
+
   </UContainer>
 </template>
 
 <script setup>
 import { ref, watch, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useNuxtApp, useToast, useHead, useFetch } from '#imports'
 
 const route = useRoute()
-const router = useRouter()
 const { $api } = useNuxtApp()
 const toast = useToast()
 
@@ -150,15 +193,18 @@ const { data: product, pending } = await useFetch(`/api/products/${slug}/${produ
   $fetch: $api
 })
 
-// Храним выбранный вариант и статус загрузки заказа
 const selectedVariant = ref(null)
-const isOrdering = ref(false)
+
+// --- СОСТОЯНИЕ ОПЛАТЫ И МОДАЛКИ ---
+const isPaymentModalOpen = ref(false)
+const paymentStep = ref('creating') // 'creating' | 'waiting' | 'ready' | 'error'
+const paymentLink = ref('')
+const paymentErrorMsg = ref('')
 
 // Магия реактивности: проверяем URL и выбираем нужный вариант
 watch(product, (newProduct) => {
   if (newProduct && newProduct.variants?.length > 0) {
     const targetVariantId = route.query.variant
-
     if (targetVariantId) {
       const foundVariant = newProduct.variants.find(v => v.id === Number(targetVariantId))
       if (foundVariant) {
@@ -166,59 +212,74 @@ watch(product, (newProduct) => {
         return
       }
     }
-
     const sortedVariants = [...newProduct.variants].sort((a, b) => Number(a.price) - Number(b.price))
     selectedVariant.value = sortedVariants[0]
   }
 }, { immediate: true })
 
-// Функция создания заказа
+// 1. ШАГ ПЕРВЫЙ: Создаем заказ
 const buyProduct = async () => {
   if (!selectedVariant.value) return
 
-  isOrdering.value = true
+  // Открываем оверлей, блокируем экран
+  isPaymentModalOpen.value = true
+  paymentStep.value = 'creating'
+  paymentErrorMsg.value = ''
+
   try {
+    // Вызываем POST для создания заказа
     const order = await $api('/api/client/order', {
       method: 'POST',
-      query: {
-        product_variant_id: selectedVariant.value.id
-      }
+      query: { product_variant_id: selectedVariant.value.id }
     })
 
-    toast.add({
-      title: 'Заказ успешно создан!',
-      description: 'Перенаправляем на оплату...',
-      color: 'green'
-    })
+    // Переводим интерфейс в режим ожидания банка
+    paymentStep.value = 'waiting'
 
-    // Если бэкенд возвращает созданный order с id, можно сразу перекинуть на страницу оплаты
-    // Например: router.push(`/checkout/${order.id}`)
+    // Запускаем второй шаг (Long Polling)
+    await waitForPaymentLink(order.id)
 
   } catch (error) {
-    console.error(error)
-
-    // Обработка 401 Unauthorized (пользователь не залогинен)
     if (error.response?.status === 401) {
+      isPaymentModalOpen.value = false
       toast.add({
         title: 'Требуется авторизация',
         description: 'Пожалуйста, войдите в аккаунт для оформления заказа',
         color: 'amber'
       })
-      // Опционально: можно открыть модалку логина или перенаправить на страницу входа
-      // router.push('/login')
     } else {
-      toast.add({
-        title: 'Ошибка',
-        description: error.data?.detail || 'Не удалось создать заказ. Попробуйте позже.',
-        color: 'red'
-      })
+      paymentStep.value = 'error'
+      paymentErrorMsg.value = error.data?.detail || 'Не удалось создать заказ. Попробуйте позже.'
     }
-  } finally {
-    isOrdering.value = false
   }
 }
 
-// Динамический заголовок вкладки браузера
+// 2. ШАГ ВТОРОЙ: Ждем ссылку (Long Polling)
+const waitForPaymentLink = async (orderId) => {
+  try {
+    // Этот запрос "зависнет" до 60 секунд, пока бэкенд не найдет ссылку в Redis
+    const response = await $api(`/api/client/orders/${orderId}/wait-payment`, {
+      method: 'GET'
+    })
+
+    if (response.payment_link) {
+      paymentLink.value = response.payment_link
+      paymentStep.value = 'ready' // Успех! Показываем ссылку
+    }
+
+  } catch (error) {
+    console.error('Ошибка ожидания ссылки:', error)
+    paymentStep.value = 'error'
+
+    // Ловим наш 408 Request Timeout с бэкенда
+    if (error.response?.status === 408) {
+      paymentErrorMsg.value = 'Время ожидания ответа от банка истекло. Заказ сохранен, попробуйте оплатить его из профиля позже.'
+    } else {
+      paymentErrorMsg.value = 'Произошла ошибка при связи с платежной системой.'
+    }
+  }
+}
+
 useHead({
   title: computed(() => product.value ? `${product.value.title} | myMarket` : 'Загрузка товара...')
 })

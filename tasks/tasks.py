@@ -7,14 +7,9 @@ from services.category import approve_suggested_category
 from services.order import cancel_unpaid_order
 
 from .broker import broker
-from .deps import get_payment_service, get_uow
+from .deps import get_payment_service, get_uow, get_task_redis
 
 log = logging.getLogger(__name__)
-
-
-# @broker.task
-# async def cancel_unpaid_order_task(order_id: int, uow=TaskiqDepends(get_uow)):
-#     await cancel_unpaid_order(uow, order_id=order_id)
 
 
 @broker.task
@@ -24,6 +19,7 @@ async def generate_payment_link_task(
     product_title: str,
     uow=TaskiqDepends(get_uow),
     payment_service=TaskiqDepends(get_payment_service),
+    redis_service=TaskiqDepends(get_task_redis)
 ):
     payment_link = await payment_service.create_payment_intent(
         order_id=order_id,
@@ -35,6 +31,8 @@ async def generate_payment_link_task(
         order = await uow.db.read_one(Order, id=order_id, with_for_update=True)
         order.payment_link = payment_link
         await uow.db.save(order)
+    channel_name = f"order_payment:{order_id}"
+    await redis_service.publish(channel_name, payment_link)
 
 
 # каждые 15 минут

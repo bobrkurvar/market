@@ -55,7 +55,6 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 
-const config = useRuntimeConfig()
 const router = useRouter()
 const toast = useToast()
 const { $api } = useNuxtApp()
@@ -78,7 +77,7 @@ const registerForm = ref({ role: 'client', username: '', password: '' })
 const onAuthSuccess = (user, successMessage) => {
   currentUser.value = user
   toast.add({ title: 'Успешно', description: successMessage, color: 'green' })
-  router.push(user.role === 'seller' ? '/seller' : '/catalog')
+  router.push('/')
 }
 
 const handleLogin = async () => {
