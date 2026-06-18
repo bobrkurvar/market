@@ -5,7 +5,8 @@ from fastapi import APIRouter, Request
 
 from adapters.deps import UowDep
 from api.schemas import ProductCatalogListOut, ProductDetailOut
-from domain import Operation, Operations, Product
+from domain import Product
+from services.product import search_and_filter_products
 
 log = logging.getLogger(__name__)
 
@@ -23,8 +24,6 @@ async def get_products(
     category_id: int | None = None,
     q: str | None = None,
 ):
-    # После фильтров должен автоматически выбраться вариант первый подходящий под все фильтры и
-    # при нажатии на продукт перво наперво должен быть выбран этот вариант, в том числе и его цена
     raw_params = dict(request.query_params)
     filters: dict[str, Any] = {}
 
@@ -34,21 +33,16 @@ async def get_products(
                 filters[k] = v.split(",")
             else:
                 filters[k] = v
-
-    async with uow:
-        if q:
-            products, count = await uow.product.search_products(
-                query=q, limit=limit, offset=offset, min_price=min_price, max_price=max_price
-            )
-        else:
-            products, count = await uow.product.get_filtered_products(
-                category_id=category_id,
-                limit=limit,
-                offset=offset,
-                min_price=min_price,
-                max_price=max_price,
-                **filters
-            )
+    products, count = await search_and_filter_products(
+        uow=uow,
+        min_price=min_price,
+        max_price=max_price,
+        category_id=category_id,
+        q=q,
+        limit=limit,
+        offset=offset,
+        **filters
+    )
     return {"items": products, "total": count}
 
 

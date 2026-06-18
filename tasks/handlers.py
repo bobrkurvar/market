@@ -1,10 +1,11 @@
-from domain import Order
+from domain import OrderCreatedEvent
 
 from .tasks import generate_payment_link_task
 
 
-async def generate_payment_link(order: Order, product_title: str):
-    # noinspection PyTypeChecker
+async def enqueue_generate_payment_link(event: OrderCreatedEvent):
     await generate_payment_link_task.kiq(
-        order_id=order.id, total_cost=order.total_cost, product_title=product_title
+        order_id=event.order_id,
+        total_cost=event.total_cost,
+        product_title=event.product_title
     )

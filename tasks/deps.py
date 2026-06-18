@@ -10,7 +10,7 @@ def get_uow(context: Context = TaskiqDepends()):
     db_provider = context.state.db_provider
     if db_provider is None:
         raise RuntimeError("DB connection is not initialized in TaskIQ state")
-    return UnitOfWork(registry=registry, session_factory=db_provider)
+    return UnitOfWork(registry=registry, provider=db_provider)
 
 
 def get_task_redis(context: Context = TaskiqDepends()) -> RedisService:
@@ -21,4 +21,9 @@ def get_task_redis(context: Context = TaskiqDepends()) -> RedisService:
 
 
 def get_payment_service(context: Context = TaskiqDepends()):
-    pass
+    payment_service = context.state.payment_service
+
+    if payment_service is None:
+        raise RuntimeError("Payment service is not initialized in TaskIQ state")
+
+    return payment_service

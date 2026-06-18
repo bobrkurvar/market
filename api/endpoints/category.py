@@ -36,9 +36,12 @@ async def get_category(uow: UowDep, slug: str, category_id: int):
             for f_rule in cat.filter_config:
                 merged_filters[f_rule.key] = f_rule
 
-        merged_filters["price"] = FilterRule(key="price", label="Цена", type=FilterType.RANGE)
+        #merged_filters["price"] = FilterRule(key="price", label="Цена", type=FilterType.RANGE)
 
-        target_category.filter_config = list(merged_filters.values())
+        #target_category.filter_config = list(merged_filters.values())
+        merged_filters.pop("price", None)
+        price_filter = FilterRule(key="price", label="Цена", type=FilterType.RANGE)
+        target_category.filter_config = [price_filter] + list(merged_filters.values())
 
         if target_category.is_folder:
             target_category.children = await uow.db.read(Category, parent_id=category_id)

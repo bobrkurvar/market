@@ -66,3 +66,17 @@ class PaymentService:
     async def close(self):
         """Не забываем закрывать HTTP-клиент при остановке приложения/воркера"""
         await self.client.aclose()
+
+
+
+class FakePaymentService:
+    async def create_payment_intent(
+        self,
+        order_id: int,
+        amount: int | float,
+        description: str,
+    ) -> str:
+        return f"http://localhost:8000/fake-payment/success?order_id={order_id}"
+
+    async def close(self):
+        pass

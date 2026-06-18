@@ -53,3 +53,52 @@ async def create_product(
         product.suggested_category = normalize_category_name(product.suggested_category)
         async with uow:
             return await uow.db.create(product)
+
+def is_variant_matching(variant, min_price, max_price, filters):
+    if min_price is not None and variant.price < min_price:
+        return False
+    if max_price is not None and variant.price > max_price:
+        return False
+
+    for key, value in filters.items():
+        attr_val = variant.attributes.get(key)
+
+        if not attr_val:
+            return False
+
+        if isinstance(value, list):
+            if attr_val not in value:
+                return False
+        else:
+            if attr_val != str(value):
+                return False
+
+    return True
+
+async def search_and_filter_products(
+    uow,
+    limit: int,
+    offset: int,
+    min_price: float | None = None,
+    max_price: float | None = None,
+    category_id: int | None = None,
+    q: str | None = None,
+    **filters
+):
+    async with uow:
+        products, count = await uow.product.get_filtered_products(
+            q=q,
+            category_id=category_id,
+            limit=limit,
+            offset=offset,
+            min_price=min_price,
+            max_price=max_price,
+            **filters
+        )
+    # Сортировка вариантов внутри продукта, что бы вариант подходил по фильтрам, а если фильтров нет то будут самый минимальный по цене
+    for product in products:
+        product.variants.sort(key=lambda v: (
+            not is_variant_matching(v, min_price, max_price, filters),
+            v.price
+        ))
+    return products, count

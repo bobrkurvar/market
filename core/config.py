@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     def test_db_url(self):
         return f"postgresql+asyncpg://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.test_db_name}"
 
+    @property
+    def redis_url(self):
+        return f"redis://{self.redis_host}:6379/0"
+
 
 def load_config() -> Settings:
     conf = Settings()  # type: ignore

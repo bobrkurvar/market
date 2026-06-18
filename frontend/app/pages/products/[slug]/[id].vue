@@ -108,6 +108,7 @@
             color="primary"
             icon="i-heroicons-shopping-bag"
             :disabled="!selectedVariant"
+            :loading="isOrdering"
             @click="buyProduct"
             class="font-bold text-base shadow-sm"
           >
@@ -133,9 +134,11 @@
 
 <script setup>
 import { ref, watch, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { useNuxtApp, useToast, useHead, useFetch } from '#imports'
 
 const route = useRoute()
+const router = useRouter()
 const { $api } = useNuxtApp()
 const toast = useToast()
 
@@ -147,23 +150,72 @@ const { data: product, pending } = await useFetch(`/api/products/${slug}/${produ
   $fetch: $api
 })
 
-// Храним выбранный вариант
+// Храним выбранный вариант и статус загрузки заказа
 const selectedVariant = ref(null)
+const isOrdering = ref(false)
 
-// Магия реактивности: как только товар загрузился, автоматически выбираем первую опцию
+// Магия реактивности: проверяем URL и выбираем нужный вариант
 watch(product, (newProduct) => {
   if (newProduct && newProduct.variants?.length > 0) {
-    selectedVariant.value = newProduct.variants[0]
+    const targetVariantId = route.query.variant
+
+    if (targetVariantId) {
+      const foundVariant = newProduct.variants.find(v => v.id === Number(targetVariantId))
+      if (foundVariant) {
+        selectedVariant.value = foundVariant
+        return
+      }
+    }
+
+    const sortedVariants = [...newProduct.variants].sort((a, b) => Number(a.price) - Number(b.price))
+    selectedVariant.value = sortedVariants[0]
   }
 }, { immediate: true })
 
-const buyProduct = () => {
-  toast.add({
-    title: 'Оформление заказа',
-    description: `Переход к оплате варианта #${selectedVariant.value.id} за ${selectedVariant.value.price} ₽`,
-    color: 'green'
-  })
-  // Здесь будет логика создания заказа (переход в корзину или на платежный шлюз)
+// Функция создания заказа
+const buyProduct = async () => {
+  if (!selectedVariant.value) return
+
+  isOrdering.value = true
+  try {
+    const order = await $api('/api/client/order', {
+      method: 'POST',
+      query: {
+        product_variant_id: selectedVariant.value.id
+      }
+    })
+
+    toast.add({
+      title: 'Заказ успешно создан!',
+      description: 'Перенаправляем на оплату...',
+      color: 'green'
+    })
+
+    // Если бэкенд возвращает созданный order с id, можно сразу перекинуть на страницу оплаты
+    // Например: router.push(`/checkout/${order.id}`)
+
+  } catch (error) {
+    console.error(error)
+
+    // Обработка 401 Unauthorized (пользователь не залогинен)
+    if (error.response?.status === 401) {
+      toast.add({
+        title: 'Требуется авторизация',
+        description: 'Пожалуйста, войдите в аккаунт для оформления заказа',
+        color: 'amber'
+      })
+      // Опционально: можно открыть модалку логина или перенаправить на страницу входа
+      // router.push('/login')
+    } else {
+      toast.add({
+        title: 'Ошибка',
+        description: error.data?.detail || 'Не удалось создать заказ. Попробуйте позже.',
+        color: 'red'
+      })
+    }
+  } finally {
+    isOrdering.value = false
+  }
 }
 
 // Динамический заголовок вкладки браузера

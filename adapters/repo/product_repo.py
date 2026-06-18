@@ -29,16 +29,33 @@ class ProductRepository:
         result = (await self.session.execute(query)).scalars()
         return tuple(self._registry.to_domain(r) for r in result)
 
+
+    @staticmethod
+    def _compile_search_query(stmt, query: str):
+        fts_query = func.websearch_to_tsquery("russian", query)
+        ts_vector = func.to_tsvector("russian", Product.description)
+        fts_match = ts_vector.op("@@")(fts_query)
+        fts_rank = func.ts_rank(ts_vector, fts_query)
+
+        trgm_sim = func.similarity(Product.title, query)
+        total_rank = (trgm_sim * 0.7) + (fts_rank * 0.3)
+
+        search_condition = or_(fts_match, trgm_sim > 0.15)
+        return stmt.where(search_condition).order_by(desc(total_rank))
+
     async def get_filtered_products(
         self,
         limit: int,
         offset: int,
+        q: str | None = None,
         category_id: int | None = None,
         max_price: float | None = None,
         min_price: float | None = None,
         **filters
     ):
         stmt = select(Product)
+        if q:
+            stmt = self._compile_search_query(stmt, q)
 
         if category_id:
             stmt = stmt.where(Product.category_id == category_id)
@@ -70,25 +87,13 @@ class ProductRepository:
 
         stmt = stmt.options(selectinload(Product.variants))
 
-        count_stmt = select(func.count()).select_from(stmt.subquery())
+        count_stmt = select(func.count()).select_from(stmt.order_by(None).subquery())
         total_count = await self.session.scalar(count_stmt)
 
         stmt = stmt.limit(limit).offset(offset)
         result = (await self.session.scalars(stmt)).unique()
         return [self._registry.to_domain(r) for r in result], total_count
 
-    # async def get_popular_products_by_orders(self, limit: int):
-    #     stmt = select(Product)
-    #     stmt = apply_sold_items_filter(stmt, is_outer=True)
-    #     stmt = (
-    #         stmt
-    #         .options(selectinload(Product.variants))
-    #         .group_by(Product.id)
-    #         .order_by(desc(func.count(ProductItem.id)))
-    #     )
-    #
-    #     result = (await self.session.execute(stmt)).scalars()
-    #     return tuple(self._registry.to_domain(prod) for prod in result)
 
     async def read_products_with_variants_and_items(self, seller_id: int):
         items_subq = (
@@ -116,29 +121,29 @@ class ProductRepository:
 
         return domain_products
 
-    async def search_products(self, query: str, limit: int = 8, offset: int = 0):
-        fts_query = func.websearch_to_tsquery("russian", query)
-        ts_vector = func.to_tsvector("russian", Product.description)
-        fts_match = ts_vector.op("@@")(fts_query)
-        fts_rank = func.ts_rank(ts_vector, fts_query)
-
-        trgm_sim = func.similarity(Product.title, query)
-        total_rank = (trgm_sim * 0.7) + (fts_rank * 0.3)
-
-        search_condition = or_(fts_match, trgm_sim > 0.15)
-        stmt = (
-            select(Product)
-            .options(selectinload(Product.variants))
-            .where(search_condition)
-            .order_by(desc(total_rank))
-            .limit(limit)
-            .offset(offset)
-        )
-        count_stmt = select(func.count(Product.id)).where(search_condition)
-
-        result = await self.session.execute(stmt)
-        count_result = await self.session.execute(count_stmt)
-        return (
-            tuple(self._registry.to_domain(p) for p in result.scalars()),
-            count_result.scalar_one(),
-        )
+    # async def search_products(self, query: str, limit: int = 8, offset: int = 0):
+    #     fts_query = func.websearch_to_tsquery("russian", query)
+    #     ts_vector = func.to_tsvector("russian", Product.description)
+    #     fts_match = ts_vector.op("@@")(fts_query)
+    #     fts_rank = func.ts_rank(ts_vector, fts_query)
+    #
+    #     trgm_sim = func.similarity(Product.title, query)
+    #     total_rank = (trgm_sim * 0.7) + (fts_rank * 0.3)
+    #
+    #     search_condition = or_(fts_match, trgm_sim > 0.15)
+    #     stmt = (
+    #         select(Product)
+    #         .options(selectinload(Product.variants))
+    #         .where(search_condition)
+    #         .order_by(desc(total_rank))
+    #         .limit(limit)
+    #         .offset(offset)
+    #     )
+    #     count_stmt = select(func.count(Product.id)).where(search_condition)
+    #
+    #     result = await self.session.execute(stmt)
+    #     count_result = await self.session.execute(count_stmt)
+    #     return (
+    #         tuple(self._registry.to_domain(p) for p in result.scalars()),
+    #         count_result.scalar_one(),
+    #     )

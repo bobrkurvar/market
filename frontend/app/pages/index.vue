@@ -58,7 +58,7 @@
             <NuxtLink
               v-for="product in homeProducts"
               :key="product.id"
-              :to="`/products/${product.slug}/${product.id}`"
+              :to="{ path: `/products/${product.slug}/${product.id}`, query: product.matched_variant_id ? { variant: product.matched_variant_id } : {} }"
               class="block outline-none"
             >
               <UCard
@@ -136,7 +136,12 @@
 
       <div class="flex flex-col md:flex-row gap-8 flex-grow pb-10">
 
-        <ProductFilters v-if="searchResults.length > 0 || hasActiveSearchFilters" />
+        <ProductFilters
+          v-if="searchResults.length > 0 || hasActiveSearchFilters"
+          :config="[
+            { key: 'price', label: 'Цена', type: 'range' }
+          ]"
+        />
 
         <main class="flex-grow flex flex-col min-w-0">
           <div v-if="isInitialLoad" class="flex justify-center py-20">
@@ -148,7 +153,7 @@
               <NuxtLink
                 v-for="product in searchResults"
                 :key="product.id"
-                :to="`/products/${product.slug}/${product.id}`"
+                :to="{ path: `/products/${product.slug}/${product.id}`, query: product.matched_variant_id ? { variant: product.matched_variant_id } : {} }"
                 class="block outline-none"
               >
                 <UCard
@@ -312,7 +317,6 @@ const fetchSearchData = async (isLoadMore = false) => {
   }
 
   try {
-    // ВАЖНО: Добавили проброс min_price и max_price из URL
     const params = {
       limit: searchLimit,
       offset: (page.value - 1) * searchLimit,
@@ -337,8 +341,6 @@ const fetchSearchData = async (isLoadMore = false) => {
   }
 }
 
-// ВАЖНО: Теперь мы следим за всем объектом route.query,
-// чтобы реагировать на изменение цены из компонента ProductFilters
 watch(() => route.query, (newQuery) => {
   if (newQuery.q) {
     page.value = 1;

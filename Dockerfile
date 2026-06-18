@@ -17,6 +17,18 @@ COPY tasks ./tasks
 COPY shared.py .
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 
+FROM base AS worker
+COPY adapters ./adapters
+COPY db ./db
+COPY domain ./domain
+COPY tasks ./tasks
+COPY services ./services
+COPY infra ./infra
+CMD ["taskiq", "worker", "tasks.broker:broker"]
+
+FROM worker AS scheduler
+CMD ["taskiq", "scheduler", "tasks.broker:scheduler"]
+
 
 FROM base AS image
 COPY img_service.py .

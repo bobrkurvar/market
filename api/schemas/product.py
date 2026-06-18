@@ -92,11 +92,19 @@ class ProductOut(ProductImage):
     title: str
     description: str
     price: float
+    variants: list = Field(exclude=True)
 
     @computed_field
     @property
     def slug(self) -> str:
         return slugify(self.title)
+
+    @computed_field
+    @property
+    def matched_variant_id(self) -> int | None:
+        if self.variants:
+            return self.variants[0].id
+        return None
 
 
 class ProductCatalogListOut(BaseModel):

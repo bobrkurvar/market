@@ -14,7 +14,7 @@ router = APIRouter(prefix="/client", dependencies=[Depends(get_client)])
 async def checkout(
     client: GetClientDep, product_variant_id: int, uow: UowDep, event_bus: EventBusDep
 ):
-    await make_order(
+    return await make_order(
         uow=uow,
         product_variant_id=product_variant_id,
         client=client,

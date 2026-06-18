@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from typing import Callable, Dict, List, Type
 
@@ -13,17 +12,15 @@ class EventBus:
 
     def subscribe(self, event_type: Type[Event], handler: Callable):
         """Регистрируем слушателя для конкретного события"""
-        if event_type not in self._subscribers:
-            self._subscribers[event_type] = []
-        self._subscribers[event_type].append(handler)
+        self._subscribers.setdefault(event_type, []).append(handler)
         log.debug(
             f"Подписан обработчик {handler.__name__} на событие {event_type.__name__}"
         )
 
-    def publish(self, event: Event):
+    async def publish(self, event: Event):
         """Публикуем событие всем подписчикам"""
         event_type = type(event)
         handlers = self._subscribers.get(event_type, [])
 
         for handler in handlers:
-            asyncio.create_task(handler(event)),
+            await handler(event)

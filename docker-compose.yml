@@ -135,8 +135,47 @@ services:
 
   redis:
     image: redis:7-alpine
+    ports:
+      - "6379:6379"
     networks:
       - internal
+
+  worker:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      target: worker
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres
+      DB_USER: postgres
+      REDIS_HOST: redis
+    networks:
+      - internal
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      target: scheduler
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres
+      DB_USER: postgres
+      REDIS_HOST: redis
+    networks:
+      - internal
+    depends_on:
+      - postgres
+      - redis
+      - worker
+    restart: unless-stopped
 
 
 networks:

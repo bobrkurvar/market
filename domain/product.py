@@ -133,9 +133,17 @@ class Product:
     def variants_count(self):
         return len(self.variants)
 
+    # @property
+    # def min_price(self):
+    #     return min(variant.price for variant in self.variants)
+
     @property
     def price(self):
-        return min(variant.price for variant in self.variants)
+        return self.variants[0].price
+
+    # @property
+    # def price(self):
+    #     return min(variant.price for variant in self.variants)
 
     def add_variants(self, variants: Collection[ProductVariant] | ProductVariant):
         new_variants = (

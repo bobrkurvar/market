@@ -13,7 +13,7 @@ from core import conf
 from core.logger import setup_logging
 from domain import *
 from infra.event_bus import EventBus
-from tasks.handlers import generate_payment_link
+from tasks.handlers import enqueue_generate_payment_link
 
 setup_logging()
 
@@ -22,7 +22,7 @@ setup_logging()
 async def lifespan(app: FastAPI):
     app.state.db_provider = DbProvider(conf.db_url)
     event_bus = EventBus()
-    event_bus.subscribe(OrderCreatedEvent, generate_payment_link)
+    event_bus.subscribe(OrderCreatedEvent, enqueue_generate_payment_link)
     app.state.event_bus = event_bus
     # app.state.image_api = HttpClient(url=f"http://{conf.image_service_url}/")
     app.state.image_api = HttpClient(url=conf.image_api_url)
@@ -37,20 +37,20 @@ async def lifespan(app: FastAPI):
 log = logging.getLogger(__name__)
 app = FastAPI(lifespan=lifespan)
 
-origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1",
-    "http://localhost",
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,  # <-- Указываем точный список, никаких звездочек
-    allow_credentials=True,  # <-- Обязательно True, так как фронт шлет credentials
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# origins = [
+#     "http://localhost:3000",
+#     "http://127.0.0.1:3000",
+#     "http://127.0.0.1",
+#     "http://localhost",
+# ]
+#
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=origins,  # <-- Указываем точный список, никаких звездочек
+#     allow_credentials=True,  # <-- Обязательно True, так как фронт шлет credentials
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
 app.include_router(main_router)
 
 

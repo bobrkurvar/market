@@ -44,15 +44,14 @@ async def make_order(
         for item in items:
             await uow.db.save(item)
 
-        # order.product = product
-        event_bus.publish(
+        await event_bus.publish(
             OrderCreatedEvent(
                 order_id=order.id,
                 total_cost=order.total_cost,
                 product_title=product.title,
             )
         )
-        return order
+    return order
 
 
 async def cancel_unpaid_order(uow, order_id: int):
