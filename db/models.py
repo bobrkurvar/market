@@ -1,15 +1,14 @@
-from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import (DECIMAL, BigInteger, CheckConstraint, ForeignKey,
                         Index, String, Text, UniqueConstraint, func,
-                        literal_column)
+                        literal_column, DateTime)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from domain import OrderStatuses, ProductItemStatuses, SuggestionStatus
-
+from datetime import datetime, timezone
 
 class Base(AsyncAttrs, DeclarativeBase):
     pass
@@ -107,9 +106,9 @@ class User(Base):
     type: Mapped[str]
 
     __mapper_args__ = {
-        "polymorphic_on": "type",  # Указываем, что наследование полиморфно по этому полю
+        "polymorphic_on": "type",
+        "polymorphic_identity": "user",
     }
-
 
 class Seller(User):
     __tablename__ = "sellers"
@@ -122,15 +121,15 @@ class Seller(User):
         "polymorphic_identity": "seller",  # Значение для колонки users.type
     }
 
-
-class Client(User):
-    __tablename__ = "clients"
-    id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
-    is_blocked: Mapped[bool] = mapped_column(default=False, server_default="false")
-    # cart: Mapped["Cart"] = relationship("Cart", back_populates="client")
-    __mapper_args__ = {
-        "polymorphic_identity": "client",  # Значение для колонки users.type
-    }
+#
+# class Client(User):
+#     __tablename__ = "clients"
+#     id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
+#     is_blocked: Mapped[bool] = mapped_column(default=False, server_default="false")
+#     # cart: Mapped["Cart"] = relationship("Cart", back_populates="client")
+#     __mapper_args__ = {
+#         "polymorphic_identity": "client",  # Значение для колонки users.type
+#     }
 
 
 # class Cart(Base):
@@ -152,15 +151,20 @@ class Order(Base):
     __tablename__ = "orders"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    client_id: Mapped[int] = mapped_column(ForeignKey("clients.id"))
+    buyer_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    seller_id: Mapped[int] = mapped_column(ForeignKey("sellers.id"))
     product_variant_id: Mapped[int | None] = mapped_column(
         ForeignKey("product_variants.id", ondelete="SET NULL")
     )
     payment_link: Mapped[str | None] = mapped_column(default=None, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc)
+    )
     status_name: Mapped[str]
     items: Mapped[list["ProductItem"]] = relationship("ProductItem")
-    client: Mapped["Client"] = relationship("Client")
+    buyer: Mapped["User"] = relationship("User", foreign_keys=[buyer_id])
+    seller: Mapped["Seller"] = relationship("Seller", foreign_keys=[seller_id])
     price: Mapped[float]
     amount: Mapped[int]
     product_snapshot: Mapped[dict] = mapped_column(
@@ -220,4 +224,16 @@ class SuggestedCategory(Base):
             ),
             name="check_suggested_category_status",
         ),
+    )
+
+
+class OrderMessage(Base):
+    __tablename__ = "order_messages"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    order_id: Mapped[int] = mapped_column(ForeignKey("orders.id", ondelete="CASCADE"))
+    sender_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    text: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc)
     )

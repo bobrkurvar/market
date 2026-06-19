@@ -22,34 +22,4 @@ async def get_home_page(uow: UowDep, limit: int = 8):
     return {"products": products, "categories": categories}
 
 
-@router.websocket("/ws/search")
-async def websocket_search(websocket: WebSocket, uow: UowDep):
-    log.debug("Вход в поиск")
-    await websocket.accept()
-    log.debug("Подключение подтверждено")
 
-    try:
-        while True:
-            query = await websocket.receive_text()
-
-            if len(query.strip()) < 3:
-                await websocket.send_json({"suggestions": []})
-                continue
-
-            async with uow:
-                categories = await uow.category.search_categories_by_product(
-                    query=query
-                )
-
-                suggestions = []
-                for cat in categories:
-                    cat_data = CategoryShortOut.model_validate(cat).model_dump()
-                    suggestions.append({
-                        "type": "category",
-                        "data": cat_data
-                    })
-
-                await websocket.send_json({"suggestions": suggestions})
-    except WebSocketDisconnect:
-        log.debug("search connection closed")
-        pass

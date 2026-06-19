@@ -5,7 +5,7 @@ from db import models
 
 from .product import map_product_item_to_domain, map_product_item_to_orm
 from .registry import registry
-from .user import map_client_to_domain
+from .user import map_user_to_domain
 
 
 def map_order_to_domain(orm_obj: models.Order) -> domain.Order:
@@ -13,14 +13,19 @@ def map_order_to_domain(orm_obj: models.Order) -> domain.Order:
     insp = inspect(orm_obj)
     if "items" not in insp.unloaded:
         items = [map_product_item_to_domain(item) for item in orm_obj.items]
-    client = None
-    if "client" not in insp.unloaded:
-        client = map_client_to_domain(orm_obj.client)
+    buyer = None
+    if "buyer" not in insp.unloaded:
+        buyer = map_user_to_domain(orm_obj.buyer)
+    seller = None
+    if "seller" not in insp.unloaded:
+        seller = map_user_to_domain(orm_obj.seller)
 
     return domain.Order(
         order_id=orm_obj.id,
-        client_id=orm_obj.client_id,
-        client=client,
+        buyer_id=orm_obj.buyer_id,
+        buyer=buyer,
+        seller_id=orm_obj.seller_id,
+        seller=seller,
         product_variant_id=orm_obj.product_variant_id,
         payment_link=orm_obj.payment_link,
         status=domain.OrderStatuses(orm_obj.status_name),
@@ -33,7 +38,8 @@ def map_order_to_domain(orm_obj: models.Order) -> domain.Order:
 
 def map_order_to_orm(d_obj: domain.Order) -> models.Order:
     return models.Order(
-        client_id=d_obj.client_id,
+        buyer_id=d_obj.buyer_id,
+        seller_id=d_obj.seller_id,
         product_variant_id=d_obj.product_variant_id,
         payment_link=d_obj.payment_link,
         status_name=str(d_obj.status),
@@ -48,18 +54,24 @@ def map_order_to_orm(d_obj: domain.Order) -> models.Order:
     )
 
 
-# def map_order_statuses_to_domain(orm_obj: models.ProductItemStatuses) -> domain.ProductItemStatuses:
-#     return models.ProductItemStatuses(
-#         name=orm_obj.name
-#     )
-#
-# def map_order_statuses_to_orm(d_obj: domain.OrderStatuses) -> models.OrderStatuses:
-#     return models.OrderStatuses(
-#         name=d_obj.value
-#     )
+def map_order_message_to_domain(orm_obj) -> domain.OrderMessage:
+    return domain.OrderMessage(
+        sender_id=orm_obj.sender_id,
+        message_id=orm_obj.id,
+        order_id=orm_obj.order_id,
+        text=orm_obj.text,
+        created_at=orm_obj.created_at
+    )
 
+def map_order_message_to_orm(d_obj) -> models.OrderMessage:
+    return models.OrderMessage(
+        sender_id=d_obj.sender_id,
+        order_id=d_obj.order_id,
+        text=d_obj.text,
+        created_at=d_obj.created_at
+    )
 
 registry.register(
     domain.Order, models.Order, to_orm=map_order_to_orm, to_domain=map_order_to_domain
 )
-# registry.register(domain.OrderStatuses, models.OrderStatuses, to_orm=map_order_statuses_to_orm, to_domain=map_order_statuses_to_domain)
+registry.register(domain.OrderMessage, models.OrderMessage, to_orm=map_order_message_to_orm, to_domain=map_order_message_to_domain)

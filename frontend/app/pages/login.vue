@@ -67,12 +67,12 @@ const tabs = [
 ]
 
 const roleOptions = [
-  { value: 'client', label: 'Покупать товары' },
+  { value: 'user', label: 'Покупать товары' },
   { value: 'seller', label: 'Продавать товары' }
 ]
 
 const loginForm = ref({ username: '', password: '' })
-const registerForm = ref({ role: 'client', username: '', password: '' })
+const registerForm = ref({ role: 'user', username: '', password: '' })
 
 const onAuthSuccess = (user, successMessage) => {
   currentUser.value = user

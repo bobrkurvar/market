@@ -1,9 +1,9 @@
 from collections.abc import Collection
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import StrEnum
 
 from .product import ProductItem, ProductVariant
-from .user import Client
+from .user import User, Seller
 
 
 class OrderStatuses(StrEnum):
@@ -17,8 +17,10 @@ class Order:
         self,
         price: float,
         product_snapshot: dict | None = None,
-        client: Client | None = None,
-        client_id: int | None = None,
+        buyer: User | None = None,
+        buyer_id: int | None = None,
+        seller: Seller | None = None,
+        seller_id: int | None = None,
         product_variant: ProductVariant | None = None,
         product_variant_id: int | None = None,
         status: OrderStatuses = OrderStatuses.pending_payments,
@@ -30,8 +32,10 @@ class Order:
         self.product_snapshot = product_snapshot or {}
         self.price = price
         self.id = order_id
-        self.client = client
-        self.client_id = client.id if client else client_id
+        self.buyer = buyer
+        self.buyer_id = buyer.id if buyer else buyer_id
+        self.seller = seller
+        self.seller_id = seller.id if seller else seller_id
         self.product_variant = product_variant
         self.product_variant_id = (
             product_variant.id if product_variant else product_variant_id
@@ -43,9 +47,17 @@ class Order:
         self._validate()
 
     def _validate(self):
-        if self.client_id is None and self.client is None:
+        if self.buyer_id is None and self.buyer is None:
             raise ValueError(
-                "Заказ не может существовать без клиента (передайте либо объект client, либо client_id)"
+                "Заказ не может существовать без покупателя (передайте либо объект buyer, либо buyer_id)"
+            )
+        if self.seller_id is None and self.seller is None:
+            raise ValueError(
+                "Заказ не может существовать без продавца (передайте либо объект seller, либо seller_id)"
+            )
+        if self.seller and self.seller_id is None:
+            raise ValueError(
+                "Для заказа подходит только реальный продавец"
             )
         if self.product_variant_id is None:
             raise ValueError(
@@ -113,3 +125,19 @@ class Order:
 
     def is_pending(self):
         return self.status == OrderStatuses.pending_payments
+
+
+class OrderMessage:
+    def __init__(
+        self,
+        sender_id: int,
+        order_id: int,
+        text: str,
+        created_at: datetime | None = None,
+        message_id: int | None = None
+    ):
+        self.sender_id = sender_id
+        self.order_id = order_id
+        self.text = text
+        self.created_at = created_at or datetime.now(timezone.utc)
+        self.id = message_id

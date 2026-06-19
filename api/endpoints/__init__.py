@@ -8,6 +8,7 @@ from .order import router as order_router
 from .pages import router as pages_router
 from .products import router as catalog_router
 from .seller import router as seller_router
+from .websockets import router as websockets_router
 
 main_router = APIRouter(prefix="/api")
 main_router.include_router(catalog_router)
@@ -18,3 +19,4 @@ main_router.include_router(auth_router)
 main_router.include_router(admin_router)
 main_router.include_router(pages_router)
 main_router.include_router(category_router)
+main_router.include_router(websockets_router)

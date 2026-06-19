@@ -1,6 +1,6 @@
 import logging
 
-from domain import (Client, CredentialsValidateError, MissingRoleError, Seller,
+from domain import (CredentialsValidateError, MissingRoleError, Seller,
                     User, UserLoginNotFoundError, UserRole)
 from infra.security import get_hash
 
@@ -30,32 +30,26 @@ async def create_user(uow, username: str, password: str, role: UserRole):
     log.debug("user role: %s", role)
     if role == UserRole.seller:
         new_account = Seller(username=username, password=hash_password)
-    elif role == UserRole.client:
-        new_account = Client(username=username, password=hash_password)
+    elif role == UserRole.user:
+        new_account = User(username=username, password=hash_password)
     else:
         raise ValueError("Неизвестная роль")
     async with uow:
         return await uow.db.create(new_account)
 
 
-def get_user_id_from_payload(payload: dict, expected_role: str) -> int:
+async def get_user_from_payload(payload: dict, uow) -> User:
+    user_id = payload.get("sub")
+    async with uow:
+        return await uow.db.read_one(User, id=int(user_id), with_raise=True)
+
+
+async def get_seller_from_payload(payload: dict, uow) -> Seller:
     role = payload.get("role")
     user_id = payload.get("sub")
 
-    if role != expected_role:
+    if role != "seller":
         raise MissingRoleError(user_id=user_id, role=role)
-    return user_id
 
-
-async def get_client_from_user(payload: dict, uow) -> Client:
-    user_id = get_user_id_from_payload(payload, expected_role="client")
     async with uow:
-        client = await uow.db.read_one(Client, id=int(user_id), with_raise=True)
-        return client
-
-
-async def get_seller_from_user(payload: dict, uow) -> Seller:
-    user_id = get_user_id_from_payload(payload, expected_role="seller")
-    async with uow:
-        seller = await uow.db.read_one(Seller, id=int(user_id), with_raise=True)
-        return seller
+        return await uow.db.read_one(Seller, id=int(user_id), with_raise=True)

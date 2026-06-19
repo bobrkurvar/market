@@ -1,6 +1,6 @@
 import logging
 
-from domain import Client, Order, OrderCreatedEvent, ProductVariant
+from domain import User, Order, OrderCreatedEvent, ProductVariant
 from infra.event_bus import EventBus
 
 log = logging.getLogger(__name__)
@@ -9,19 +9,19 @@ log = logging.getLogger(__name__)
 async def make_order(
     uow,
     product_variant_id: int,
-    client: Client,
+    buyer: User,
     event_bus: EventBus,
     amount: int = 1,
 ):
     async with uow:
+        # Внутри read_available_items лежит подзапрос SKIP LOCKED.
+        items = await uow.product.read_available_items(
+            variant_id=product_variant_id, amount=amount
+        )
         product_variant = await uow.db.read_one(
             ProductVariant, id=product_variant_id, loaded="product"
         )
         product = product_variant.product
-        # Внутри read_available_items лежит подзапрос SKIP LOCKED.
-        items = await uow.product.read_available_items(
-            variant_id=product_variant.id, amount=amount
-        )
 
         if len(items) < amount:
             raise ValueError("Недостаточно товара в наличии")
@@ -33,7 +33,8 @@ async def make_order(
         }
 
         order = Order(
-            client=client,
+            buyer=buyer,
+            seller_id=product.seller_id,
             amount=amount,
             price=product_variant.price,
             product_variant_id=product_variant.id,

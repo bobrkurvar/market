@@ -145,11 +145,17 @@
               <div class="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
                 <UIcon name="i-heroicons-check" class="w-10 h-10 text-green-600 dark:text-green-400" />
               </div>
-              <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Заказ успешно создан!</h3>
-              <p class="text-gray-500 dark:text-gray-400 mb-8">Платежная ссылка сгенерирована и готова к оплате.</p>
+              <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Заказ успешно оформлен!</h3>
+              <p class="text-gray-500 dark:text-gray-400 mb-8">Товар зарезервирован, вы можете перейти к диалогу с продавцом.</p>
 
-              <UButton size="xl" color="green" block :to="paymentLink" target="_blank" icon="i-heroicons-credit-card">
-                Перейти к оплате
+              <UButton
+                size="xl"
+                color="primary"
+                block
+                :to="`/profile/orders/${createdOrderId}`"
+                icon="i-heroicons-chat-bubble-left-right"
+              >
+                Перейти в чат с продавцом
               </UButton>
               <UButton variant="ghost" color="gray" block class="mt-3" @click="isPaymentModalOpen = false">
                 Закрыть
@@ -196,9 +202,9 @@ const { data: product, pending } = await useFetch(`/api/products/${slug}/${produ
 const selectedVariant = ref(null)
 
 // --- СОСТОЯНИЕ ОПЛАТЫ И МОДАЛКИ ---
+const createdOrderId = ref(null) // Храним ID созданного заказа для перехода в чат
 const isPaymentModalOpen = ref(false)
 const paymentStep = ref('creating') // 'creating' | 'waiting' | 'ready' | 'error'
-const paymentLink = ref('')
 const paymentErrorMsg = ref('')
 
 // Магия реактивности: проверяем URL и выбираем нужный вариант
@@ -227,13 +233,16 @@ const buyProduct = async () => {
   paymentErrorMsg.value = ''
 
   try {
-    // Вызываем POST для создания заказа
-    const order = await $api('/api/client/order', {
+    // Вызываем POST для создания заказа (путь изменен на /orders)
+    const order = await $api('/api/client/orders', {
       method: 'POST',
       query: { product_variant_id: selectedVariant.value.id }
     })
 
-    // Переводим интерфейс в режим ожидания банка
+    // Сохраняем ID заказа для кнопки "Перейти в чат"
+    createdOrderId.value = order.id
+
+    // Переводим интерфейс в режим ожидания ответа банка (пока там просто заглушка)
     paymentStep.value = 'waiting'
 
     // Запускаем второй шаг (Long Polling)
@@ -254,28 +263,27 @@ const buyProduct = async () => {
   }
 }
 
-// 2. ШАГ ВТОРОЙ: Ждем ссылку (Long Polling)
+// 2. ШАГ ВТОРОЙ: Ждем успешного статуса
 const waitForPaymentLink = async (orderId) => {
   try {
-    // Этот запрос "зависнет" до 60 секунд, пока бэкенд не найдет ссылку в Redis
+    // Этот запрос ждет успешного сигнала из Redis (путь изменен на wait-payment)
     const response = await $api(`/api/client/orders/${orderId}/wait-payment`, {
       method: 'GET'
     })
 
-    if (response.payment_link) {
-      paymentLink.value = response.payment_link
-      paymentStep.value = 'ready' // Успех! Показываем ссылку
+    // Раз мы не переходим по ссылке, нам просто важен факт успешного ответа
+    if (response) {
+      paymentStep.value = 'ready' // Успех! Показываем кнопку перехода в чат
     }
 
   } catch (error) {
-    console.error('Ошибка ожидания ссылки:', error)
+    console.error('Ошибка ожидания:', error)
     paymentStep.value = 'error'
 
-    // Ловим наш 408 Request Timeout с бэкенда
     if (error.response?.status === 408) {
-      paymentErrorMsg.value = 'Время ожидания ответа от банка истекло. Заказ сохранен, попробуйте оплатить его из профиля позже.'
+      paymentErrorMsg.value = 'Время ожидания истекло. Заказ сохранен, вы можете перейти к нему позже.'
     } else {
-      paymentErrorMsg.value = 'Произошла ошибка при связи с платежной системой.'
+      paymentErrorMsg.value = 'Произошла ошибка при обработке заказа.'
     }
   }
 }

@@ -1,23 +1,23 @@
 import asyncio
 
 from fastapi import APIRouter, Depends, HTTPException
-from sse_starlette.sse import EventSourceResponse
 
-from adapters.deps import EventBusDep, GetClientDep, UowDep, get_client, RedisDep
+#from adapters.deps import EventBusDep, GetClientDep, UowDep, get_client, RedisDep
+from adapters.deps import EventBusDep, UowDep, GetUserDep, RedisDep, get_user
 from domain import Order
 from services.order import make_order
 
-router = APIRouter(prefix="/client", dependencies=[Depends(get_client)])
+router = APIRouter(prefix="/client", dependencies=[Depends(get_user)])
 
 
-@router.post("/order")
+@router.post("/orders")
 async def checkout(
-    client: GetClientDep, product_variant_id: int, uow: UowDep, event_bus: EventBusDep
+    user: GetUserDep, product_variant_id: int, uow: UowDep, event_bus: EventBusDep
 ):
     return await make_order(
         uow=uow,
         product_variant_id=product_variant_id,
-        client=client,
+        buyer=user,
         event_bus=event_bus,
     )
 
@@ -50,19 +50,3 @@ async def wait_order_payment_link(
         await pubsub.unsubscribe(channel_name)
         await pubsub.close()
 
-# @router.get("/orders/{order_id}/stream")
-# async def stream_order_status(order_id: int, uow: UowDep):
-#     async def event_generator():
-#         while True:
-#             async with uow:
-#                 order = await uow.db.read_one(Order, id=order_id)
-#
-#                 if order.payment_link:
-#                     yield {"event": "payment_ready", "data": order.payment_link}
-#                     break
-#
-#                 yield {"event": "processing", "data": "Генерируем ссылку в банке..."}
-#
-#             await asyncio.sleep(1)
-#
-#     return EventSourceResponse(event_generator())

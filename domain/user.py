@@ -3,7 +3,7 @@ from enum import StrEnum
 
 
 class UserRole(StrEnum):
-    client = "client"
+    user = "user"
     seller = "seller"
     admin = "admin"
 
@@ -12,7 +12,7 @@ class User:
     def __init__(
         self,
         username: str,
-        role: UserRole,
+        role: UserRole = UserRole.user,
         user_id: int | None = None,
         password: str | None = None,
     ):
@@ -55,21 +55,21 @@ class Seller(User):
         return f"<Salesperson(username={self.username}, rating={self.rating})>"
 
 
-class Client(User):
-    def __init__(
-        self,
-        username: str,
-        password: str,
-        client_id: int | None = None,
-        is_blocked: bool = False,
-    ):
-        super().__init__(
-            user_id=client_id,
-            username=username,
-            password=password,
-            role=UserRole.client,
-        )
-        self.is_blocked = is_blocked
-
-    def __repr__(self):
-        return f"<Client(username={self.username})>"
+# class Client(User):
+#     def __init__(
+#         self,
+#         username: str,
+#         password: str,
+#         client_id: int | None = None,
+#         is_blocked: bool = False,
+#     ):
+#         super().__init__(
+#             user_id=client_id,
+#             username=username,
+#             password=password,
+#             role=UserRole.client,
+#         )
+#         self.is_blocked = is_blocked
+#
+#     def __repr__(self):
+#         return f"<Client(username={self.username})>"

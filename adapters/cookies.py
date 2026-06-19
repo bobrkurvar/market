@@ -1,6 +1,7 @@
 import logging
 
-from fastapi import Request, Response
+from fastapi import Response
+from starlette.requests import HTTPConnection
 
 from core import conf
 
@@ -13,10 +14,10 @@ class AuthCookies:
         self.access_token_key = "access_token"
         self.cookie_secret = not conf.is_test
 
-    def get_refresh_token(self, request: Request):
+    def get_refresh_token(self, request: HTTPConnection):
         return request.cookies.get(self.refresh_token_key)
 
-    def get_access_token(self, request: Request):
+    def get_access_token(self, request: HTTPConnection):
         return request.cookies.get(self.access_token_key)
 
     @staticmethod
