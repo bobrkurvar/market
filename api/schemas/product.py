@@ -121,13 +121,25 @@ class ProductVariantDetailOut(BaseModel):
         from_attributes = True
 
 
+class SellerShortOut(BaseModel):
+    id: int
+    username: str
+    rating: float | None = None
+
+    class Config:
+        from_attributes = True
+
 class ProductDetailOut(ProductImage):
     id: int
     title: str
     description: str
-    # Если ты хочешь вывести имя продавца:
-    # seller_username: str | None = Field(default=None, alias="seller.username")
+    seller: SellerShortOut
     variants: list[ProductVariantDetailOut]
+
+    # @computed_field
+    # @property
+    # def seller_username(self) -> str:
+    #     return self.seller.username if self.seller else None
 
     class Config:
         from_attributes = True

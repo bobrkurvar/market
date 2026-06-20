@@ -51,14 +51,18 @@ class Order:
             raise ValueError(
                 "Заказ не может существовать без покупателя (передайте либо объект buyer, либо buyer_id)"
             )
-        if self.seller_id is None and self.seller is None:
+        if self.seller_id is None:
             raise ValueError(
                 "Заказ не может существовать без продавца (передайте либо объект seller, либо seller_id)"
             )
-        if self.seller and self.seller_id is None:
-            raise ValueError(
-                "Для заказа подходит только реальный продавец"
-            )
+        # if self.seller_id is None and self.seller is None:
+        #     raise ValueError(
+        #         "Заказ не может существовать без продавца (передайте либо объект seller, либо seller_id)"
+        #     )
+        # if self.seller and self.seller_id is None:
+        #     raise ValueError(
+        #         "Для заказа подходит только реальный продавец"
+        #     )
         if self.product_variant_id is None:
             raise ValueError(
                 "Заказ не может существовать без товара (передайте либо существующий объект product, либо product_id)"
@@ -68,18 +72,22 @@ class Order:
                 "Нельзя передавать товарные позиции при инициализации нового заказа"
             )
 
+
     @property
     def items(self):
-        if self._items is None:
+        if not self._items:
             raise ValueError("Заказ не может быть без товарных позиций")
         return self._items
+
+    # @property
+    # def items(self):
+    #     if self._items is None:
+    #         raise ValueError("Заказ не может быть без товарных позиций")
+    #     return self._items
 
     def cancel(self):
         if self.is_paid():
             raise ValueError("Заказ уже оплачен")
-
-        if not self.items:
-            raise ValueError("Заказ без товаров")
 
         for item in self.items:
             item.release()

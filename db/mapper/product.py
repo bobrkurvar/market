@@ -4,6 +4,8 @@ import domain
 from db import models
 
 from .registry import registry
+from .user import map_seller_to_domain
+from .category import map_category_to_domain
 
 # def map_product_items_statuses_to_domain(orm_obj: models.ProductItemStatuses) -> domain.ProductItemStatuses:
 #     return models.ProductItemStatuses(
@@ -46,11 +48,15 @@ def map_product_to_domain(orm_obj: models.Product) -> domain.Product:
         ]
     category = None
     if "category" not in insp.unloaded:
-        category = orm_obj.category
+        category = map_category_to_domain(orm_obj.category)
+    seller = None
+    if "seller" not in insp.unloaded:
+        seller = map_seller_to_domain(orm_obj.seller)
 
     return domain.Product(
         product_id=orm_obj.id,
         seller_id=orm_obj.seller_id,
+        seller=seller,
         title=orm_obj.title,
         description=orm_obj.description,
         variants=variants,

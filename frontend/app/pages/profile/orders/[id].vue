@@ -109,25 +109,18 @@ import { useNuxtApp, useState } from '#imports'
 
 const route = useRoute()
 const { $api } = useNuxtApp()
-
-// Берем ID заказа из URL (например, /profile/orders/1 -> orderId = 1)
 const orderId = route.params.id
-
-// Достаем глобальный стейт текущего юзера (ты создавал его в login.vue)
 const currentUser = useState('user')
 
-// Реактивные данные
 const pending = ref(true)
 const order = ref(null)
 const messages = ref([])
 
-// Для чата
 const newMessage = ref('')
 const isConnected = ref(false)
 const chatContainer = ref(null)
 let socket = null
 
-// Функция автоскролла к последнему сообщению
 const scrollToBottom = async () => {
   await nextTick()
   if (chatContainer.value) {
@@ -135,40 +128,76 @@ const scrollToBottom = async () => {
   }
 }
 
-// При загрузке компонента
+// 1. ВЫНОСИМ ЗАГРУЗКУ ИСТОРИИ В ОТДЕЛЬНУЮ ФУНКЦИЮ
+const loadHistory = async () => {
+  try {
+    const historyData = await $api(`/api/orders/${orderId}/messages`)
+    messages.value = historyData || []
+    scrollToBottom()
+  } catch (e) {
+    console.error("Ошибка обновления истории:", e)
+  }
+}
+
+// 2. ВЫНОСИМ ЛОГИКУ ПОДКЛЮЧЕНИЯ ВЕБСОКЕТА
+const connectWebSocket = () => {
+  if (socket && socket.readyState !== WebSocket.CLOSED) return
+
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${wsProtocol}//${window.location.host}/api/ws/orders/${orderId}/chat`;
+
+  socket = new WebSocket(wsUrl);
+
+  socket.onopen = () => {
+    isConnected.value = true
+  }
+
+  socket.onmessage = (event) => {
+    const incomingMsg = JSON.parse(event.data)
+    messages.value.push(incomingMsg)
+    scrollToBottom()
+  }
+
+  socket.onclose = () => {
+    isConnected.value = false
+  }
+}
+
+// 3. ВЫНОСИМ ЛОГИКУ ОТКЛЮЧЕНИЯ
+const disconnectWebSocket = () => {
+  if (socket) {
+    socket.close()
+    socket = null
+    isConnected.value = false
+  }
+}
+
+// 4. ОБРАБОТЧИК ВИДИМОСТИ СТРАНИЦЫ (МАГИЯ ЗДЕСЬ)
+const handleVisibilityChange = async () => {
+  if (document.hidden) {
+    // Пользователь ушел на другую вкладку - отключаем сокет
+    disconnectWebSocket()
+  } else {
+    // Пользователь вернулся!
+    // Сначала подтягиваем пропущенные сообщения по REST
+    await loadHistory()
+    // Затем заново открываем сокет
+    connectWebSocket()
+  }
+}
+
 onMounted(async () => {
   try {
-    // 1. Выполняем GET запросы к REST API (Твои эндпоинты в order.py)
-    const [orderData, historyData] = await Promise.all([
-      $api(`/api/orders/${orderId}`),
-      $api(`/api/orders/${orderId}/messages`)
-    ])
-
-    order.value = orderData
-    messages.value = historyData || []
+    // Первичная загрузка сделки
+    order.value = await $api(`/api/orders/${orderId}`)
+    await loadHistory()
     pending.value = false
 
-    // Скроллим к концу загруженной истории
-    scrollToBottom()
+    // Подключаем сокет
+    connectWebSocket()
 
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${wsProtocol}//${window.location.host}/api/ws/orders/${orderId}/chat`;
-
-    socket = new WebSocket(wsUrl);
-
-    socket.onopen = () => {
-      isConnected.value = true
-    }
-
-    socket.onmessage = (event) => {
-      const incomingMsg = JSON.parse(event.data)
-      messages.value.push(incomingMsg)
-      scrollToBottom() // Автоскролл при каждом новом сообщении
-    }
-
-    socket.onclose = () => {
-      isConnected.value = false
-    }
+    // Подписываемся на событие сворачивания/разворачивания вкладки
+    document.addEventListener('visibilitychange', handleVisibilityChange)
 
   } catch (error) {
     console.error('Ошибка загрузки сделки:', error)
@@ -176,18 +205,13 @@ onMounted(async () => {
   }
 })
 
-// Обязательно закрываем соединение, если пользователь ушел со страницы!
 onBeforeUnmount(() => {
-  if (socket) {
-    socket.close()
-  }
+  disconnectWebSocket()
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
 })
 
-// Отправка сообщения
 const sendMessage = () => {
   if (!newMessage.value.trim() || !socket || socket.readyState !== WebSocket.OPEN) return
-
-  // Твой бэкенд ждет просто текст: await websocket.receive_text()
   socket.send(newMessage.value)
   newMessage.value = ''
 }

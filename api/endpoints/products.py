@@ -50,5 +50,5 @@ async def get_products(
 async def get_catalog(uow: UowDep, product_id: int, slug: str):
     async with uow:
         return await uow.db.read_one(
-            Product, id=product_id, loaded="variants", with_raise=True
+            Product, id=product_id, loaded=["variants", "seller"], with_raise=True
         )

@@ -26,11 +26,20 @@
               {{ product.title }}
             </h1>
 
-            <div class="mt-4 space-y-2 text-sm text-gray-500 dark:text-gray-400">
-              <p class="flex items-center gap-2">
-                <UIcon name="i-heroicons-user-circle" class="w-5 h-5 text-gray-400" />
-                Продавец: <span class="font-bold text-gray-900 dark:text-gray-200">{{ product.seller_username || 'Неизвестно' }}</span>
-              </p>
+            <div class="mt-4 space-y-3 text-sm text-gray-500 dark:text-gray-400">
+
+              <div class="flex items-center gap-3">
+                <p class="flex items-center gap-2">
+                  <UIcon name="i-heroicons-user-circle" class="w-5 h-5 text-gray-400" />
+                  Продавец: <span class="font-bold text-gray-900 dark:text-gray-200">{{ product.seller?.username || 'Неизвестно' }}</span>
+                </p>
+
+                <UBadge v-if="product.seller?.rating" color="amber" variant="subtle" size="sm" class="flex items-center gap-1">
+                  <UIcon name="i-heroicons-star-solid" class="w-3 h-3" />
+                  {{ product.seller.rating }}
+                </UBadge>
+              </div>
+
               <p class="flex items-center gap-2">
                 <UIcon name="i-heroicons-bolt" class="w-5 h-5 text-amber-500" />
                 Автоматическая доставка

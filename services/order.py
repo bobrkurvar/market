@@ -58,7 +58,7 @@ async def make_order(
 async def cancel_unpaid_order(uow, order_id: int):
     async with uow:
         order = await uow.db.read_one(
-            Order, id=order_id, loaded=["items"], with_for_update=True
+            Order, id=order_id, loaded="items", with_for_update=True
         )
         if not order.is_pending():
             return

@@ -2,7 +2,6 @@ import asyncio
 
 from fastapi import APIRouter, Depends, HTTPException
 
-#from adapters.deps import EventBusDep, GetClientDep, UowDep, get_client, RedisDep
 from adapters.deps import EventBusDep, UowDep, GetUserDep, RedisDep, get_user
 from domain import Order
 from services.order import make_order

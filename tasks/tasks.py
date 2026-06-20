@@ -42,12 +42,8 @@ async def sweep_expired_orders_task(uow=TaskiqDepends(get_uow)):
         expired_order_ids = await uow.order.get_expired_pending_order_ids(
             minutes_ago=15
         )
-        for order_id in expired_order_ids:
-            async with uow.savepoint():
-                try:
-                    await cancel_unpaid_order(uow, order_id=order_id)
-                except Exception as e:
-                    log.error("Не удалось отменить заказ %s: %s", order_id, e)
+    for order_id in expired_order_ids:
+        await cancel_unpaid_order(uow, order_id=order_id)
 
 
 @broker.task(schedule=[{"cron": "0 3 * * *"}])
