@@ -62,6 +62,8 @@ class ProductVariant:
         product_variant_id: int | None = None,
         items: Collection[ProductItem] | ProductItem = None,
         attributes: dict | None = None,
+        activate_instruction: str | None = None,
+        stock: int | None = -1
     ):
         self.product = product
         self.product_id = product.id if product else product_id
@@ -69,17 +71,21 @@ class ProductVariant:
         self.id = product_variant_id
         self._items = [items] if isinstance(items, ProductItem) else items
         self.attributes = attributes
+        self.activate_instruction = activate_instruction
+        self.stock = stock
         self._validate()
 
     def _validate(self):
         if self.price < 0:
             raise ValueError("Цена не может быть отрицательной")
 
+
     @property
     def items(self):
         if self._items is None:
             raise ValueError("Товар без товарных позиций")
         return self._items
+
 
     def change_price(self, new_price: int):
         if new_price < 0:
@@ -101,6 +107,7 @@ class Product:
         variants: Collection[ProductVariant] | ProductVariant | None = None,
         description: str = "",
         items_count: int | None = None,
+        activate_instruction: str | None = None
     ):
         self.id = product_id
         self.suggested_category = suggested_category
@@ -115,6 +122,7 @@ class Product:
         if variants is not None:
             self.add_variants(variants)
         self.items_count = items_count
+        self.activate_instruction = activate_instruction
         self._validate()
 
     def _validate(self):

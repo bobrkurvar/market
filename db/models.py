@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from sqlalchemy import (DECIMAL, BigInteger, CheckConstraint, ForeignKey,
                         Index, String, Text, UniqueConstraint, func,
-                        literal_column, DateTime)
+                        literal_column, DateTime, Integer)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -24,6 +24,7 @@ class Product(Base):
     description: Mapped[str] = mapped_column(Text)
     suggested_category: Mapped[str] = mapped_column(String(100), nullable=True)
     category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"))
+    activate_instruction: Mapped[str | None] = mapped_column(Text, nullable=True)
     category: Mapped["Category"] = relationship("Category", back_populates="products")
     variants: Mapped[list["ProductVariant"]] = relationship(
         "ProductVariant",
@@ -59,6 +60,8 @@ class ProductVariant(Base):
     )
     price: Mapped[float]
     attributes: Mapped[dict] = mapped_column(JSONB, nullable=True, default=dict)
+    activate_instruction: Mapped[str | None] = mapped_column(Text, nullable=True)
+    stock: Mapped[int | None] = mapped_column(Integer, nullable=True)
     product: Mapped["Product"] = relationship("Product", back_populates="variants")
     items: Mapped[list["ProductItem"]] = relationship(
         "ProductItem",

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile
 from adapters.deps import GetSellerDep, HttpClientDep, UowDep, get_seller
 from adapters.images import ImageGenerator, ProductImagesManager
 from api.schemas import ProductCreate, ProductSellerListOut
-from domain import Category
+from domain import Category, Order
 from infra.security import async_hash_calculate
 from services.product import create_product
 
@@ -47,5 +47,10 @@ async def get_seller_products(seller: GetSellerDep, uow: UowDep):
 @router.get("/categories")
 async def get_catalog(uow: UowDep):
     async with uow:
-        # return await uow.category.get_leaf_categories()
-        return await uow.db.read(Category, is_folder=True)
+        return await uow.db.read(Category, is_folder=False)
+
+
+@router.get("/sales")
+async def get_orders(seller: GetSellerDep, uow: UowDep):
+    async with uow:
+        return await uow.db.read(Order, seller_id=seller.id)

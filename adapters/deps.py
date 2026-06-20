@@ -9,7 +9,7 @@ from adapters.redis import RedisService
 from db.mapper import registry
 from domain import Seller
 from infra.event_bus import EventBus
-from services.auth import (get_seller_from_payload, get_user_from_payload,
+from services.auth import (get_seller_from_user, get_user_from_payload,
                            resolve_session_payload)
 
 from .cookies import AuthCookies
@@ -93,8 +93,8 @@ async def get_user_ws(
         raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
 
 
-async def get_seller(payload: "GetUserDep", uow: "UowDep") -> Seller:
-    return await get_seller_from_payload(payload, uow)
+async def get_seller(user: "GetUserDep", uow: "UowDep") -> Seller:
+    return await get_seller_from_user(user=user, uow=uow)
 
 
 UowDep = Annotated[UnitOfWork, Depends(get_uow)]

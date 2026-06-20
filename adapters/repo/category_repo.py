@@ -26,14 +26,14 @@ class CategoryRepository:
     #     result = (await self.session.execute(stmt)).scalars()
     #     return tuple(self._registry.to_domain(cat) for cat in result)
 
-    async def get_leaf_categories(self) -> tuple:
-        # Подзапрос: проверяем, существует ли строка, где parent_id равен ID текущей категории
-        child_exists = exists().where(Category.parent_id == Category.id)
-
-        # Главный запрос: выбираем категории, для которых НЕ существуют дети (~ означает NOT)
-        stmt = select(Category).where(~child_exists)
-        result = await self.session.execute(stmt)
-        return tuple(self._registry.to_domain(cat) for cat in result.scalars())
+    # async def get_leaf_categories(self) -> tuple:
+    #     # Подзапрос: проверяем, существует ли строка, где parent_id равен ID текущей категории
+    #     child_exists = exists().where(Category.parent_id == Category.id)
+    #
+    #     # Главный запрос: выбираем категории, для которых НЕ существуют дети (~ означает NOT)
+    #     stmt = select(Category).where(~child_exists)
+    #     result = await self.session.execute(stmt)
+    #     return tuple(self._registry.to_domain(cat) for cat in result.scalars())
 
     async def get_all_categories_tree_flat(self) -> list[dict]:
         categories = (await self.session.execute(select(Category))).scalars()

@@ -44,12 +44,22 @@ async def get_user_from_payload(payload: dict, uow) -> User:
         return await uow.db.read_one(User, id=int(user_id), with_raise=True)
 
 
-async def get_seller_from_payload(payload: dict, uow) -> Seller:
-    role = payload.get("role")
-    user_id = payload.get("sub")
+# async def get_seller_from_user(payload: dict, uow) -> Seller:
+#     # role = payload.get("role")
+#     # user_id = payload.get("sub")
+#
+#     if role != "seller":
+#         raise MissingRoleError(user_id=user_id, role=role)
+#
+#     async with uow:
+#         return await uow.db.read_one(Seller, id=int(user_id), with_raise=True)
 
-    if role != "seller":
-        raise MissingRoleError(user_id=user_id, role=role)
+async def get_seller_from_user(user: User, uow) -> Seller:
+    # role = payload.get("role")
+    # user_id = payload.get("sub")
+
+    if user.role != "seller":
+        raise MissingRoleError(user_id=user.id, role=user.role)
 
     async with uow:
-        return await uow.db.read_one(Seller, id=int(user_id), with_raise=True)
+        return await uow.db.read_one(Seller, id=user.id, with_raise=True)

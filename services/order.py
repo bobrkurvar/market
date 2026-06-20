@@ -14,18 +14,10 @@ async def make_order(
     amount: int = 1,
 ):
     async with uow:
-        # Внутри read_available_items лежит подзапрос SKIP LOCKED.
-        items = await uow.product.read_available_items(
-            variant_id=product_variant_id, amount=amount
-        )
         product_variant = await uow.db.read_one(
             ProductVariant, id=product_variant_id, loaded="product"
         )
         product = product_variant.product
-
-        if len(items) < amount:
-            raise ValueError("Недостаточно товара в наличии")
-
         snapshot = {
             "title": product.title,
             "description": product.description,
@@ -40,10 +32,24 @@ async def make_order(
             product_variant_id=product_variant.id,
             product_snapshot=snapshot,
         )
+        if product_variant.stock == -1:
+            # Внутри read_available_items лежит подзапрос SKIP LOCKED.
+            items = await uow.product.read_available_items(
+                variant_id=product_variant_id, amount=amount
+            )
+            if len(items) < amount:
+                raise ValueError("Недостаточно товара в наличии")
+            order.reserve_items(items)
+            for item in items:
+                await uow.db.save(item)
+        else:
+            # если stock None значит товар не имеет числового ограничения
+            if product_variant.stock is not None:
+                if product_variant.stock < amount:
+                    raise ValueError("Недостаточно товара в наличии")
+                product_variant.stock -= amount
+                await uow.db.save(product_variant)
         order = await uow.db.create(order)
-        order.reserve_items(items)
-        for item in items:
-            await uow.db.save(item)
 
         await event_bus.publish(
             OrderCreatedEvent(
