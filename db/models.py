@@ -82,7 +82,7 @@ class ProductItem(Base):
     order_id: Mapped[int | None] = mapped_column(ForeignKey("orders.id", ondelete="SET NULL"), nullable=True)
 
     content: Mapped[str] = mapped_column(Text)
-    status_name: Mapped[str]
+    #status_name: Mapped[str]
     variant: Mapped["ProductVariant"] = relationship(
         "ProductVariant", back_populates="items"
     )
