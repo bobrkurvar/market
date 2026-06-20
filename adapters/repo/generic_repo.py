@@ -68,11 +68,12 @@ class GenericRepository:
     async def delete(self, domain_cls, **filters) -> tuple:
         log.debug("%s filter for delete: %s", domain_cls.__name__, filters)
         model = self._registry.get_model(domain_cls)
-        conditions = [
-            getattr(model, field) == value for field, value in filters.items()
-        ]
-        delete_query = delete(model).where(*conditions).returning(model)
-        result = await self.session.execute(delete_query)
+        query = self._apply_conditions(delete(model), model, filters).returning(model)
+        # conditions = [
+        #     getattr(model, field) == value for field, value in filters.items()
+        # ]
+        #delete_query = delete(model).where(*conditions).returning(model)
+        result = await self.session.execute(query)
         deleted_domains = tuple(
             self._registry.to_domain(record) for record in result.scalars()
         )
@@ -157,8 +158,8 @@ class GenericRepository:
             Operations.lt: operator.lt,
             Operations.ilike: lambda attr, value: attr.ilike(value),
             Operations.in_: lambda attr, value: attr.in_(value),
-            Operations.is_: lambda attr, _: attr.is_(),
-            Operations.is_not: lambda attr, _: attr.is_not(),
+            Operations.is_: lambda attr, _: attr.is_(value),
+            Operations.is_not: lambda attr, _: attr.is_not(value),
         }
         for field, filter_data in filters.items():
             attr = getattr(base_orm_model, field)

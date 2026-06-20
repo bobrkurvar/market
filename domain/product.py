@@ -62,7 +62,7 @@ class ProductVariant:
         product_variant_id: int | None = None,
         items: Collection[ProductItem] | ProductItem = None,
         attributes: dict | None = None,
-        activate_instruction: str | None = None,
+        buyer_message: str | None = None,
         stock: int | None = -1
     ):
         self.product = product
@@ -71,7 +71,7 @@ class ProductVariant:
         self.id = product_variant_id
         self._items = [items] if isinstance(items, ProductItem) else items
         self.attributes = attributes
-        self.activate_instruction = activate_instruction
+        self.buyer_message = buyer_message
         self.stock = stock
         self._validate()
 
@@ -79,6 +79,11 @@ class ProductVariant:
         if self.price < 0:
             raise ValueError("Цена не может быть отрицательной")
 
+    def increase(self, amount: int):
+        if amount < 0:
+            raise ValueError("amount должен быть больше 0")
+        if self.stock is not None:
+            self.stock += amount
 
     @property
     def items(self):
@@ -107,7 +112,7 @@ class Product:
         variants: Collection[ProductVariant] | ProductVariant | None = None,
         description: str = "",
         items_count: int | None = None,
-        activate_instruction: str | None = None
+        buyer_message: str | None = None
     ):
         self.id = product_id
         self.suggested_category = suggested_category
@@ -122,7 +127,7 @@ class Product:
         if variants is not None:
             self.add_variants(variants)
         self.items_count = items_count
-        self.activate_instruction = activate_instruction
+        self.buyer_message = buyer_message
         self._validate()
 
     def _validate(self):
@@ -141,17 +146,11 @@ class Product:
     def variants_count(self):
         return len(self.variants)
 
-    # @property
-    # def min_price(self):
-    #     return min(variant.price for variant in self.variants)
 
     @property
     def price(self):
         return self.variants[0].price
 
-    # @property
-    # def price(self):
-    #     return min(variant.price for variant in self.variants)
 
     def add_variants(self, variants: Collection[ProductVariant] | ProductVariant):
         new_variants = (

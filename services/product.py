@@ -1,7 +1,7 @@
 import logging
 from typing import Awaitable, Callable
 
-from domain import Product
+from domain import Product, ProductVariant, ProductItem, Operation, Operations
 from infra.matcher import normalize_category_name
 
 log = logging.getLogger(__name__)
@@ -102,3 +102,10 @@ async def search_and_filter_products(
             v.price
         ))
     return products, count
+
+
+async def delete_product_variant(uow, product_variant_id: int):
+    async with uow:
+        await uow.db.delete(ProductVariant, id=product_variant_id)
+        # Некоторые ключи, которые привязаны к успешным заказам нужно сохранить поэтому такие сложности, а не простое удаление по графу
+        await uow.db.delete(ProductItem, product_variant_id=product_variant_id, order_id=Operation(value=None, op=Operations.is_))

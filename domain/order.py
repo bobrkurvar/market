@@ -75,20 +75,16 @@ class Order:
 
     @property
     def items(self):
-        if not self._items:
+        if self._items is None:
             raise ValueError("Заказ не может быть без товарных позиций")
         return self._items
 
-    # @property
-    # def items(self):
-    #     if self._items is None:
-    #         raise ValueError("Заказ не может быть без товарных позиций")
-    #     return self._items
 
     def cancel(self):
         if self.is_paid():
             raise ValueError("Заказ уже оплачен")
-
+        if not self._items:
+            self.product_variant.increase(self.amount)
         for item in self.items:
             item.release()
 
@@ -99,9 +95,6 @@ class Order:
             return
         if self.is_cancelled():
             raise ValueError("Попытка оплатить отмененный заказ")
-
-        if not self.items:
-            raise ValueError("Заказ без товаров")
 
         for item in self.items:
             item.confirm_purchase()

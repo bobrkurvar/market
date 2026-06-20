@@ -18,10 +18,12 @@ async def make_order(
             ProductVariant, id=product_variant_id, loaded="product"
         )
         product = product_variant.product
+        buyer_message = product_variant.buyer_message or product.buyer_message
         snapshot = {
             "title": product.title,
             "description": product.description,
             "attributes": product_variant.attributes,
+            "buyer_message": buyer_message
         }
 
         order = Order(
@@ -64,7 +66,7 @@ async def make_order(
 async def cancel_unpaid_order(uow, order_id: int):
     async with uow:
         order = await uow.db.read_one(
-            Order, id=order_id, loaded="items", with_for_update=True
+            Order, id=order_id, loaded=["items", "product_variant"], with_for_update=True
         )
         if not order.is_pending():
             return

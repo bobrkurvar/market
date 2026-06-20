@@ -24,7 +24,7 @@ class Product(Base):
     description: Mapped[str] = mapped_column(Text)
     suggested_category: Mapped[str] = mapped_column(String(100), nullable=True)
     category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"))
-    activate_instruction: Mapped[str | None] = mapped_column(Text, nullable=True)
+    buyer_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     category: Mapped["Category"] = relationship("Category", back_populates="products")
     variants: Mapped[list["ProductVariant"]] = relationship(
         "ProductVariant",
@@ -60,12 +60,13 @@ class ProductVariant(Base):
     )
     price: Mapped[float]
     attributes: Mapped[dict] = mapped_column(JSONB, nullable=True, default=dict)
-    activate_instruction: Mapped[str | None] = mapped_column(Text, nullable=True)
+    buyer_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     stock: Mapped[int | None] = mapped_column(Integer, nullable=True)
     product: Mapped["Product"] = relationship("Product", back_populates="variants")
     items: Mapped[list["ProductItem"]] = relationship(
         "ProductItem",
-        cascade="all, delete-orphan",
+        #cascade="all, delete-orphan", что бы ключи могли жить без варианта и не восприниматься за сирот
+        cascade="save-update, merge",
         back_populates="variant",
         passive_deletes=True,
     )
@@ -76,9 +77,9 @@ class ProductItem(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     product_variant_id: Mapped[int] = mapped_column(
-        ForeignKey("product_variants.id", ondelete="CASCADE")
+        ForeignKey("product_variants.id", ondelete="SET NULL")
     )
-    order_id: Mapped[int] = mapped_column(ForeignKey("orders.id", ondelete="SET NULL"), nullable=True)
+    order_id: Mapped[int | None] = mapped_column(ForeignKey("orders.id", ondelete="SET NULL"), nullable=True)
 
     content: Mapped[str] = mapped_column(Text)
     status_name: Mapped[str]
@@ -95,11 +96,6 @@ class ProductItem(Base):
     )
 
 
-# class ProductItemStatuses(Base):
-#     __tablename__ = "product_item_statuses"
-#     name: Mapped[str] = mapped_column(primary_key=True)
-
-
 class User(Base):
     __tablename__ = "users"
 
@@ -113,6 +109,7 @@ class User(Base):
         "polymorphic_identity": "user",
     }
 
+
 class Seller(User):
     __tablename__ = "sellers"
     id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
@@ -124,30 +121,6 @@ class Seller(User):
         "polymorphic_identity": "seller",  # Значение для колонки users.type
     }
 
-#
-# class Client(User):
-#     __tablename__ = "clients"
-#     id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
-#     is_blocked: Mapped[bool] = mapped_column(default=False, server_default="false")
-#     # cart: Mapped["Cart"] = relationship("Cart", back_populates="client")
-#     __mapper_args__ = {
-#         "polymorphic_identity": "client",  # Значение для колонки users.type
-#     }
-
-
-# class Cart(Base):
-#     __tablename__ = "cart"
-#     client_id: Mapped[int] = mapped_column(ForeignKey("clients.id"), primary_key=True)
-#     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), primary_key=True)
-#     quantity: Mapped[int]
-#
-#     client: Mapped["Client"] = relationship("Client", back_populates="cart")
-#     product: Mapped["Product"] = relationship("Product")
-
-
-# class OrderStatuses(Base):
-#     __tablename__ = "order_statuses"
-#     name: Mapped[str] = mapped_column(String(20), primary_key=True)
 
 
 class Order(Base):
@@ -166,6 +139,7 @@ class Order(Base):
     )
     status_name: Mapped[str]
     items: Mapped[list["ProductItem"]] = relationship("ProductItem")
+    product_variant: Mapped["ProductVariant"] = relationship("ProductVariant")
     buyer: Mapped["User"] = relationship("User", foreign_keys=[buyer_id])
     seller: Mapped["Seller"] = relationship("Seller", foreign_keys=[seller_id])
     price: Mapped[float]
