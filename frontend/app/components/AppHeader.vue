@@ -15,7 +15,7 @@
           </span>
         </button>
 
-        <div v-if="route.path !== '/login'" class="relative hidden max-w-2xl flex-1 md:block">
+        <div v-if="showSearch" class="relative hidden max-w-2xl flex-1 md:block">
           <UInput
             v-model="searchInput"
             icon="i-heroicons-magnifying-glass"
@@ -95,7 +95,7 @@
         </div>
       </div>
 
-      <div v-if="route.path !== '/login'" class="relative mt-3 md:hidden">
+      <div v-if="showSearch" class="relative mt-3 md:hidden">
         <UInput
           v-model="searchInput"
           icon="i-heroicons-magnifying-glass"
@@ -142,7 +142,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onUnmounted } from 'vue'
+import { ref, watch, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
@@ -150,6 +150,11 @@ const router = useRouter()
 const currentUser = useState('user')
 const colorMode = useColorMode()
 const { $api } = useNuxtApp()
+
+// Скрываем поиск на странице логина и во всей админке
+const showSearch = computed(() => {
+  return route.path !== '/login' && !route.path.startsWith('/admin')
+})
 
 // --- МЕНЮ ПРОФИЛЯ ---
 const dropdownItems = [

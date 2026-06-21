@@ -44,6 +44,13 @@ async def get_user_from_payload(payload: dict, uow) -> User:
         return await uow.db.read_one(User, id=int(user_id), with_raise=True)
 
 
+async def get_admin_from_user(user: User, uow):
+    if user.role != "admin":
+        raise MissingRoleError(user_id=user.id, role=user.role)
+
+    async with uow:
+        return await uow.db.read_one(User, id=user.id, with_raise=True)
+
 # async def get_seller_from_user(payload: dict, uow) -> Seller:
 #     # role = payload.get("role")
 #     # user_id = payload.get("sub")
@@ -57,7 +64,6 @@ async def get_user_from_payload(payload: dict, uow) -> User:
 async def get_seller_from_user(user: User, uow) -> Seller:
     # role = payload.get("role")
     # user_id = payload.get("sub")
-
     if user.role != "seller":
         raise MissingRoleError(user_id=user.id, role=user.role)
 

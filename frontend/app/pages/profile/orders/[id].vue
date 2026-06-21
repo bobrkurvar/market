@@ -16,8 +16,14 @@
           <div class="space-y-4">
             <div>
               <p class="text-sm text-gray-500">Статус заказа</p>
-              <p class="font-semibold text-amber-600 dark:text-amber-400">
-                {{ order.status === 'paid' ? 'Оплачен' : 'Ожидает оплаты' }}
+              <p class="font-semibold" :class="{
+                'text-amber-600 dark:text-amber-400': order.status === 'pending_payments',
+                'text-green-600 dark:text-green-400': order.status === 'paid',
+                'text-red-600 dark:text-red-400': order.status === 'dispute'
+              }">
+                <template v-if="order.status === 'paid'">Оплачен</template>
+                <template v-else-if="order.status === 'dispute'">Открыт спор</template>
+                <template v-else>Ожидает оплаты</template>
               </p>
             </div>
             <UDivider />
@@ -69,6 +75,32 @@
               </div>
             </div>
           </UCard>
+        </div>
+
+        <div v-if="order.status === 'paid' || order.status === 'dispute'" class="space-y-6">
+
+          <UCard v-if="order.status === 'dispute'" class="bg-red-50 dark:bg-red-900/20 ring-red-200 dark:ring-red-800">
+            <h3 class="text-sm font-bold text-red-900 dark:text-red-100 flex items-center gap-2 mb-2">
+              <UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5" />
+              Открыт спор
+            </h3>
+            <p class="text-sm text-red-800 dark:text-red-200 leading-relaxed">
+              Администратор скоро подключится к чату для решения проблемы.
+            </p>
+          </UCard>
+
+          <UButton
+            v-else-if="order.status === 'paid'"
+            color="red"
+            variant="soft"
+            icon="i-heroicons-shield-exclamation"
+            block
+            :loading="isDisputing"
+            @click="openDispute"
+          >
+            Позвать техподдержку (Спор)
+          </UButton>
+
         </div>
 
       </div>
@@ -167,6 +199,8 @@ const isConnected = ref(false)
 const chatContainer = ref(null)
 let socket = null
 
+const isDisputing = ref(false)
+
 const scrollToBottom = async () => {
   await nextTick()
   if (chatContainer.value) {
@@ -174,13 +208,34 @@ const scrollToBottom = async () => {
   }
 }
 
-// ДОБАВЛЕНО: Функция копирования ключа
 const copyToClipboard = async (text) => {
   try {
     await navigator.clipboard.writeText(text)
     toast.add({ title: 'Скопировано', description: 'Ключ скопирован в буфер обмена', color: 'green' })
   } catch (err) {
     toast.add({ title: 'Ошибка', description: 'Не удалось скопировать текст', color: 'red' })
+  }
+}
+
+const openDispute = async () => {
+  if (!confirm('Вы уверены, что хотите открыть спор? К чату подключится администратор.')) return
+
+  isDisputing.value = true
+  try {
+    await $api(`/api/orders/${orderId}/dispute`, {
+      method: 'POST'
+    })
+
+    toast.add({ title: 'Спор открыт', description: 'Ожидайте ответа администратора', color: 'green' })
+
+    if (order.value) {
+      order.value.status = 'dispute'
+    }
+  } catch (error) {
+    const errorMsg = error.data?.detail || error.response?._data?.detail || 'Не удалось открыть спор'
+    toast.add({ title: 'Ошибка', description: errorMsg, color: 'red' })
+  } finally {
+    isDisputing.value = false
   }
 }
 

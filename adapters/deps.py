@@ -7,10 +7,10 @@ from starlette.requests import HTTPConnection
 from adapters.http_client import HttpClient
 from adapters.redis import RedisService
 from db.mapper import registry
-from domain import Seller
+from domain import Seller, User
 from infra.event_bus import EventBus
 from services.auth import (get_seller_from_user, get_user_from_payload,
-                           resolve_session_payload)
+                           resolve_session_payload, get_admin_from_user)
 
 from .cookies import AuthCookies
 from .uow import UnitOfWork
@@ -97,12 +97,16 @@ async def get_seller(user: "GetUserDep", uow: "UowDep") -> Seller:
     return await get_seller_from_user(user=user, uow=uow)
 
 
+async def get_admin(user: "GetUserDep", uow: "UowDep") -> User:
+    return await get_admin_from_user(user=user, uow=uow)
+
+
 UowDep = Annotated[UnitOfWork, Depends(get_uow)]
 EventBusDep = Annotated[EventBus, Depends(get_event_bus)]
 RedisDep = Annotated[RedisService, Depends(get_redis)]
 HttpClientDep = Annotated[HttpClient, Depends(get_image_api)]
 authCookiesDep = Annotated[AuthCookies, Depends()]
-GetUserDep = Annotated[dict, Depends(get_user)]
-GetUserWsDep = Annotated[dict, Depends(get_user_ws)]
-#GetClientDep = Annotated[Client, Depends(get_client)]
+GetUserDep = Annotated[User, Depends(get_user)]
+GetUserWsDep = Annotated[User, Depends(get_user_ws)]
+GetAminDep = Annotated[User, Depends(get_admin)]
 GetSellerDep = Annotated[Seller, Depends(get_seller)]

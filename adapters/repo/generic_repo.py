@@ -92,9 +92,9 @@ class GenericRepository:
         query = self._apply_conditions(update(model), model, filters)
         query = query.values(**values).returning(model)
 
-        result = await self.session.execute(query)
-        updated_records = result.scalars()
-        return tuple(self._registry.to_domain(record) for record in updated_records)
+        result = await self.session.scalars(query)
+        #updated_records = result.scalars()
+        return tuple(self._registry.to_domain(record) for record in result)
 
     async def read_one(
         self,

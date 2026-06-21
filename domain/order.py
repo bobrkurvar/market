@@ -10,6 +10,7 @@ class OrderStatuses(StrEnum):
     pending_payments = "pending_payments"
     paid = "paid"
     cancelled = "canceled"
+    dispute = "dispute"
 
 
 class Order:
@@ -124,6 +125,11 @@ class Order:
 
     def is_pending(self):
         return self.status == OrderStatuses.pending_payments
+
+    def dispute(self):
+        if not self.is_paid():
+            raise ValueError("Нельзя начать спор по не оплаченному заказу")
+        self.status = OrderStatuses.dispute
 
 
 class OrderMessage:
