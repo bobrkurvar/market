@@ -40,10 +40,17 @@
                 </UBadge>
               </div>
 
-              <p class="flex items-center gap-2">
-                <UIcon name="i-heroicons-bolt" class="w-5 h-5 text-amber-500" />
-                Автоматическая доставка
-              </p>
+              <div v-if="selectedVariant" class="mt-2">
+                <p v-if="selectedVariant.stock === -1" class="flex items-center gap-2 text-sm">
+                  <UIcon name="i-heroicons-bolt" class="w-5 h-5 text-amber-500" />
+                  Автоматическая доставка
+                </p>
+                <p v-else class="flex items-center gap-2 text-sm">
+                  <UIcon name="i-heroicons-clock" class="w-5 h-5 text-blue-500" />
+                  Ручная выдача
+                </p>
+              </div>
+
             </div>
           </div>
         </div>
@@ -72,39 +79,50 @@
             </h3>
 
             <div class="space-y-3">
-              <label
-                v-for="variant in product.variants"
-                :key="variant.id"
-                class="flex items-start p-4 border rounded-xl cursor-pointer transition-all duration-200"
-                :class="selectedVariant?.id === variant.id
-                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/30 ring-2 ring-primary-500'
-                  : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'"
-              >
-                <div class="flex items-center h-5 mt-0.5">
-                  <input
-                    type="radio"
-                    name="variant"
-                    :value="variant"
-                    v-model="selectedVariant"
-                    class="w-4 h-4 text-primary-600 focus:ring-primary-500 border-gray-300"
-                  />
-                </div>
+              <template v-for="variant in product.variants" :key="variant.id">
+                <label
+                  v-if="variant.is_active !== false"
+                  class="flex items-start p-4 border rounded-xl transition-all duration-200"
+                  :class="[
+                    variant.items_count === 0
+                      ? 'opacity-50 cursor-not-allowed bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-800'
+                      : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800',
+                    selectedVariant?.id === variant.id && variant.items_count !== 0
+                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/30 ring-2 ring-primary-500'
+                      : 'border-gray-200 dark:border-gray-700'
+                  ]"
+                >
+                  <div class="flex items-center h-5 mt-0.5">
+                    <input
+                      type="radio"
+                      name="variant"
+                      :value="variant"
+                      v-model="selectedVariant"
+                      :disabled="variant.items_count === 0"
+                      class="w-4 h-4 text-primary-600 focus:ring-primary-500 border-gray-300 disabled:opacity-50"
+                    />
+                  </div>
 
-                <div class="ml-3 flex-1">
-                  <div v-if="variant.attributes && Object.keys(variant.attributes).length > 0">
-                    <div v-for="(val, key) in variant.attributes" :key="key" class="text-sm font-medium text-gray-900 dark:text-white">
-                      {{ key }}: <span class="text-gray-500 dark:text-gray-400">{{ val }}</span>
+                  <div class="ml-3 flex-1">
+                    <div v-if="variant.attributes && Object.keys(variant.attributes).length > 0">
+                      <div v-for="(val, key) in variant.attributes" :key="key" class="text-sm font-medium text-gray-900 dark:text-white">
+                        {{ key }}: <span class="text-gray-500 dark:text-gray-400">{{ val }}</span>
+                      </div>
+                    </div>
+                    <div v-else class="text-sm font-medium text-gray-900 dark:text-white">
+                      Стандартное издание
+                    </div>
+
+                    <div class="mt-1.5 text-xs font-bold" :class="getStockStatus(variant.items_count).color">
+                      {{ getStockStatus(variant.items_count).text }}
                     </div>
                   </div>
-                  <div v-else class="text-sm font-medium text-gray-900 dark:text-white">
-                    Стандартное издание
-                  </div>
-                </div>
 
-                <div class="text-base font-bold text-gray-900 dark:text-white ml-4">
-                  {{ variant.price }} ₽
-                </div>
-              </label>
+                  <div class="text-base font-bold text-gray-900 dark:text-white ml-4">
+                    {{ variant.price }} ₽
+                  </div>
+                </label>
+              </template>
             </div>
           </div>
 
@@ -122,7 +140,7 @@
 
           <p class="text-xs text-center text-gray-500 mt-4 flex items-center justify-center gap-1">
             <UIcon name="i-heroicons-shield-check" class="w-4 h-4" />
-            Безопасная сделка. Мгновенная доставка.
+            Безопасная сделка. {{ selectedVariant?.stock === -1 ? 'Мгновенная доставка.' : 'Гарантия возврата.' }}
           </p>
         </UCard>
       </div>
@@ -131,7 +149,7 @@
     <div v-else class="text-center py-20">
       <UIcon name="i-heroicons-archive-box-x-mark" class="w-20 h-20 mx-auto text-gray-300 dark:text-gray-700 mb-4" />
       <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Товар не найден</h2>
-      <p class="text-gray-500 mt-2 mb-6">Возможно, он был удален или ссылка недействительна.</p>
+      <p class="text-gray-500 mt-2 mb-6">Возможно, он был удален, закончился или ссылка недействительна.</p>
       <UButton to="/" size="lg" color="gray" variant="solid">Вернуться в каталог</UButton>
     </div>
 
@@ -143,19 +161,46 @@
             <div v-if="paymentStep === 'creating' || paymentStep === 'waiting'">
               <UIcon name="i-heroicons-arrow-path" class="w-16 h-16 animate-spin text-primary-500 mx-auto mb-6" />
               <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                {{ paymentStep === 'creating' ? 'Создаем заказ...' : 'Связываемся с банком...' }}
+                {{ paymentStep === 'creating' ? 'Создаем заказ...' : 'Генерируем счет...' }}
               </h3>
               <p class="text-gray-500 dark:text-gray-400 animate-pulse">
                 Пожалуйста, не закрывайте страницу.
               </p>
             </div>
 
-            <div v-else-if="paymentStep === 'ready'">
+            <div v-else-if="paymentStep === 'payment_ready'">
+              <div class="w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                <UIcon name="i-heroicons-credit-card" class="w-10 h-10 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Заказ готов к оплате</h3>
+              <p class="text-gray-500 dark:text-gray-400 mb-8">Сумма к оплате: <span class="font-bold text-gray-900 dark:text-white">{{ selectedVariant?.price }} ₽</span></p>
+
+              <UButton
+                size="xl"
+                color="blue"
+                block
+                @click="simulatePayment"
+                icon="i-heroicons-banknotes"
+              >
+                Оплатить (Тестовый режим)
+              </UButton>
+              <UButton variant="ghost" color="gray" block class="mt-3" @click="isPaymentModalOpen = false">
+                Отмена
+              </UButton>
+            </div>
+
+            <div v-else-if="paymentStep === 'processing_payment'">
+              <UIcon name="i-heroicons-arrow-path" class="w-16 h-16 animate-spin text-green-500 mx-auto mb-6" />
+              <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Обработка платежа...</h3>
+              <p class="text-gray-500 dark:text-gray-400 animate-pulse">Связываемся с банком.</p>
+            </div>
+
+            <div v-else-if="paymentStep === 'success'">
               <div class="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
                 <UIcon name="i-heroicons-check" class="w-10 h-10 text-green-600 dark:text-green-400" />
               </div>
-              <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Заказ успешно оформлен!</h3>
-              <p class="text-gray-500 dark:text-gray-400 mb-8">Товар зарезервирован, вы можете перейти к диалогу с продавцом.</p>
+              <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Оплата прошла успешно!</h3>
+              <p class="text-gray-500 dark:text-gray-400 mb-8">Деньги зачислены. Товар зарезервирован за вами.</p>
 
               <UButton
                 size="xl"
@@ -164,10 +209,7 @@
                 :to="`/profile/orders/${createdOrderId}`"
                 icon="i-heroicons-chat-bubble-left-right"
               >
-                Перейти в чат с продавцом
-              </UButton>
-              <UButton variant="ghost" color="gray" block class="mt-3" @click="isPaymentModalOpen = false">
-                Закрыть
+                Получить товар и открыть чат
               </UButton>
             </div>
 
@@ -179,7 +221,7 @@
               <p class="text-gray-500 dark:text-gray-400 mb-8">{{ paymentErrorMsg }}</p>
 
               <UButton size="lg" color="primary" block @click="isPaymentModalOpen = false">
-                Попробовать снова
+                Закрыть
               </UButton>
             </div>
 
@@ -213,21 +255,47 @@ const selectedVariant = ref(null)
 // --- СОСТОЯНИЕ ОПЛАТЫ И МОДАЛКИ ---
 const createdOrderId = ref(null) // Храним ID созданного заказа для перехода в чат
 const isPaymentModalOpen = ref(false)
-const paymentStep = ref('creating') // 'creating' | 'waiting' | 'ready' | 'error'
+const paymentStep = ref('creating') // 'creating' | 'waiting' | 'payment_ready' | 'processing_payment' | 'success' | 'error'
 const paymentErrorMsg = ref('')
 
-// Магия реактивности: проверяем URL и выбираем нужный вариант
+const getStockStatus = (count) => {
+  if (count === null || count === undefined) {
+    return { text: 'В наличии', color: 'text-green-600 dark:text-green-400' }
+  }
+  if (count > 10) {
+    return { text: 'В наличии: >10 шт.', color: 'text-green-600 dark:text-green-400' }
+  }
+  if (count > 0) {
+    return { text: `Осталось: ${count} шт.`, color: 'text-amber-600 dark:text-amber-400' }
+  }
+  return { text: 'Нет в наличии', color: 'text-red-500 dark:text-red-400' }
+}
+
+// Магия реактивности: проверяем URL и выбираем нужный вариант, игнорируя пустые/скрытые
 watch(product, (newProduct) => {
   if (newProduct && newProduct.variants?.length > 0) {
+    // Отсекаем неактивные и распроданные варианты для автовыбора
+    const availableVariants = newProduct.variants.filter(
+      v => v.is_active !== false && v.items_count !== 0
+    )
+
+    // Если всё раскупили, ничего не выбираем
+    if (availableVariants.length === 0) {
+      selectedVariant.value = null
+      return
+    }
+
     const targetVariantId = route.query.variant
     if (targetVariantId) {
-      const foundVariant = newProduct.variants.find(v => v.id === Number(targetVariantId))
+      const foundVariant = availableVariants.find(v => v.id === Number(targetVariantId))
       if (foundVariant) {
         selectedVariant.value = foundVariant
         return
       }
     }
-    const sortedVariants = [...newProduct.variants].sort((a, b) => Number(a.price) - Number(b.price))
+
+    // Иначе берем самый дешевый из ДОСТУПНЫХ
+    const sortedVariants = [...availableVariants].sort((a, b) => Number(a.price) - Number(b.price))
     selectedVariant.value = sortedVariants[0]
   }
 }, { immediate: true })
@@ -242,19 +310,19 @@ const buyProduct = async () => {
   paymentErrorMsg.value = ''
 
   try {
-    // Вызываем POST для создания заказа (путь изменен на /orders)
+    // Вызываем POST для создания заказа
     const order = await $api('/api/client/orders', {
       method: 'POST',
       query: { product_variant_id: selectedVariant.value.id }
     })
 
-    // Сохраняем ID заказа для кнопки "Перейти в чат"
+    // Сохраняем ID заказа
     createdOrderId.value = order.id
 
-    // Переводим интерфейс в режим ожидания ответа банка (пока там просто заглушка)
+    // Переводим интерфейс в режим ожидания ответа банка
     paymentStep.value = 'waiting'
 
-    // Запускаем второй шаг (Long Polling)
+    // Запускаем второй шаг (Long Polling / WebSockets)
     await waitForPaymentLink(order.id)
 
   } catch (error) {
@@ -272,28 +340,48 @@ const buyProduct = async () => {
   }
 }
 
-// 2. ШАГ ВТОРОЙ: Ждем успешного статуса
+// 2. ШАГ ВТОРОЙ: Ждем ссылку на оплату
 const waitForPaymentLink = async (orderId) => {
   try {
-    // Этот запрос ждет успешного сигнала из Redis (путь изменен на wait-payment)
     const response = await $api(`/api/client/orders/${orderId}/wait-payment`, {
       method: 'GET'
     })
 
-    // Раз мы не переходим по ссылке, нам просто важен факт успешного ответа
     if (response) {
-      paymentStep.value = 'ready' // Успех! Показываем кнопку перехода в чат
+      // Ссылка пришла! Вместо перехода в чат, показываем кнопку оплаты
+      paymentStep.value = 'payment_ready'
     }
 
   } catch (error) {
     console.error('Ошибка ожидания:', error)
     paymentStep.value = 'error'
+    paymentErrorMsg.value = error.response?.status === 408
+      ? 'Время ожидания истекло. Заказ сохранен, вы можете перейти к нему позже.'
+      : 'Произошла ошибка при обработке заказа.'
+  }
+}
 
-    if (error.response?.status === 408) {
-      paymentErrorMsg.value = 'Время ожидания истекло. Заказ сохранен, вы можете перейти к нему позже.'
-    } else {
-      paymentErrorMsg.value = 'Произошла ошибка при обработке заказа.'
-    }
+// 3. ШАГ ТРЕТИЙ: Эмуляция оплаты через Mock-Вебхук
+const simulatePayment = async () => {
+  paymentStep.value = 'processing_payment'
+
+  try {
+    // Дергаем наш вебхук. Передаем ключ "id", так как этого ждет OrderPaymentPayload
+    await $api('/api/webhooks/payment', {
+      method: 'POST',
+      body: { id: createdOrderId.value }
+    })
+
+    // Искусственная задержка для красоты интерфейса
+    await new Promise(resolve => setTimeout(resolve, 800))
+
+    // Успех! Теперь статус в базе точно 'paid'
+    paymentStep.value = 'success'
+
+  } catch (error) {
+    console.error('Ошибка симуляции оплаты:', error)
+    paymentStep.value = 'error'
+    paymentErrorMsg.value = 'Не удалось провести оплату. Попробуйте позже.'
   }
 }
 

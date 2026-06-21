@@ -15,7 +15,7 @@
           </span>
         </button>
 
-        <div class="relative hidden max-w-2xl flex-1 md:block">
+        <div v-if="route.path !== '/login'" class="relative hidden max-w-2xl flex-1 md:block">
           <UInput
             v-model="searchInput"
             icon="i-heroicons-magnifying-glass"
@@ -95,7 +95,7 @@
         </div>
       </div>
 
-      <div class="relative mt-3 md:hidden">
+      <div v-if="route.path !== '/login'" class="relative mt-3 md:hidden">
         <UInput
           v-model="searchInput"
           icon="i-heroicons-magnifying-glass"

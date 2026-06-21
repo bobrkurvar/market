@@ -16,6 +16,17 @@ class ProductRepository:
         self.session = session
         self._registry = registry
 
+    async def get_active_products(self, category_id: int):
+        query = (
+            select(Product)
+            .where(Product.category_id == category_id)
+            .where(
+                Product.variants.any(ProductVariant.is_active == True)
+            )
+        )
+        result = await self.session.scalars(query)
+        return tuple(self._registry.to_domain(r) for r in result)
+
     async def read_available_items(self, variant_id: int, amount: int):
         query = (
             select(ProductItem)
@@ -29,6 +40,16 @@ class ProductRepository:
         result = (await self.session.execute(query)).scalars()
         return tuple(self._registry.to_domain(r) for r in result)
 
+    async def count_available_items(self, variant_id: int) -> int:
+        query = (
+            select(func.count(ProductItem.id))
+            .where(
+                ProductItem.product_variant_id == variant_id,
+                ProductItem.status_name == ProductItemStatuses.available,
+            )
+        )
+        result = await self.session.execute(query)
+        return result.scalar() or 0
 
     @staticmethod
     def _compile_search_query(stmt, query: str):
@@ -60,7 +81,10 @@ class ProductRepository:
         if category_id:
             stmt = stmt.where(Product.category_id == category_id)
 
-        variant_conditions = [ProductVariant.product_id == Product.id]
+        variant_conditions = [
+            ProductVariant.product_id == Product.id,
+            ProductVariant.is_active.is_(True)
+        ]
 
         if min_price is not None:
             variant_conditions.append(ProductVariant.price >= min_price)
@@ -80,12 +104,13 @@ class ProductRepository:
                     ProductVariant.attributes[key].astext == str(value)
                 )
 
-        if len(variant_conditions) > 1:
-            stmt = stmt.where(
-                exists().where(and_(*variant_conditions))
-            )
+        stmt = stmt.where(
+            exists().where(and_(*variant_conditions))
+        )
 
-        stmt = stmt.options(selectinload(Product.variants))
+        stmt = stmt.options(
+            selectinload(Product.variants.and_(ProductVariant.is_active.is_(True)))
+        )
 
         count_stmt = select(func.count()).select_from(stmt.order_by(None).subquery())
         total_count = await self.session.scalar(count_stmt)
@@ -121,29 +146,3 @@ class ProductRepository:
 
         return domain_products
 
-    # async def search_products(self, query: str, limit: int = 8, offset: int = 0):
-    #     fts_query = func.websearch_to_tsquery("russian", query)
-    #     ts_vector = func.to_tsvector("russian", Product.description)
-    #     fts_match = ts_vector.op("@@")(fts_query)
-    #     fts_rank = func.ts_rank(ts_vector, fts_query)
-    #
-    #     trgm_sim = func.similarity(Product.title, query)
-    #     total_rank = (trgm_sim * 0.7) + (fts_rank * 0.3)
-    #
-    #     search_condition = or_(fts_match, trgm_sim > 0.15)
-    #     stmt = (
-    #         select(Product)
-    #         .options(selectinload(Product.variants))
-    #         .where(search_condition)
-    #         .order_by(desc(total_rank))
-    #         .limit(limit)
-    #         .offset(offset)
-    #     )
-    #     count_stmt = select(func.count(Product.id)).where(search_condition)
-    #
-    #     result = await self.session.execute(stmt)
-    #     count_result = await self.session.execute(count_stmt)
-    #     return (
-    #         tuple(self._registry.to_domain(p) for p in result.scalars()),
-    #         count_result.scalar_one(),
-    #     )

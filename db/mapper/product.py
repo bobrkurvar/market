@@ -101,14 +101,20 @@ def map_product_variant_to_domain(
         attributes=orm_obj.attributes,
         items=items,
         product_variant_id=orm_obj.id,
+        is_active=orm_obj.is_active,
+        stock=orm_obj.stock,
+        buyer_message=orm_obj.buyer_message,
     )
 
 
 def map_product_variant_to_orm(d_obj: domain.ProductVariant) -> models.ProductVariant:
     return models.ProductVariant(
+        is_active=d_obj.is_active,
+        stock=d_obj.stock,
         product_id=d_obj.product_id,
         price=d_obj.price,
         attributes=d_obj.attributes,
+        buyer_message=d_obj.buyer_message,
         items=(
             [map_product_item_to_orm(item) for item in d_obj._items]
             if d_obj._items

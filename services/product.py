@@ -103,7 +103,6 @@ async def search_and_filter_products(
         ))
     return products, count
 
-
 async def delete_product_variant(uow, product_variant_id: int):
     async with uow:
         await uow.db.delete(ProductVariant, id=product_variant_id)

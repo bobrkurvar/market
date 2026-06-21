@@ -28,7 +28,9 @@ class Order:
         items: Collection[ProductItem] | ProductItem = None,
         order_id: int | None = None,
         payment_link: str | None = None,
+        created_at: datetime | None = None,
     ):
+        self.created_at = created_at or datetime.now(timezone.utc)
         self.product_snapshot = product_snapshot or {}
         self.price = price
         self.id = order_id
@@ -44,6 +46,7 @@ class Order:
         self.amount = amount
         self._items = [items] if isinstance(items, ProductItem) else items
         self.payment_link = payment_link
+
         self._validate()
 
     def _validate(self):
@@ -55,14 +58,6 @@ class Order:
             raise ValueError(
                 "Заказ не может существовать без продавца (передайте либо объект seller, либо seller_id)"
             )
-        # if self.seller_id is None and self.seller is None:
-        #     raise ValueError(
-        #         "Заказ не может существовать без продавца (передайте либо объект seller, либо seller_id)"
-        #     )
-        # if self.seller and self.seller_id is None:
-        #     raise ValueError(
-        #         "Для заказа подходит только реальный продавец"
-        #     )
         if self.product_variant_id is None:
             raise ValueError(
                 "Заказ не может существовать без товара (передайте либо существующий объект product, либо product_id)"
@@ -77,15 +72,17 @@ class Order:
     def items(self):
         if self._items is None:
             raise ValueError("Заказ не может быть без товарных позиций")
+        if not self.is_paid():
+            raise ValueError("Ключи можно прочитать только у оплаченного твоара")
         return self._items
 
 
     def cancel(self):
         if self.is_paid():
             raise ValueError("Заказ уже оплачен")
-        if not self._items:
+        if self._items is None:
             self.product_variant.increase(self.amount)
-        for item in self.items:
+        for item in self._items:
             item.release()
 
         self.status = OrderStatuses.cancelled
@@ -96,8 +93,9 @@ class Order:
         if self.is_cancelled():
             raise ValueError("Попытка оплатить отмененный заказ")
 
-        for item in self.items:
-            item.confirm_purchase()
+        if self._items:
+            for item in self._items:
+                item.confirm_purchase()
 
         self.status = OrderStatuses.paid
 

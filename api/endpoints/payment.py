@@ -1,26 +1,19 @@
 import logging
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter
 
 from adapters.deps import UowDep
 from services.order import confirm_order_payment
+from api.schemas import OrderPaymentPayload
 
 log = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.post("/webhooks/bank")
-async def payment_webhook(request: Request, uow: UowDep):
-    # 1. Секьюрити: проверяем IP-адреса или подпись
-    # (В ЮKassa можно сверять IP с белым списком или проверять базовую авторизацию)
-    # await verify_bank_security(request)
+@router.post("/webhooks/payment")
+async def payment_webhook(order: OrderPaymentPayload, uow: UowDep):
+    log.debug("Payment for order with id: %s", order.id)
+    order = await confirm_order_payment(uow=uow, order_id=order.id)
+    log.debug("Status after payment: %s", order.status)
 
-    payload = await request.json()
-
-    event_type = payload.get("event")
-    order_id = int(payload["object"]["metadata"]["order_id"])
-    log.info("Получен вебхук от банка: %s для заказа #%s", event_type, order_id)
-    if event_type == "payment.succeeded":
-        await confirm_order_payment(uow=uow, order_id=order_id)
-
-    return {"status": "ok"}
+    return {"status": "success", "message": "Оплата успешно проведена"}

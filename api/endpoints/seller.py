@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile
 
 from adapters.deps import GetSellerDep, HttpClientDep, UowDep, get_seller
 from adapters.images import ImageGenerator, ProductImagesManager
-from api.schemas import ProductCreate, ProductSellerListOut
+from api.schemas import ProductCreate, ProductSellerListOut, OrderRead
 from domain import Category, Order
 from infra.security import async_hash_calculate
 from services.product import create_product
@@ -54,3 +54,9 @@ async def get_catalog(uow: UowDep):
 async def get_orders(seller: GetSellerDep, uow: UowDep):
     async with uow:
         return await uow.db.read(Order, seller_id=seller.id)
+
+
+@router.get("/orders/{order_id}", response_model=OrderRead)
+async def get_buyer_order_details(seller: GetSellerDep, order_id: int, uow: UowDep):
+    async with uow:
+        return await uow.db.read_one(Order, seller_id=seller.id, id=order_id, loaded=["items"])

@@ -1,8 +1,8 @@
 """init
 
-Revision ID: 05a74945cb93
+Revision ID: 032f4ab9c7a2
 Revises: 
-Create Date: 2026-06-19 19:40:44.488389
+Create Date: 2026-06-21 13:02:56.902407
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '05a74945cb93'
+revision: str = '032f4ab9c7a2'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -61,6 +61,7 @@ def upgrade() -> None:
     sa.Column('description', sa.Text(), nullable=False),
     sa.Column('suggested_category', sa.String(length=100), nullable=True),
     sa.Column('category_id', sa.Integer(), nullable=False),
+    sa.Column('buyer_message', sa.Text(), nullable=True),
     sa.ForeignKeyConstraint(['category_id'], ['categories.id'], ),
     sa.ForeignKeyConstraint(['seller_id'], ['sellers.id'], ),
     sa.PrimaryKeyConstraint('id')
@@ -71,7 +72,10 @@ def upgrade() -> None:
     sa.Column('id', sa.BigInteger(), nullable=False),
     sa.Column('product_id', sa.BigInteger(), nullable=False),
     sa.Column('price', sa.Float(), nullable=False),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
     sa.Column('attributes', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('buyer_message', sa.Text(), nullable=True),
+    sa.Column('stock', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['product_id'], ['products.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
@@ -110,7 +114,7 @@ def upgrade() -> None:
     sa.Column('status_name', sa.String(), nullable=False),
     sa.CheckConstraint("status_name IN ('available', 'reserved', 'sold', 'compromised')", name='check_product_item_status'),
     sa.ForeignKeyConstraint(['order_id'], ['orders.id'], ondelete='SET NULL'),
-    sa.ForeignKeyConstraint(['product_variant_id'], ['product_variants.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['product_variant_id'], ['product_variants.id'], ondelete='SET NULL'),
     sa.PrimaryKeyConstraint('id')
     )
     # ### end Alembic commands ###

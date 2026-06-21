@@ -59,6 +59,7 @@ class ProductVariant(Base):
         ForeignKey("products.id", ondelete="CASCADE")
     )
     price: Mapped[float]
+    is_active: Mapped[bool]
     attributes: Mapped[dict] = mapped_column(JSONB, nullable=True, default=dict)
     buyer_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     stock: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -82,7 +83,7 @@ class ProductItem(Base):
     order_id: Mapped[int | None] = mapped_column(ForeignKey("orders.id", ondelete="SET NULL"), nullable=True)
 
     content: Mapped[str] = mapped_column(Text)
-    #status_name: Mapped[str]
+    status_name: Mapped[str]
     variant: Mapped["ProductVariant"] = relationship(
         "ProductVariant", back_populates="items"
     )

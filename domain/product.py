@@ -57,6 +57,7 @@ class ProductVariant:
     def __init__(
         self,
         price: float,
+        is_active: bool = True,
         product_id: int | None = None,
         product: "Product" = None,
         product_variant_id: int | None = None,
@@ -73,6 +74,8 @@ class ProductVariant:
         self.attributes = attributes
         self.buyer_message = buyer_message
         self.stock = stock
+        self.items_count = None
+        self.is_active = is_active
         self._validate()
 
     def _validate(self):
@@ -111,7 +114,7 @@ class Product:
         suggested_category: str | None = None,
         variants: Collection[ProductVariant] | ProductVariant | None = None,
         description: str = "",
-        items_count: int | None = None,
+        #items_count: int | None = None,
         buyer_message: str | None = None
     ):
         self.id = product_id
@@ -126,7 +129,7 @@ class Product:
         self._variants = None
         if variants is not None:
             self.add_variants(variants)
-        self.items_count = items_count
+        #self.items_count = items_count
         self.buyer_message = buyer_message
         self._validate()
 

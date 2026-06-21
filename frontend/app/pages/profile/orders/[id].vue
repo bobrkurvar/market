@@ -7,6 +7,7 @@
     <div v-else-if="order" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
       <div class="lg:col-span-1 space-y-6">
+
         <UCard :ui="{ body: { padding: 'p-6' } }">
           <template #header>
             <h3 class="font-bold text-lg text-gray-900 dark:text-white">Сделка #{{ order.id }}</h3>
@@ -15,7 +16,9 @@
           <div class="space-y-4">
             <div>
               <p class="text-sm text-gray-500">Статус заказа</p>
-              <p class="font-semibold text-amber-600 dark:text-amber-400">Ожидает выдачи товара</p>
+              <p class="font-semibold text-amber-600 dark:text-amber-400">
+                {{ order.status === 'paid' ? 'Оплачен' : 'Ожидает оплаты' }}
+              </p>
             </div>
             <UDivider />
             <div>
@@ -26,6 +29,48 @@
             </div>
           </div>
         </UCard>
+
+        <div v-if="order.status === 'paid'" class="space-y-6">
+
+          <UCard v-if="order.product_snapshot?.buyer_message" class="bg-blue-50 dark:bg-blue-900/20 ring-blue-200 dark:ring-blue-800">
+            <h3 class="text-sm font-bold text-blue-900 dark:text-blue-100 flex items-center gap-2 mb-3">
+              <UIcon name="i-heroicons-information-circle" class="w-5 h-5" />
+              Сообщение от продавца
+            </h3>
+            <p class="text-sm text-blue-800 dark:text-blue-200 whitespace-pre-line leading-relaxed">
+              {{ order.product_snapshot.buyer_message }}
+            </p>
+          </UCard>
+
+          <UCard v-if="order.items && order.items.length > 0">
+            <template #header>
+              <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <UIcon name="i-heroicons-key" class="w-5 h-5 text-green-500" />
+                Ваши покупки
+              </h3>
+            </template>
+
+            <div class="space-y-3">
+              <div
+                v-for="(item, index) in order.items"
+                :key="item.id"
+                class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700"
+              >
+                <code class="flex-1 font-mono text-sm font-bold text-gray-900 dark:text-white break-all">
+                  {{ item.content }}
+                </code>
+                <UButton
+                  color="gray"
+                  variant="ghost"
+                  icon="i-heroicons-clipboard-document"
+                  size="sm"
+                  @click="copyToClipboard(item.content)"
+                />
+              </div>
+            </div>
+          </UCard>
+        </div>
+
       </div>
 
       <div class="lg:col-span-2">
@@ -105,10 +150,11 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
-import { useNuxtApp, useState } from '#imports'
+import { useNuxtApp, useState, useToast } from '#imports'
 
 const route = useRoute()
 const { $api } = useNuxtApp()
+const toast = useToast()
 const orderId = route.params.id
 const currentUser = useState('user')
 
@@ -128,7 +174,16 @@ const scrollToBottom = async () => {
   }
 }
 
-// 1. ВЫНОСИМ ЗАГРУЗКУ ИСТОРИИ В ОТДЕЛЬНУЮ ФУНКЦИЮ
+// ДОБАВЛЕНО: Функция копирования ключа
+const copyToClipboard = async (text) => {
+  try {
+    await navigator.clipboard.writeText(text)
+    toast.add({ title: 'Скопировано', description: 'Ключ скопирован в буфер обмена', color: 'green' })
+  } catch (err) {
+    toast.add({ title: 'Ошибка', description: 'Не удалось скопировать текст', color: 'red' })
+  }
+}
+
 const loadHistory = async () => {
   try {
     const historyData = await $api(`/api/orders/${orderId}/messages`)
@@ -139,7 +194,6 @@ const loadHistory = async () => {
   }
 }
 
-// 2. ВЫНОСИМ ЛОГИКУ ПОДКЛЮЧЕНИЯ ВЕБСОКЕТА
 const connectWebSocket = () => {
   if (socket && socket.readyState !== WebSocket.CLOSED) return
 
@@ -163,7 +217,6 @@ const connectWebSocket = () => {
   }
 }
 
-// 3. ВЫНОСИМ ЛОГИКУ ОТКЛЮЧЕНИЯ
 const disconnectWebSocket = () => {
   if (socket) {
     socket.close()
@@ -172,31 +225,22 @@ const disconnectWebSocket = () => {
   }
 }
 
-// 4. ОБРАБОТЧИК ВИДИМОСТИ СТРАНИЦЫ (МАГИЯ ЗДЕСЬ)
 const handleVisibilityChange = async () => {
   if (document.hidden) {
-    // Пользователь ушел на другую вкладку - отключаем сокет
     disconnectWebSocket()
   } else {
-    // Пользователь вернулся!
-    // Сначала подтягиваем пропущенные сообщения по REST
     await loadHistory()
-    // Затем заново открываем сокет
     connectWebSocket()
   }
 }
 
 onMounted(async () => {
   try {
-    // Первичная загрузка сделки
     order.value = await $api(`/api/orders/${orderId}`)
     await loadHistory()
     pending.value = false
 
-    // Подключаем сокет
     connectWebSocket()
-
-    // Подписываемся на событие сворачивания/разворачивания вкладки
     document.addEventListener('visibilitychange', handleVisibilityChange)
 
   } catch (error) {

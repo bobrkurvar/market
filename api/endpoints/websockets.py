@@ -1,8 +1,8 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
 from api.schemas import CategoryShortOut
 from adapters.deps import UowDep, GetUserWsDep
 from adapters.ws_manager import chat_manager
-from domain import OrderMessage
+from domain import OrderMessage, Order, OrderStatuses
 import logging
 
 log = logging.getLogger(__name__)
@@ -44,6 +44,18 @@ async def websocket_search(websocket: WebSocket, uow: UowDep):
 
 @router.websocket("/orders/{order_id}/chat")
 async def order_chat_endpoint(websocket: WebSocket, user: GetUserWsDep, order_id: int, uow: UowDep):
+    async with uow:
+        order = await uow.db.read_one(Order, id=order_id)
+
+    if user.id not in [order.buyer_id, order.seller_id]:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Нет доступа к чату")
+        return
+
+    if order.status != OrderStatuses.paid:
+        log.debug("Order status: %s", order.status)
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Чат доступен только после оплаты")
+        return
+
     await chat_manager.connect(websocket, order_id)
 
     try:

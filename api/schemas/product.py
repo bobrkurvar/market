@@ -116,6 +116,9 @@ class ProductVariantDetailOut(BaseModel):
     id: int
     price: float
     attributes: dict | None
+    is_active: bool
+    items_count: int | None
+    stock: int | None
 
     class Config:
         from_attributes = True

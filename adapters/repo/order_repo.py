@@ -1,10 +1,11 @@
 import logging
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import select, or_, exists
+from sqlalchemy.orm import selectinload
 
-from db.models import Order
-from domain import OrderStatuses
+from db.models import Order, OrderMessage
+from domain import OrderStatuses, NotFoundError
 
 log = logging.getLogger(__name__)
 
@@ -26,3 +27,24 @@ class OrderRepository:
 
         result = await self.session.execute(query)
         return list(result.scalars())
+
+
+    async def get_users_order(
+        self,
+        order_id: int,
+        user_id: int,
+    ):
+        query = select(Order).where(
+            Order.id == order_id,
+            or_(
+                Order.buyer_id == user_id,
+                Order.seller_id == user_id
+            )
+        ).options(selectinload(Order.items))
+        orm_obj = await self.session.scalar(query)
+        if not orm_obj:
+            raise NotFoundError(Order.__name__, id=order_id, user_id=user_id)
+        return self._registry.to_domain(orm_obj)
+
+
+

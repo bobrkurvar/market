@@ -5,7 +5,7 @@ from fastapi import APIRouter, Request
 
 from adapters.deps import UowDep
 from api.schemas import ProductCatalogListOut, ProductDetailOut
-from domain import Product
+from domain import Product, ProductItem
 from services.product import search_and_filter_products
 
 log = logging.getLogger(__name__)
@@ -49,6 +49,16 @@ async def get_products(
 @router.get("/{slug}/{product_id}", response_model=ProductDetailOut)
 async def get_catalog(uow: UowDep, product_id: int, slug: str):
     async with uow:
-        return await uow.db.read_one(
+        product = await uow.db.read_one(
             Product, id=product_id, loaded=["variants", "seller"], with_raise=True
         )
+        for variant in product.variants:
+            if not variant.is_active:
+                continue
+            if variant.stock == -1:
+                variant.items_count = await uow.product.count_available_items(variant.id)
+            elif variant.stock is not None:
+                variant.items_count = variant.stock
+            if variant.items_count is not None and variant.items_count <= 0:
+                variant.is_active = False
+        return product

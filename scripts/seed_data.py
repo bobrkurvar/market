@@ -176,6 +176,74 @@ async def seed_data(uow, product_file_manager, category_file_manager, img_genera
     )
 
     # --- 3. ГЕНЕРАЦИЯ ТОВАРОВ ---
+    # log.info("Создаем товары...")
+    # products_to_create = 60
+    #
+    # for i in range(1, products_to_create + 1):
+    #     seller = random.choice(sellers)
+    #     category = random.choice(leaf_categories)
+    #
+    #     # Находим папку-родителя
+    #     parent_folder = next(f for f in folder_categories if f.id == category.parent_id)
+    #
+    #     # --- ИЗМЕНЕНИЕ 2: Собираем ОБЪЕКТЫ обязательных атрибутов (а не просто их ключи) ---
+    #     expected_attrs = parent_folder.filter_config + category.filter_config
+    #
+    #     img_filename = random.choice(prod_images_pool)
+    #     with open(os.path.join(SOURCE_PROD_DIR, img_filename), "rb") as f:
+    #         img_bytes = f.read()
+    #
+    #     num_variants = random.randint(1, 3)
+    #     product_variants = []
+    #
+    #     for _ in range(num_variants):
+    #         keys_to_create = random.randint(5, 15)
+    #         product_items = []
+    #
+    #         for _ in range(keys_to_create):
+    #             key_content = fake.bothify(
+    #                 text="?????-?????-?????",
+    #                 letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+    #             )
+    #             item = ProductItem(content=key_content)
+    #             product_items.append(item)
+    #
+    #         # --- ИЗМЕНЕНИЕ 3: Динамически генерируем значения на основе опций атрибута ---
+    #         variant_attributes = {}
+    #         for attr in expected_attrs:
+    #             # Если у атрибута есть заранее заготовленные опции - выбираем случайную из них
+    #             if attr.options:
+    #                 variant_attributes[attr.key] = random.choice(attr.options)
+    #             else:
+    #                 # Если опций нет (свободный ввод), придумываем случайное слово
+    #                 variant_attributes[attr.key] = fake.word().capitalize()
+    #
+    #         # Добавляем свободный "информационный" атрибут, который не участвует в фильтрах
+    #         variant_attributes["Доставка"] = "Моментальная"
+    #
+    #         variant = ProductVariant(
+    #             price=float(random.randint(99, 4999)),
+    #             attributes=variant_attributes,
+    #             items=product_items,
+    #         )
+    #         product_variants.append(variant)
+    #
+    #     product = Product(
+    #         title=f"{fake['en_US'].word().capitalize()} {fake['en_US'].word().capitalize()}",
+    #         description=fake["ru_RU"].text(max_nb_chars=400),
+    #         seller_id=seller.id,
+    #         category_id=category.id,
+    #         variants=product_variants,
+    #     )
+    #
+    #     await create_product(
+    #         uow=uow,
+    #         img=img_bytes,
+    #         file_manager=product_file_manager,
+    #         img_generator=img_generator,
+    #         product=product,
+    #         hash_calculator=async_hash_calculate,
+    #     )
     log.info("Создаем товары...")
     products_to_create = 60
 
@@ -185,8 +253,6 @@ async def seed_data(uow, product_file_manager, category_file_manager, img_genera
 
         # Находим папку-родителя
         parent_folder = next(f for f in folder_categories if f.id == category.parent_id)
-
-        # --- ИЗМЕНЕНИЕ 2: Собираем ОБЪЕКТЫ обязательных атрибутов (а не просто их ключи) ---
         expected_attrs = parent_folder.filter_config + category.filter_config
 
         img_filename = random.choice(prod_images_pool)
@@ -196,35 +262,59 @@ async def seed_data(uow, product_file_manager, category_file_manager, img_genera
         num_variants = random.randint(1, 3)
         product_variants = []
 
+        # --- НОВОЕ: Генерируем общее сообщение от продавца (с вероятностью 50%) ---
+        product_buyer_message = (
+            f"Спасибо за покупку! Общая инструкция: {fake['ru_RU'].text(max_nb_chars=100)}"
+            if random.random() > 0.5 else None
+        )
+
         for _ in range(num_variants):
-            keys_to_create = random.randint(5, 15)
+
+            # --- НОВОЕ: Случайным образом выбираем тип выдачи товара ---
+            delivery_type = random.choice(["auto", "manual_limited", "manual_infinite"])
+
             product_items = []
+            stock_value = -1
 
-            for _ in range(keys_to_create):
-                key_content = fake.bothify(
-                    text="?????-?????-?????",
-                    letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
-                )
-                item = ProductItem(content=key_content)
-                product_items.append(item)
+            if delivery_type == "auto":
+                # Сценарий 1: Автовыдача (Ключи)
+                keys_to_create = random.randint(5, 15)
+                for _ in range(keys_to_create):
+                    key_content = fake.bothify(
+                        text="?????-?????-?????",
+                        letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+                    )
+                    product_items.append(ProductItem(content=key_content))
+                stock_value = -1
+            elif delivery_type == "manual_limited":
+                # Сценарий 2: Ручная выдача (Лимитированная услуга)
+                stock_value = random.randint(5, 50)
+            elif delivery_type == "manual_infinite":
+                # Сценарий 3: Ручная выдача (Бесконечная услуга)
+                stock_value = None
 
-            # --- ИЗМЕНЕНИЕ 3: Динамически генерируем значения на основе опций атрибута ---
             variant_attributes = {}
             for attr in expected_attrs:
-                # Если у атрибута есть заранее заготовленные опции - выбираем случайную из них
                 if attr.options:
                     variant_attributes[attr.key] = random.choice(attr.options)
                 else:
-                    # Если опций нет (свободный ввод), придумываем случайное слово
                     variant_attributes[attr.key] = fake.word().capitalize()
 
-            # Добавляем свободный "информационный" атрибут, который не участвует в фильтрах
-            variant_attributes["Доставка"] = "Моментальная"
+            # Добавим логику и в атрибуты: автовыдача - моментальная, ручная - в течение часа
+            variant_attributes["Доставка"] = "Моментальная" if delivery_type == "auto" else "В течение 1-2 часов"
+
+            # --- НОВОЕ: Специфичное сообщение для варианта (с вероятностью 30%) ---
+            variant_buyer_message = (
+                f"Внимание для этого варианта: {fake['ru_RU'].sentence()}"
+                if random.random() > 0.7 else None
+            )
 
             variant = ProductVariant(
                 price=float(random.randint(99, 4999)),
                 attributes=variant_attributes,
-                items=product_items,
+                items=product_items,  # Будет списком ключей ИЛИ просто пустым списком []
+                stock=stock_value,
+                buyer_message=variant_buyer_message
             )
             product_variants.append(variant)
 
@@ -234,6 +324,7 @@ async def seed_data(uow, product_file_manager, category_file_manager, img_genera
             seller_id=seller.id,
             category_id=category.id,
             variants=product_variants,
+            buyer_message=product_buyer_message
         )
 
         await create_product(

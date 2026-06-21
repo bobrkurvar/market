@@ -9,7 +9,7 @@ from .user import map_user_to_domain
 
 
 def map_order_to_domain(orm_obj: models.Order) -> domain.Order:
-    items = []
+    items = None
     insp = inspect(orm_obj)
     if "items" not in insp.unloaded:
         items = [map_product_item_to_domain(item) for item in orm_obj.items]
@@ -21,6 +21,7 @@ def map_order_to_domain(orm_obj: models.Order) -> domain.Order:
         seller = map_user_to_domain(orm_obj.seller)
 
     return domain.Order(
+        created_at=orm_obj.created_at,
         order_id=orm_obj.id,
         buyer_id=orm_obj.buyer_id,
         buyer=buyer,
@@ -37,7 +38,9 @@ def map_order_to_domain(orm_obj: models.Order) -> domain.Order:
 
 
 def map_order_to_orm(d_obj: domain.Order) -> models.Order:
-    return models.Order(
+    orm_obj = models.Order(
+        id=d_obj.id,
+        created_at=d_obj.created_at,
         buyer_id=d_obj.buyer_id,
         seller_id=d_obj.seller_id,
         product_variant_id=d_obj.product_variant_id,
@@ -46,13 +49,13 @@ def map_order_to_orm(d_obj: domain.Order) -> models.Order:
         product_snapshot=d_obj.product_snapshot,
         price=d_obj.price,
         amount=d_obj.amount,
-        items=(
-            [map_product_item_to_orm(item) for item in d_obj._items]
-            if d_obj._items
-            else []
-        ),
     )
-
+    if d_obj._items is not None:
+        orm_obj.items = [
+            map_product_item_to_orm(item)
+            for item in d_obj._items
+        ]
+    return orm_obj
 
 def map_order_message_to_domain(orm_obj) -> domain.OrderMessage:
     return domain.OrderMessage(

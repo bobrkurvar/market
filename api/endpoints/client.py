@@ -3,8 +3,9 @@ import asyncio
 from fastapi import APIRouter, Depends, HTTPException
 
 from adapters.deps import EventBusDep, UowDep, GetUserDep, RedisDep, get_user
-from domain import Order
+from domain import Order, OrderMessage
 from services.order import make_order
+from api.schemas import OrderRead
 
 router = APIRouter(prefix="/client", dependencies=[Depends(get_user)])
 
@@ -19,6 +20,11 @@ async def checkout(
         buyer=user,
         event_bus=event_bus,
     )
+
+# @router.get("/orders/{order_id}", response_model=OrderRead)
+# async def get_buyer_order_details(user: GetUserDep, order_id: int, uow: UowDep):
+#     async with uow:
+#         return await uow.db.read_one(Order, buyer_id=user.id, id=order_id, loaded=["items"])
 
 
 @router.get("/orders/{order_id}/wait-payment")

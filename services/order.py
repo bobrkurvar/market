@@ -34,24 +34,38 @@ async def make_order(
             product_variant_id=product_variant.id,
             product_snapshot=snapshot,
         )
+        order = await uow.db.create(order)
         if product_variant.stock == -1:
             # Внутри read_available_items лежит подзапрос SKIP LOCKED.
+            # Для проверки наличия после покупки делаем +1
             items = await uow.product.read_available_items(
-                variant_id=product_variant_id, amount=amount
+                variant_id=product_variant_id, amount=amount + 1
             )
+
             if len(items) < amount:
                 raise ValueError("Недостаточно товара в наличии")
-            order.reserve_items(items)
-            for item in items:
+
+            # Если база отдала ровно amount значит ключей больше нет!
+            if len(items) == amount:
+                product_variant.is_active = False
+                await uow.db.save(product_variant)
+
+            # Отрезаем лишний ключ (если он был) и резервируем только нужное количество
+            items_to_reserve = items[:amount]
+            order.reserve_items(items_to_reserve)
+            for item in items_to_reserve:
                 await uow.db.save(item)
+
         else:
             # если stock None значит товар не имеет числового ограничения
             if product_variant.stock is not None:
                 if product_variant.stock < amount:
                     raise ValueError("Недостаточно товара в наличии")
                 product_variant.stock -= amount
+                # Если после покупки остаток стал равен нулю — скрываем вариант
+                if product_variant.stock == 0:
+                    product_variant.is_active = False
                 await uow.db.save(product_variant)
-        order = await uow.db.create(order)
 
         await event_bus.publish(
             OrderCreatedEvent(
