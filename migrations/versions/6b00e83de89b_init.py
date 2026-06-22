@@ -1,8 +1,8 @@
 """init
 
-Revision ID: 032f4ab9c7a2
+Revision ID: 6b00e83de89b
 Revises: 
-Create Date: 2026-06-21 13:02:56.902407
+Create Date: 2026-06-21 21:28:52.854023
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '032f4ab9c7a2'
+revision: str = '6b00e83de89b'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -90,7 +90,7 @@ def upgrade() -> None:
     sa.Column('price', sa.Float(), nullable=False),
     sa.Column('amount', sa.Integer(), nullable=False),
     sa.Column('product_snapshot', postgresql.JSONB(astext_type=sa.Text()), server_default='{}', nullable=False),
-    sa.CheckConstraint("status_name IN ('pending_payments', 'paid', 'canceled')", name='check_order_status'),
+    sa.CheckConstraint("status_name IN ('pending_payments', 'paid', 'canceled', 'dispute')", name='check_order_status'),
     sa.ForeignKeyConstraint(['buyer_id'], ['users.id'], ),
     sa.ForeignKeyConstraint(['product_variant_id'], ['product_variants.id'], ondelete='SET NULL'),
     sa.ForeignKeyConstraint(['seller_id'], ['sellers.id'], ),

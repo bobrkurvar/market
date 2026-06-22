@@ -1,4 +1,3 @@
-import json
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
@@ -6,11 +5,12 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from adapters.deps import HttpClientDep, UowDep
 from adapters.images import CategoryImagesManager, ImageGenerator
 from api.schemas import CategoryAdminOut, CategoryCreate
-from domain import Category
+from domain import Category, OrderMessage, OrderStatuses, Order
 from infra.security import async_hash_calculate
 from services.category import create_category
+from adapters.deps import get_admin
 
-router = APIRouter(prefix="/admin")
+router = APIRouter(prefix="/admin", dependencies=[Depends(get_admin)])
 
 
 def get_category_form(data: Annotated[str, Form()]) -> CategoryCreate:
@@ -48,3 +48,17 @@ async def admin_delete_category(category_id: int, uow: UowDep):
             Category, id=category_id, with_raise=True
         )
         return {"category": deleted_category}
+
+
+@router.get("/orders/disputes")
+async def admin_get_orders_disputes(uow: UowDep):
+    async with uow:
+        return await uow.db.read(Order, status_name=OrderStatuses.dispute)
+
+
+@router.get("/orders/{order_id}/messages")
+async def admin_get_chat_history(uow: UowDep, order_id: int):
+    async with uow:
+        return await uow.db.read(OrderMessage, order_id=order_id, order_by="created_at")
+
+
