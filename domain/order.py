@@ -5,6 +5,60 @@ from enum import StrEnum
 from .product import ProductItem, ProductVariant
 from .user import User, Seller
 
+class DisputeStatuses(StrEnum):
+    open = "open"
+    resolved = "resolved"
+
+
+class Message:
+    def __init__(
+        self,
+        sender_id: int,
+        text: str,
+        created_at: datetime | None = None,
+        message_id: int | None = None
+    ):
+        self.sender_id = sender_id
+        self.text = text
+        self.created_at = created_at or datetime.now(timezone.utc)
+        self.id = message_id
+
+
+class Dispute:
+    def __init__(
+        self,
+        order_id: int,
+        opened_by_id: int,
+        reason: str,
+        status: DisputeStatuses = DisputeStatuses.open,
+        dispute_id: int | None = None,
+        created_at: datetime | None = None,
+        resolution: str | None = None,
+        resolved_by_id: int | None = None,
+        resolved_at: datetime | None = None,
+    ):
+        self.id = dispute_id
+        self.order_id = order_id
+        self.opened_by_id = opened_by_id
+        self.reason = reason
+        self.status = status
+        self.created_at = created_at or datetime.now(timezone.utc)
+        self.resolution = resolution
+        self.resolved_by_id = resolved_by_id
+        self.resolved_at = resolved_at
+
+
+class DisputeMessage(Message):
+    def __init__(
+        self,
+        sender_id: int,
+        dispute_id: int,
+        text: str,
+        created_at: datetime | None = None,
+        message_id: int | None = None
+    ):
+        super().__init__(sender_id=sender_id, text=text, created_at=created_at, message_id=message_id)
+        self.dispute_id = dispute_id
 
 class OrderStatuses(StrEnum):
     pending_payments = "pending_payments"
@@ -77,22 +131,39 @@ class Order:
             raise ValueError("Ключи можно прочитать только у оплаченного твоара")
         return self._items
 
-
     def cancel(self):
         if self.is_paid():
-            raise ValueError("Заказ уже оплачен")
+            raise ValueError("Нельзя отменить оплаченный заказ")
+
+        if self.is_disputed():
+            raise ValueError("Нельзя отменить заказ, находящийся в споре")
+
+        if self.is_cancelled():
+            raise ValueError("Нельзя отменить отменённый заказ")
+
+        if not self.is_pending():
+            raise ValueError("Заказ нельзя отменить в текущем статусе")
+
         if self._items is None:
             self.product_variant.increase(self.amount)
-        for item in self._items:
-            item.release()
+        else:
+            for item in self._items:
+                item.release()
 
         self.status = OrderStatuses.cancelled
 
     def pay(self):
         if self.is_paid():
-            return
+            raise ValueError("Нельзя оплатить уже оплаченный заказ")
+
         if self.is_cancelled():
-            raise ValueError("Попытка оплатить отмененный заказ")
+            raise ValueError("Попытка оплатить отменённый заказ")
+
+        if self.is_disputed():
+            raise ValueError("Нельзя оплатить заказ, находящийся в споре")
+
+        if not self.is_pending():
+            raise ValueError("Заказ нельзя оплатить в текущем статусе")
 
         if self._items:
             for item in self._items:
@@ -126,13 +197,27 @@ class Order:
     def is_pending(self):
         return self.status == OrderStatuses.pending_payments
 
-    def dispute(self):
+    def is_disputed(self):
+        return self.status == OrderStatuses.dispute
+
+    def open_dispute(self, opened_by_id: int, reason: str) -> Dispute:
         if not self.is_paid():
             raise ValueError("Нельзя начать спор по не оплаченному заказу")
+        if opened_by_id not in {self.buyer_id, self.seller_id}:
+            raise ValueError("Только участник заказа может открыть спор")
+        if not reason.strip():
+            raise ValueError("Укажите причину спора")
+
         self.status = OrderStatuses.dispute
 
+        return Dispute(
+            order_id=self.id,
+            opened_by_id=opened_by_id,
+            reason=reason,
+        )
 
-class OrderMessage:
+
+class OrderMessage(Message):
     def __init__(
         self,
         sender_id: int,
@@ -141,8 +226,5 @@ class OrderMessage:
         created_at: datetime | None = None,
         message_id: int | None = None
     ):
-        self.sender_id = sender_id
+        super().__init__(sender_id=sender_id, text=text, created_at=created_at, message_id=message_id)
         self.order_id = order_id
-        self.text = text
-        self.created_at = created_at or datetime.now(timezone.utc)
-        self.id = message_id

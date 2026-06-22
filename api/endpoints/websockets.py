@@ -2,7 +2,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
 from api.schemas import CategoryShortOut
 from adapters.deps import UowDep, GetUserWsDep
 from adapters.ws_manager import chat_manager
-from domain import OrderMessage, Order, OrderStatuses
+from domain import OrderMessage, Order, OrderStatuses, DisputeStatuses, Dispute, DisputeMessage, UserRole
 import logging
 
 log = logging.getLogger(__name__)
@@ -80,3 +80,78 @@ async def order_chat_endpoint(websocket: WebSocket, user: GetUserWsDep, order_id
 
     except WebSocketDisconnect:
         chat_manager.disconnect(websocket, order_id)
+
+
+
+@router.websocket("/disputes/{dispute_id}/chat")
+async def dispute_chat_endpoint(
+    websocket: WebSocket,
+    user: GetUserWsDep,
+    dispute_id: int,
+    uow: UowDep,
+):
+    async with uow:
+        dispute = await uow.db.read_one(
+            Dispute,
+            id=dispute_id,
+            with_raise=True,
+        )
+
+        order = await uow.db.read_one(
+            Order,
+            id=dispute.order_id,
+            with_raise=True,
+        )
+
+    if (user.role != UserRole.admin) and (not user.id in {order.buyer_id, order.seller_id}):
+        await websocket.close(
+            code=status.WS_1008_POLICY_VIOLATION,
+            reason="Нет доступа к спору",
+        )
+        return
+
+    if order.status != OrderStatuses.dispute:
+        await websocket.close(
+            code=status.WS_1008_POLICY_VIOLATION,
+            reason="Заказ не находится в споре",
+        )
+        return
+
+    if dispute.status != DisputeStatuses.open:
+        await websocket.close(
+            code=status.WS_1008_POLICY_VIOLATION,
+            reason="Спор уже закрыт",
+        )
+        return
+
+    room_id = f"dispute:{dispute.id}"
+    await chat_manager.connect(websocket, room_id)
+
+    try:
+        while True:
+            text = await websocket.receive_text()
+
+            if not text.strip():
+                continue
+
+            async with uow:
+                msg = await uow.db.create(
+                    DisputeMessage(
+                        dispute_id=dispute.id,
+                        sender_id=user.id,
+                        text=text,
+                    )
+                )
+
+            await chat_manager.broadcast(
+                room_id,
+                {
+                    "id": msg.id,
+                    "sender_id": msg.sender_id,
+                    "text": msg.text,
+                    "created_at": msg.created_at.isoformat(),
+                },
+            )
+
+    except WebSocketDisconnect:
+        chat_manager.disconnect(websocket, room_id)

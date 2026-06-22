@@ -16,9 +16,20 @@ def map_user_to_domain(orm_obj: models.User) -> domain.User:
 
 
 def map_user_to_orm(d_obj: domain.User) -> models.User:
-    return models.User(
-        username=d_obj.username, password=d_obj.password, type=d_obj.role
+    return models.User(username=d_obj.username, password=d_obj.password)
+
+
+def map_admin_to_domain(orm_obj: models.AdminOrm) -> domain.Admin:
+    return domain.Admin(
+        username=orm_obj.username,
+        password=orm_obj.password,
+        admin_id=orm_obj.id,
     )
+
+
+def map_admin_to_orm(d_obj: domain.Admin) -> models.AdminOrm:
+    return models.AdminOrm(username=d_obj.username, password=d_obj.password)
+
 
 
 def map_seller_to_domain(orm_obj: models.Seller) -> domain.Seller:
@@ -37,28 +48,6 @@ def map_seller_to_orm(d_obj: domain.Seller) -> models.Seller:
     return models.Seller(id=d_obj.id, username=d_obj.username, password=d_obj.password)
 
 
-# def map_client_to_domain(orm_obj: models.Client) -> domain.Client:
-#     is_blocked = None
-#     if "is_blocked" not in inspect(orm_obj).unloaded:
-#         is_blocked = orm_obj.is_blocked
-#     return domain.Client(
-#         client_id=orm_obj.id,
-#         username=orm_obj.username,
-#         is_blocked=is_blocked,
-#         password=orm_obj.password,
-#     )
-#
-#
-# def map_client_to_orm(d_obj: domain.Client) -> models.Client:
-#     return models.Client(id=d_obj.id, username=d_obj.username, password=d_obj.password)
-
-
-# registry.register(
-#     domain.Client,
-#     models.Client,
-#     to_orm=map_client_to_orm,
-#     to_domain=map_client_to_domain,
-# )
 registry.register(
     domain.Seller,
     models.Seller,
@@ -70,4 +59,10 @@ registry.register(
     models.User,
     to_orm=map_user_to_orm,
     to_domain=map_user_to_domain,
+)
+registry.register(
+    domain.Admin,
+    models.AdminOrm,
+    to_orm=map_admin_to_orm,
+    to_domain=map_admin_to_domain,
 )

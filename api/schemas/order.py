@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
+from .base import BaseInput
 
 
 class OrderPaymentPayload(BaseModel):
@@ -19,3 +20,7 @@ class OrderRead(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class DisputeCreate(BaseInput):
+    reason: str

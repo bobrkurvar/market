@@ -89,7 +89,9 @@
             <UButton color="gray" variant="soft" class="rounded-xl font-semibold" trailing-icon="i-heroicons-chevron-down-20-solid">
               <UAvatar :alt="currentUser.username" size="xs" class="mr-1 bg-primary-500 text-white font-bold" />
               <span class="hidden sm:inline">{{ currentUser.username }}</span>
-              <span class="hidden text-xs text-gray-400 lg:inline">{{ currentUser.role === 'seller' ? 'Продавец' : 'Клиент' }}</span>
+              <span class="hidden text-xs text-gray-400 lg:inline">
+                {{ currentUser.role === 'admin' ? 'Администратор' : (currentUser.role === 'seller' ? 'Продавец' : 'Покупатель') }}
+              </span>
             </UButton>
           </UDropdownMenu>
         </div>
@@ -162,7 +164,7 @@ const dropdownItems = [
     label: 'Панель управления',
     icon: 'i-heroicons-cog-8-tooth',
     onSelect: () => {
-      const path = currentUser.value.role === 'seller' ? '/seller' : '/profile'
+      const path = currentUser.value.role === 'admin' ? '/admin' : (currentUser.value.role === 'seller' ? '/seller' : '/profile')
       router.push(path)
     }
   }],

@@ -97,6 +97,7 @@ async def confirm_order_payment(uow, order_id: int):
         )
         try:
             order.pay()
+            # нужно доменное исключение повторной оплаты
         except ValueError as e:
             log.critical(str(e))
             raise

@@ -1,8 +1,8 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 from adapters.deps import UowDep, GetUserDep
-from domain import OrderMessage, NotFoundError, Order, OrderStatuses
-from api.schemas import OrderRead
+from domain import Order
+from api.schemas import OrderRead, DisputeCreate
 
 router = APIRouter(prefix="/orders")
 
@@ -19,16 +19,25 @@ async def get_order_details(user: GetUserDep, order_id: int, uow: UowDep):
 @router.get("/{order_id}/messages")
 async def get_chat_history(user: GetUserDep, order_id: int, uow: UowDep):
     async with uow:
-        try:
-            await uow.order.get_users_order(order_id=order_id, user_id=user.id)
-        except NotFoundError:
-            raise HTTPException(status_code=404)
-        return await uow.db.read(OrderMessage, order_id=order_id, order_by="created_at")
+        return await uow.order.get_user_order_messages(user_id=user.id, order_id=order_id)
 
 
 @router.post("/{order_id}/dispute")
-async def buyer_dispute_order(user: GetUserDep, order_id: int, uow: UowDep):
+async def dispute_order(user: GetUserDep, data: DisputeCreate, order_id: int, uow: UowDep):
     async with uow:
-        order = await uow.db.read_one(Order, id=order_id, buyer_id=user.id, with_raise=True)
-        order.dispute()
+        order: Order = await uow.order.get_users_order(order_id=order_id, user_id=user.id)
+        dispute = order.open_dispute(opened_by_id=user.id, reason=data.reason)
         await uow.db.save(order)
+        return await uow.db.create(dispute)
+
+
+@router.get("/{order_id}/dispute")
+async def get_order_dispute(user: GetUserDep, order_id: int, uow: UowDep):
+    async with uow:
+        return await uow.dispute.get_user_dispute(order_id=order_id, user_id=user.id)
+
+
+@router.get("/{order_id}/dispute/messages")
+async def get_disputes_messages(user: GetUserDep, order_id: int, uow: UowDep):
+    async with uow:
+        return await uow.dispute.get_user_dispute_messages(order_id=order_id, user_id=user.id)

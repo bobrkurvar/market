@@ -6,6 +6,7 @@ from adapters.repo.category_repo import CategoryRepository
 from adapters.repo.generic_repo import GenericRepository
 from adapters.repo.order_repo import OrderRepository
 from adapters.repo.product_repo import ProductRepository
+from adapters.repo.dispute_repo import DisputeRepository
 
 log = logging.getLogger(__name__)
 
@@ -34,6 +35,7 @@ class UnitOfWork:
         self.category = CategoryRepository(
             session=self.session, registry=self._registry
         )
+        self.dispute = DisputeRepository(session=self.session, registry=self._registry)
 
         return self
 

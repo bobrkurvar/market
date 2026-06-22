@@ -7,10 +7,10 @@ from starlette.requests import HTTPConnection
 from adapters.http_client import HttpClient
 from adapters.redis import RedisService
 from db.mapper import registry
-from domain import Seller, User
+from domain import Seller, Admin, UserRole
 from infra.event_bus import EventBus
 from services.auth import (get_seller_from_user, get_user_from_payload,
-                           resolve_session_payload, get_admin_from_user)
+                           resolve_session_payload, get_admin_from_user, CurrentUser)
 
 from .cookies import AuthCookies
 from .uow import UnitOfWork
@@ -70,12 +70,12 @@ async def get_user(
     cookies: "authCookiesDep",
     redis: "RedisDep",
     uow: "UowDep",
-):
+) -> CurrentUser:
     payload, new_tokens = await _extract_and_validate_payload(request, cookies, redis, uow)
 
     if new_tokens:
         cookies.set_tokens(response=response, **new_tokens)
-    return await get_user_from_payload(payload=payload, uow=uow)
+    return get_user_from_payload(payload=payload)
 
 
 async def get_user_ws(
@@ -83,11 +83,12 @@ async def get_user_ws(
     cookies: "authCookiesDep",
     redis: "RedisDep",
     uow: "UowDep",
-):
+) -> CurrentUser | Admin:
     log.debug("Зашли в get_user_ws")
     try:
         payload, _ = await _extract_and_validate_payload(websocket, cookies, redis, uow)
-        return await get_user_from_payload(payload=payload, uow=uow)
+        user = get_user_from_payload(payload=payload)
+        return await get_admin_from_user(user, uow) if user.role == UserRole.admin else user
     except Exception as e:
         log.error(f"=== ОШИБКА АВТОРИЗАЦИИ WEBSOCKET ===: {repr(e)}")
         raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
@@ -97,7 +98,7 @@ async def get_seller(user: "GetUserDep", uow: "UowDep") -> Seller:
     return await get_seller_from_user(user=user, uow=uow)
 
 
-async def get_admin(user: "GetUserDep", uow: "UowDep") -> User:
+async def get_admin(user: "GetUserDep", uow: "UowDep") -> Admin:
     return await get_admin_from_user(user=user, uow=uow)
 
 
@@ -106,7 +107,7 @@ EventBusDep = Annotated[EventBus, Depends(get_event_bus)]
 RedisDep = Annotated[RedisService, Depends(get_redis)]
 HttpClientDep = Annotated[HttpClient, Depends(get_image_api)]
 authCookiesDep = Annotated[AuthCookies, Depends()]
-GetUserDep = Annotated[User, Depends(get_user)]
-GetUserWsDep = Annotated[User, Depends(get_user_ws)]
-GetAminDep = Annotated[User, Depends(get_admin)]
+GetUserDep = Annotated[CurrentUser, Depends(get_user)]
+GetUserWsDep = Annotated[CurrentUser, Depends(get_user_ws)]
+GetAminDep = Annotated[Admin, Depends(get_admin)]
 GetSellerDep = Annotated[Seller, Depends(get_seller)]

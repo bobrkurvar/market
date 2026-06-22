@@ -47,11 +47,6 @@ RUN npx nuxt generate
 FROM nginx:1.27-alpine AS frontend
 COPY --from=builder /app/.output/public /var/www/frontend
 
-# FROM node:22-alpine AS frontend
-# WORKDIR /app
-# COPY --from=frontend_builder app/.output .output
-# CMD ["node", ".output/server/index.mjs"]
-
 
 FROM base AS migrate
 COPY alembic.ini .
@@ -60,26 +55,17 @@ COPY db db
 COPY domain domain
 CMD ["alembic", "upgrade", "head"]
 
-FROM base AS runner
-COPY infra/security.py ./infra/security.py
-COPY adapters ./adapters
-COPY domain ./domain
-COPY services ./services
-COPY db ./db
-COPY scripts/db_init.py ./db_init.py
-COPY shared.py ./shared.py
-CMD ["python", "-m", "db_init"]
 
-FROM base AS seed_data
+FROM base AS scripts
 COPY infra/security.py ./infra/security.py
 COPY adapters ./adapters
 COPY infra ./infra
 COPY domain ./domain
 COPY services ./services
 COPY db ./db
-COPY scripts/seed_data.py .
+COPY scripts ./scripts
 COPY shared.py ./shared.py
-CMD ["python", "-m", "seed_data"]
+CMD ["python", "-m", "scripts"]
 
 
 

@@ -1,11 +1,11 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 
 from adapters.deps import HttpClientDep, UowDep
 from adapters.images import CategoryImagesManager, ImageGenerator
 from api.schemas import CategoryAdminOut, CategoryCreate
-from domain import Category, OrderMessage, OrderStatuses, Order
+from domain import Category, OrderMessage, Dispute, DisputeMessage
 from infra.security import async_hash_calculate
 from services.category import create_category
 from adapters.deps import get_admin
@@ -50,15 +50,21 @@ async def admin_delete_category(category_id: int, uow: UowDep):
         return {"category": deleted_category}
 
 
-@router.get("/orders/disputes")
-async def admin_get_orders_disputes(uow: UowDep):
-    async with uow:
-        return await uow.db.read(Order, status_name=OrderStatuses.dispute)
-
 
 @router.get("/orders/{order_id}/messages")
 async def admin_get_chat_history(uow: UowDep, order_id: int):
     async with uow:
         return await uow.db.read(OrderMessage, order_id=order_id, order_by="created_at")
 
+
+@router.get("/disputes")
+async def admin_get_orders_disputes(uow: UowDep):
+    async with uow:
+        return await uow.db.read(Dispute)
+
+
+@router.get("/disputes/{dispute_id}/messages")
+async def admin_get_dispute_chat_history(uow: UowDep, dispute_id: int):
+    async with uow:
+        return await uow.db.read(DisputeMessage, dispute_id=dispute_id, order_by="created_at")
 

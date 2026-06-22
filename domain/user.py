@@ -27,6 +27,15 @@ class User:
                 "Для создания нового пользователя придумайте для него пароль"
             )
 
+class Admin(User):
+    def __init__(
+        self,
+        username: str,
+        admin_id: int | None = None,
+        password: str | None = None,
+    ):
+        super().__init__(username=username, user_id=admin_id, password=password, role=UserRole.admin)
+
 
 class Seller(User):
     def __init__(

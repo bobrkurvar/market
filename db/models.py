@@ -7,7 +7,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-from domain import OrderStatuses, ProductItemStatuses, SuggestionStatus
+from domain import OrderStatuses, ProductItemStatuses, SuggestionStatus, DisputeStatuses
 from datetime import datetime, timezone
 
 class Base(AsyncAttrs, DeclarativeBase):
@@ -108,6 +108,12 @@ class User(Base):
     __mapper_args__ = {
         "polymorphic_on": "type",
         "polymorphic_identity": "user",
+    }
+
+# Не таблица, а заглушка для orm что бы просто создать пользователя с ролью admin
+class AdminOrm(User):
+    __mapper_args__ = {
+        "polymorphic_identity": "admin",
     }
 
 
@@ -214,4 +220,58 @@ class OrderMessage(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc)
+    )
+
+
+class Dispute(Base):
+    __tablename__ = "disputes"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    order_id: Mapped[int] = mapped_column(
+        ForeignKey("orders.id"),
+        unique=True,
+    )
+    opened_by_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id")
+    )
+    reason: Mapped[str] = mapped_column(Text)
+    status_name: Mapped[str]
+    resolution: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+    resolved_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id"),
+        nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+    )
+    resolved_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    __table_args__ = (
+        CheckConstraint(
+            "status_name IN ({})".format(
+                ", ".join(f"'{status}'" for status in DisputeStatuses)
+            ),
+            name="check_dispute_status",
+        ),
+    )
+
+
+class DisputeMessage(Base):
+    __tablename__ = "dispute_messages"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    dispute_id: Mapped[int] = mapped_column(
+        ForeignKey("disputes.id", ondelete="CASCADE")
+    )
+    sender_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id")
+    )
+    text: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
     )

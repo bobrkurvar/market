@@ -4,8 +4,8 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select, or_, exists
 from sqlalchemy.orm import selectinload
 
-from db.models import Order, OrderMessage
-from domain import OrderStatuses, NotFoundError
+from db.models import Order, Dispute as DisputeOrm, OrderMessage
+from domain import OrderStatuses, NotFoundError, Dispute as DisputeDomain
 
 log = logging.getLogger(__name__)
 
@@ -47,4 +47,35 @@ class OrderRepository:
         return self._registry.to_domain(orm_obj)
 
 
+    async def get_user_order_messages(
+        self,
+        order_id: int,
+        user_id: int,
+    ):
+        query = (
+            select(OrderMessage)
+            .select_from(Order)
+            .outerjoin(
+                OrderMessage,
+                OrderMessage.order_id == Order.id,
+            )
+            .where(
+                Order.id == order_id,
+                or_(
+                    Order.buyer_id == user_id,
+                    Order.seller_id == user_id,
+                ),
+            )
+            .order_by(OrderMessage.created_at)
+        )
+
+        rows = (await self.session.scalars(query)).all()
+        if not rows:
+            raise NotFoundError(
+                Order.__name__,
+                id=order_id,
+                user_id=user_id,
+            )
+
+        return tuple(self._registry.to_domain(r) for r in rows if r is not None)
 

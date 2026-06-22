@@ -340,15 +340,18 @@ async def seed_data(uow, product_file_manager, category_file_manager, img_genera
     log.info("🎉 Генерация полностью завершена!")
 
 
-if __name__ == "__main__":
+async def main():
     db_provider = DbProvider(conf.db_url)
     uow = UnitOfWork(provider=db_provider, registry=registry)
     img_generator = ImageGenerator(HttpClient(conf.image_api_url))
-    asyncio.run(
-        seed_data(
-            uow=uow,
-            img_generator=img_generator,
-            product_file_manager=ProductImagesManager(),
-            category_file_manager=CategoryImagesManager(),
-        )
+    await seed_data(
+        uow=uow,
+        img_generator=img_generator,
+        product_file_manager=ProductImagesManager(),
+        category_file_manager=CategoryImagesManager(),
     )
+
+
+if __name__ == "__main__":
+    setup_logging()
+    asyncio.run(main())

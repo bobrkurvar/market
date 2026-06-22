@@ -41,9 +41,6 @@ async def get_user_profile(user: GetUserDep):
 async def refresh_tokens(request: Request, redis: RedisDep, uow: UowDep):
     cookie_manager = AuthCookies()
     refresh_token = cookie_manager.get_refresh_token(request=request)
-    # access_token = cookie_manager.get_access_token(request=request)
-    # log.debug("access_token: %s", access_token)
-    # log.debug("refresh_token: %s", refresh_token)
     tokens = await create_tokens_from_refresh(
         redis=redis, uow=uow, refresh_token=refresh_token
     )

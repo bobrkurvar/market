@@ -5,7 +5,7 @@ from db import models
 
 from .product import map_product_item_to_domain, map_product_item_to_orm
 from .registry import registry
-from .user import map_user_to_domain
+from .user import map_user_to_domain, map_seller_to_domain
 
 
 def map_order_to_domain(orm_obj: models.Order) -> domain.Order:
@@ -18,7 +18,7 @@ def map_order_to_domain(orm_obj: models.Order) -> domain.Order:
         buyer = map_user_to_domain(orm_obj.buyer)
     seller = None
     if "seller" not in insp.unloaded:
-        seller = map_user_to_domain(orm_obj.seller)
+        seller = map_seller_to_domain(orm_obj.seller)
 
     return domain.Order(
         created_at=orm_obj.created_at,
