@@ -74,10 +74,19 @@ const roleOptions = [
 const loginForm = ref({ username: '', password: '' })
 const registerForm = ref({ role: 'user', username: '', password: '' })
 
+// Обновленная функция с умным роутингом
 const onAuthSuccess = (user, successMessage) => {
   currentUser.value = user
   toast.add({ title: 'Успешно', description: successMessage, color: 'green' })
-  router.push('/')
+
+  // Перекидываем пользователя в зависимости от его роли
+  if (user.role === 'admin') {
+    router.push('/admin')
+  } else if (user.role === 'seller') {
+    router.push('/seller') // Заодно добавил редирект для продавца, если у тебя есть такая страница
+  } else {
+    router.push('/')
+  }
 }
 
 const handleLogin = async () => {

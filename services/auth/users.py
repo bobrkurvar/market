@@ -8,10 +8,10 @@ log = logging.getLogger(__name__)
 
 
 async def check_user(uow, verify, username: str, password: str):
-    user = await uow.db.read_one(User, username=username)
-    if not user:
-        log.debug("user with username: %s not found", username)
-        raise UserLoginNotFoundError(username)
+    user = await uow.db.read_one(User, username=username, with_raise=True)
+    # if not user:
+    #     log.debug("user with username: %s not found", username)
+    #     raise UserLoginNotFoundError(username)
     if not verify(password, user.password):
         log.debug("wrong password")
         raise CredentialsValidateError
