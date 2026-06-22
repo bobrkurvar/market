@@ -56,7 +56,7 @@ async def order_chat_endpoint(websocket: WebSocket, user: GetUserWsDep, order_id
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Чат доступен только после оплаты")
         return
 
-    await chat_manager.connect(websocket, order_id)
+    await chat_manager.connect_to_order(websocket, order_id)
 
     try:
         while True:
@@ -79,7 +79,7 @@ async def order_chat_endpoint(websocket: WebSocket, user: GetUserWsDep, order_id
             })
 
     except WebSocketDisconnect:
-        chat_manager.disconnect(websocket, order_id)
+        chat_manager.disconnect_from_order(websocket, order_id)
 
 
 
@@ -124,8 +124,7 @@ async def dispute_chat_endpoint(
         )
         return
 
-    room_id = f"dispute:{dispute.id}"
-    await chat_manager.connect(websocket, room_id)
+    await chat_manager.connect_to_dispute(websocket, dispute.id)
 
     try:
         while True:
@@ -143,8 +142,8 @@ async def dispute_chat_endpoint(
                     )
                 )
 
-            await chat_manager.broadcast(
-                room_id,
+            await chat_manager.broadcast_to_dispute(
+                dispute.id,
                 {
                     "id": msg.id,
                     "sender_id": msg.sender_id,
@@ -154,4 +153,4 @@ async def dispute_chat_endpoint(
             )
 
     except WebSocketDisconnect:
-        chat_manager.disconnect(websocket, room_id)
+        chat_manager.disconnect_from_dispute(websocket, dispute.id)

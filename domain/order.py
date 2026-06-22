@@ -60,6 +60,7 @@ class DisputeMessage(Message):
         super().__init__(sender_id=sender_id, text=text, created_at=created_at, message_id=message_id)
         self.dispute_id = dispute_id
 
+
 class OrderStatuses(StrEnum):
     pending_payments = "pending_payments"
     paid = "paid"
@@ -201,6 +202,8 @@ class Order:
         return self.status == OrderStatuses.dispute
 
     def open_dispute(self, opened_by_id: int, reason: str) -> Dispute:
+        if self.is_disputed():
+            raise ValueError("Нельзя начать спор повторно")
         if not self.is_paid():
             raise ValueError("Нельзя начать спор по не оплаченному заказу")
         if opened_by_id not in {self.buyer_id, self.seller_id}:

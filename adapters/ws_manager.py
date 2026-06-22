@@ -1,29 +1,59 @@
 from fastapi import WebSocket
 
+
 class ChatConnectionManager:
     def __init__(self):
-        # Структура: { order_id: [WebSocket, WebSocket] }
-        self.active_connections: dict[int, list[WebSocket]] = {}
+        self.active_connections: dict[str, list[WebSocket]] = {}
 
-    async def connect(self, websocket: WebSocket, order_id: int):
-        # Обязательно принимаем соединение
+    @staticmethod
+    def _order_room(order_id: int) -> str:
+        return f"order:{order_id}"
+
+    @staticmethod
+    def _dispute_room(dispute_id: int) -> str:
+        return f"dispute:{dispute_id}"
+
+    async def _connect(self, websocket: WebSocket, room_id: str):
         await websocket.accept()
 
-        if order_id not in self.active_connections:
-            self.active_connections[order_id] = []
-        self.active_connections[order_id].append(websocket)
+        if room_id not in self.active_connections:
+            self.active_connections[room_id] = []
 
-    def disconnect(self, websocket: WebSocket, order_id: int):
-        if order_id in self.active_connections:
-            self.active_connections[order_id].remove(websocket)
-            # Очищаем память, если комната опустела
-            if not self.active_connections[order_id]:
-                del self.active_connections[order_id]
+        self.active_connections[room_id].append(websocket)
+
+    def _disconnect(self, websocket: WebSocket, room_id: str):
+        connections = self.active_connections.get(room_id)
+
+        if not connections:
+            return
+
+        if websocket in connections:
+            connections.remove(websocket)
+
+        if not connections:
+            del self.active_connections[room_id]
+
+    async def _broadcast(self, room_id: str, message: dict):
+        for connection in self.active_connections.get(room_id, []):
+            await connection.send_json(message)
+
+    async def connect_to_order(self, websocket: WebSocket, order_id: int):
+        await self._connect(websocket, self._order_room(order_id))
+
+    def disconnect_from_order(self, websocket: WebSocket, order_id: int):
+        self._disconnect(websocket, self._order_room(order_id))
 
     async def broadcast_to_order(self, order_id: int, message: dict):
-        # Идем по всем вебсокетам в комнате и шлем им JSON
-        if order_id in self.active_connections:
-            for connection in self.active_connections[order_id]:
-                await connection.send_json(message)
+        await self._broadcast(self._order_room(order_id), message)
+
+    async def connect_to_dispute(self, websocket: WebSocket, dispute_id: int):
+        await self._connect(websocket, self._dispute_room(dispute_id))
+
+    def disconnect_from_dispute(self, websocket: WebSocket, dispute_id: int):
+        self._disconnect(websocket, self._dispute_room(dispute_id))
+
+    async def broadcast_to_dispute(self, dispute_id: int, message: dict):
+        await self._broadcast(self._dispute_room(dispute_id), message)
+
 
 chat_manager = ChatConnectionManager()

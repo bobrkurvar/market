@@ -200,7 +200,10 @@
       <div v-else-if="activeTab === 'disputes'">
         <div v-if="disputeView === 'list'" class="space-y-6 animate-fadeIn">
           <div class="flex justify-between items-center">
-            <h1 class="text-2xl font-bold text-gray-900">Арбитраж и споры</h1>
+            <div>
+              <h1 class="text-2xl font-bold text-gray-900">Арбитраж и споры</h1>
+              <p class="text-sm text-gray-500 mt-1">Открывайте карточку спора, чтобы увидеть чат разбирательства и исходную переписку по заказу.</p>
+            </div>
             <button @click="fetchDisputes" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center">
               <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 mr-1" /> Обновить
             </button>
@@ -210,100 +213,212 @@
             <div v-if="disputesPending" class="p-12 flex justify-center">
               <UIcon name="i-heroicons-arrow-path" class="animate-spin w-8 h-8 text-indigo-500" />
             </div>
+
             <div v-else-if="disputes.length === 0" class="p-12 text-center text-gray-500">
               <UIcon name="i-heroicons-check-badge" class="w-16 h-16 mx-auto text-gray-300 mb-3" />
-              Открытых споров нет. Все сделки проходят успешно.
+              Споров пока нет.
             </div>
-            <table v-else class="w-full text-left border-collapse">
-              <thead>
-                <tr class="bg-gray-50 border-b text-sm text-gray-500">
-                  <th class="p-4 font-medium">Спор #</th>
-                  <th class="p-4 font-medium">Сумма заказа</th>
-                  <th class="p-4 font-medium">Дата открытия</th>
-                  <th class="p-4 font-medium text-right">Действие</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y">
-                <tr v-for="order in disputes" :key="order.id" class="hover:bg-gray-50 transition">
-                  <td class="p-4 font-medium text-gray-900">Заказ #{{ order.id }}</td>
-                  <td class="p-4 font-medium text-gray-900">{{ order.price }} ₽</td>
-                  <td class="p-4 text-gray-600">{{ new Date(order.created_at).toLocaleDateString() }}</td>
-                  <td class="p-4 text-right">
-                    <button
-                      @click="openDisputeChat(order)"
-                      class="inline-flex items-center px-4 py-2 bg-indigo-50 text-indigo-700 text-sm font-medium rounded-lg hover:bg-indigo-100 transition"
-                    >
-                      Рассмотреть
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+
+            <div v-else class="overflow-x-auto">
+              <table class="w-full min-w-[850px] text-left border-collapse">
+                <thead>
+                  <tr class="bg-gray-50 border-b text-sm text-gray-500">
+                    <th class="p-4 font-medium">Спор</th>
+                    <th class="p-4 font-medium">Заказ</th>
+                    <th class="p-4 font-medium">Причина</th>
+                    <th class="p-4 font-medium">Открыл</th>
+                    <th class="p-4 font-medium">Статус</th>
+                    <th class="p-4 font-medium">Дата</th>
+                    <th class="p-4 font-medium text-right">Действие</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y">
+                  <tr v-for="dispute in disputes" :key="dispute.id" class="hover:bg-gray-50 transition">
+                    <td class="p-4 font-medium text-gray-900">#{{ dispute.id }}</td>
+                    <td class="p-4 text-gray-700">#{{ dispute.order_id }}</td>
+                    <td class="p-4 text-gray-700 max-w-xs">
+                      <p class="line-clamp-2">{{ dispute.reason }}</p>
+                    </td>
+                    <td class="p-4 text-gray-600">Пользователь #{{ dispute.opened_by_id }}</td>
+                    <td class="p-4">
+                      <span
+                        class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold"
+                        :class="disputeStatusClass(dispute.status)"
+                      >
+                        {{ disputeStatusLabel(dispute.status) }}
+                      </span>
+                    </td>
+                    <td class="p-4 text-gray-600">{{ formatDate(dispute.created_at) }}</td>
+                    <td class="p-4 text-right">
+                      <button
+                        @click="openDispute(dispute)"
+                        class="inline-flex items-center px-4 py-2 bg-indigo-50 text-indigo-700 text-sm font-medium rounded-lg hover:bg-indigo-100 transition"
+                      >
+                        Открыть
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
-        <div v-else-if="disputeView === 'chat'" class="max-w-4xl mx-auto animate-fadeIn">
+        <div v-else-if="disputeView === 'detail' && activeDispute" class="max-w-7xl mx-auto animate-fadeIn">
           <button
-            @click="disputeView = 'list'"
+            @click="closeDispute"
             class="flex items-center text-gray-500 hover:text-gray-900 mb-6 font-medium transition"
           >
             <span class="mr-2">←</span> Назад к списку споров
           </button>
 
-          <div class="bg-white rounded-xl border shadow-sm flex flex-col h-[70vh]">
-            <div class="p-6 border-b flex justify-between items-center bg-gray-50 rounded-t-xl">
+          <section class="bg-white rounded-xl border shadow-sm p-6 mb-6">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <h2 class="text-xl font-bold text-gray-900">Спор по заказу #{{ activeDispute?.id }}</h2>
-                <p class="text-sm text-gray-500 mt-1">Ознакомьтесь с перепиской и вынесите вердикт</p>
+                <div class="flex items-center gap-3 flex-wrap">
+                  <h2 class="text-2xl font-bold text-gray-900">
+                    Спор #{{ activeDispute.id }}
+                  </h2>
+                  <span
+                    class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold"
+                    :class="disputeStatusClass(activeDispute.status)"
+                  >
+                    {{ disputeStatusLabel(activeDispute.status) }}
+                  </span>
+                </div>
+                <p class="text-sm text-gray-500 mt-1">
+                  Заказ #{{ activeDispute.order_id }} · открыт {{ formatDate(activeDispute.created_at) }} пользователем #{{ activeDispute.opened_by_id }}
+                </p>
               </div>
+              <button
+                @click="reloadDisputeChats"
+                :disabled="chatPending"
+                class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-indigo-700 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition disabled:opacity-50"
+              >
+                <UIcon name="i-heroicons-arrow-path" :class="['w-5 h-5 mr-1', chatPending ? 'animate-spin' : '']" />
+                Обновить
+              </button>
             </div>
 
-            <div class="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50/50">
-              <div v-if="chatPending" class="flex justify-center py-10">
-                <UIcon name="i-heroicons-arrow-path" class="animate-spin w-8 h-8 text-indigo-500" />
-              </div>
+            <div class="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4">
+              <p class="text-xs font-semibold uppercase tracking-wide text-amber-700 mb-1">Причина спора</p>
+              <p class="text-sm text-amber-950 whitespace-pre-wrap">{{ activeDispute.reason }}</p>
+            </div>
 
-              <div v-else-if="activeDisputeMessages.length === 0" class="text-center text-gray-400 mt-10 italic">
-                Переписка пуста. Стороны не оставили сообщений.
-              </div>
+            <div v-if="activeDispute.resolution" class="mt-4 rounded-lg border border-green-200 bg-green-50 p-4">
+              <p class="text-xs font-semibold uppercase tracking-wide text-green-700 mb-1">Решение</p>
+              <p class="text-sm text-green-950 whitespace-pre-wrap">{{ activeDispute.resolution }}</p>
+              <p v-if="activeDispute.resolved_at" class="text-xs text-green-700 mt-2">
+                Закрыт: {{ formatDate(activeDispute.resolved_at) }}
+              </p>
+            </div>
+          </section>
 
-              <div
-                v-else
-                v-for="msg in activeDisputeMessages"
-                :key="msg.id"
-                class="flex flex-col"
-                :class="msg.sender_id === activeDispute?.buyer_id ? 'items-end' : 'items-start'"
-              >
-                <span class="text-xs text-gray-500 mb-1 px-1 font-medium">
-                  {{ msg.sender_id === activeDispute?.buyer_id ? 'Покупатель' : 'Продавец' }} (ID: {{ msg.sender_id }})
-                </span>
-                <div
-                  class="max-w-[80%] rounded-2xl px-5 py-3 shadow-sm text-sm"
-                  :class="msg.sender_id === activeDispute?.buyer_id
-                    ? 'bg-indigo-100 text-indigo-900 rounded-br-none'
-                    : 'bg-white border border-gray-200 text-gray-800 rounded-bl-none'"
-                >
-                  <p class="whitespace-pre-wrap leading-relaxed">{{ msg.text }}</p>
+          <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <section class="bg-white rounded-xl border shadow-sm flex flex-col h-[68vh] min-h-[520px]">
+              <div class="p-5 border-b bg-indigo-50/60 rounded-t-xl">
+                <div class="flex items-center justify-between gap-4">
+                  <div>
+                    <h3 class="text-lg font-bold text-gray-900">Чат разбирательства</h3>
+                    <p class="text-sm text-gray-500 mt-1">Покупатель, продавец и поддержка.</p>
+                  </div>
+                  <span
+                    class="text-xs font-medium px-2 py-1 rounded-full"
+                    :class="isDisputeSocketConnected ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'"
+                  >
+                    {{ isDisputeSocketConnected ? 'Онлайн' : 'Не подключён' }}
+                  </span>
                 </div>
               </div>
-            </div>
 
-            <div class="p-6 border-t bg-white rounded-b-xl flex gap-4">
-              <button
-                @click="resolveDispute('buyer')"
-                :disabled="isResolving"
-                class="flex-1 bg-red-50 text-red-700 border border-red-200 px-6 py-3 rounded-lg font-medium hover:bg-red-100 transition flex items-center justify-center disabled:opacity-50"
+              <div class="flex-1 overflow-y-auto p-5 space-y-4 bg-gray-50/50">
+                <div v-if="chatPending" class="flex justify-center py-10">
+                  <UIcon name="i-heroicons-arrow-path" class="animate-spin w-8 h-8 text-indigo-500" />
+                </div>
+
+                <div v-else-if="activeDisputeMessages.length === 0" class="text-center text-gray-400 mt-10 italic">
+                  В чате спора пока нет сообщений.
+                </div>
+
+                <div
+                  v-for="msg in activeDisputeMessages"
+                  :key="msg.id"
+                  class="flex flex-col"
+                  :class="isOwnMessage(msg) ? 'items-end' : 'items-start'"
+                >
+                  <span class="text-xs text-gray-500 mb-1 px-1 font-medium">
+                    {{ messageAuthorLabel(msg) }} · {{ formatDate(msg.created_at, true) }}
+                  </span>
+                  <div
+                    class="max-w-[85%] rounded-2xl px-4 py-3 shadow-sm text-sm"
+                    :class="isOwnMessage(msg)
+                      ? 'bg-indigo-600 text-white rounded-br-none'
+                      : 'bg-white border border-gray-200 text-gray-800 rounded-bl-none'"
+                  >
+                    <p class="whitespace-pre-wrap leading-relaxed">{{ msg.text }}</p>
+                  </div>
+                </div>
+              </div>
+
+              <form
+                v-if="activeDispute.status === 'open'"
+                @submit.prevent="sendDisputeMessage"
+                class="p-4 border-t bg-white rounded-b-xl"
               >
-                Вернуть деньги покупателю
-              </button>
-              <button
-                @click="resolveDispute('seller')"
-                :disabled="isResolving"
-                class="flex-1 bg-green-50 text-green-700 border border-green-200 px-6 py-3 rounded-lg font-medium hover:bg-green-100 transition flex items-center justify-center disabled:opacity-50"
-              >
-                Отклонить спор (Деньги продавцу)
-              </button>
-            </div>
+                <textarea
+                  v-model="newDisputeMessage"
+                  rows="3"
+                  placeholder="Напишите сообщение от имени поддержки…"
+                  class="w-full resize-none border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  @keydown.enter.exact.prevent="sendDisputeMessage"
+                />
+                <div class="flex items-center justify-between mt-3">
+                  <p class="text-xs text-gray-500">Enter — отправить, Shift + Enter — новая строка.</p>
+                  <button
+                    type="submit"
+                    :disabled="!newDisputeMessage.trim() || !isDisputeSocketConnected"
+                    class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition disabled:opacity-50"
+                  >
+                    <UIcon name="i-heroicons-paper-airplane" class="w-4 h-4 mr-1.5" />
+                    Отправить
+                  </button>
+                </div>
+              </form>
+
+              <div v-else class="p-4 border-t bg-gray-50 rounded-b-xl text-sm text-gray-500">
+                Спор закрыт: новые сообщения отправлять нельзя.
+              </div>
+            </section>
+
+            <section class="bg-white rounded-xl border shadow-sm flex flex-col h-[68vh] min-h-[520px]">
+              <div class="p-5 border-b bg-gray-50 rounded-t-xl">
+                <h3 class="text-lg font-bold text-gray-900">Исходный чат заказа</h3>
+                <p class="text-sm text-gray-500 mt-1">Только для чтения: история сделки до и во время разбирательства.</p>
+              </div>
+
+              <div class="flex-1 overflow-y-auto p-5 space-y-4 bg-gray-50/50">
+                <div v-if="chatPending" class="flex justify-center py-10">
+                  <UIcon name="i-heroicons-arrow-path" class="animate-spin w-8 h-8 text-indigo-500" />
+                </div>
+
+                <div v-else-if="activeOrderMessages.length === 0" class="text-center text-gray-400 mt-10 italic">
+                  В исходном чате заказа нет сообщений.
+                </div>
+
+                <div
+                  v-for="msg in activeOrderMessages"
+                  :key="msg.id"
+                  class="flex flex-col items-start"
+                >
+                  <span class="text-xs text-gray-500 mb-1 px-1 font-medium">
+                    Пользователь #{{ msg.sender_id }} · {{ formatDate(msg.created_at, true) }}
+                  </span>
+                  <div class="max-w-[85%] rounded-2xl rounded-bl-none px-4 py-3 border border-gray-200 bg-white text-sm text-gray-800 shadow-sm">
+                    <p class="whitespace-pre-wrap leading-relaxed">{{ msg.text }}</p>
+                  </div>
+                </div>
+              </div>
+            </section>
           </div>
         </div>
       </div>
@@ -321,7 +436,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 
 definePageMeta({
   middleware: [
@@ -351,7 +466,6 @@ const { $api } = useNuxtApp()
 // Состояния вкладок и видов
 const activeTab = ref('dashboard')
 const categoryView = ref('list') // 'list' | 'create'
-const disputeView = ref('list')  // 'list' | 'chat'
 
 // --- КАТЕГОРИИ ---
 const categories = ref([])
@@ -439,59 +553,179 @@ const confirmDelete = async (category) => {
 }
 
 // --- СПОРЫ ---
+const currentUser = useState('user')
+
 const disputes = ref([])
 const disputesPending = ref(false)
+const disputeView = ref('list') // 'list' | 'detail'
+
 const activeDispute = ref(null)
 const activeDisputeMessages = ref([])
+const activeOrderMessages = ref([])
 const chatPending = ref(false)
-const isResolving = ref(false)
+
+const newDisputeMessage = ref('')
+const isDisputeSocketConnected = ref(false)
+let disputeSocket = null
+
+const formatDate = (value, withTime = false) => {
+  if (!value) return '—'
+
+  return new Date(value).toLocaleString('ru-RU', withTime
+    ? { dateStyle: 'short', timeStyle: 'short' }
+    : { dateStyle: 'medium' },
+  )
+}
+
+const disputeStatusLabel = (status) => {
+  if (status === 'open') return 'Открыт'
+  if (status === 'resolved') return 'Решён'
+  return status || 'Неизвестно'
+}
+
+const disputeStatusClass = (status) => {
+  if (status === 'open') return 'bg-amber-100 text-amber-800'
+  if (status === 'resolved') return 'bg-green-100 text-green-800'
+  return 'bg-gray-100 text-gray-700'
+}
+
+const isOwnMessage = (message) => message.sender_id === currentUser.value?.id
+
+const messageAuthorLabel = (message) => (
+  isOwnMessage(message)
+    ? 'Поддержка'
+    : `Участник #${message.sender_id}`
+)
 
 const fetchDisputes = async () => {
   disputesPending.value = true
+
   try {
-    disputes.value = await $api('/api/admin/orders/disputes')
+    disputes.value = await $api('/api/admin/disputes')
   } catch (error) {
-    toast.add({ title: 'Ошибка', description: 'Не удалось загрузить споры', color: 'red' })
+    toast.add({
+      title: 'Ошибка',
+      description: 'Не удалось загрузить список споров',
+      color: 'red',
+    })
   } finally {
     disputesPending.value = false
   }
 }
 
-const openDisputeChat = async (order) => {
-  activeDispute.value = order
-  disputeView.value = 'chat'
+const disconnectDisputeSocket = () => {
+  if (
+    disputeSocket &&
+    (disputeSocket.readyState === WebSocket.OPEN ||
+      disputeSocket.readyState === WebSocket.CONNECTING)
+  ) {
+    disputeSocket.close()
+  }
+
+  disputeSocket = null
+  isDisputeSocketConnected.value = false
+}
+
+const connectDisputeSocket = () => {
+  if (!activeDispute.value || activeDispute.value.status !== 'open') return
+
+  if (
+    disputeSocket &&
+    disputeSocket.readyState !== WebSocket.CLOSED
+  ) {
+    return
+  }
+
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const wsUrl = `${wsProtocol}//${window.location.host}/api/ws/disputes/${activeDispute.value.id}/chat`
+
+  disputeSocket = new WebSocket(wsUrl)
+
+  disputeSocket.onopen = () => {
+    isDisputeSocketConnected.value = true
+  }
+
+  disputeSocket.onmessage = (event) => {
+    const message = JSON.parse(event.data)
+
+    if (!activeDisputeMessages.value.some((item) => item.id === message.id)) {
+      activeDisputeMessages.value.push(message)
+    }
+  }
+
+  disputeSocket.onclose = () => {
+    isDisputeSocketConnected.value = false
+    disputeSocket = null
+  }
+
+  disputeSocket.onerror = () => {
+    toast.add({
+      title: 'Ошибка',
+      description: 'Не удалось подключиться к чату спора',
+      color: 'red',
+    })
+  }
+}
+
+const reloadDisputeChats = async () => {
+  if (!activeDispute.value) return
+
   chatPending.value = true
-  activeDisputeMessages.value = []
 
   try {
-    activeDisputeMessages.value = await $api(`/api/admin/orders/${order.id}/messages`)
+    const [disputeMessages, orderMessages] = await Promise.all([
+      $api(`/api/admin/disputes/${activeDispute.value.id}/messages`),
+      $api(`/api/admin/orders/${activeDispute.value.order_id}/messages`),
+    ])
+
+    activeDisputeMessages.value = disputeMessages
+    activeOrderMessages.value = orderMessages
   } catch (error) {
-    toast.add({ title: 'Ошибка', description: 'Не удалось загрузить переписку', color: 'red' })
+    toast.add({
+      title: 'Ошибка',
+      description: 'Не удалось загрузить историю сообщений',
+      color: 'red',
+    })
   } finally {
     chatPending.value = false
   }
 }
 
-const resolveDispute = async (winner) => {
-  const winnerName = winner === 'buyer' ? 'покупателя (возврат)' : 'продавца (закрыть спор)'
-  if (!confirm(`Вы уверены, что хотите решить спор в пользу ${winnerName}?`)) return
+const openDispute = async (dispute) => {
+  disconnectDisputeSocket()
 
-  isResolving.value = true
-  try {
-    await $api(`/api/admin/orders/${activeDispute.value.id}/resolve`, {
-      method: 'POST',
-      body: { winner }
-    })
+  activeDispute.value = dispute
+  activeDisputeMessages.value = []
+  activeOrderMessages.value = []
+  newDisputeMessage.value = ''
+  disputeView.value = 'detail'
 
-    toast.add({ title: 'Успешно', description: 'Решение принято', color: 'green' })
-    disputeView.value = 'list'
-    await fetchDisputes()
-  } catch (error) {
-    const errorMsg = error.data?.detail || error.response?._data?.detail || 'Ошибка при решении спора'
-    toast.add({ title: 'Ошибка', description: errorMsg, color: 'red' })
-  } finally {
-    isResolving.value = false
+  await reloadDisputeChats()
+  connectDisputeSocket()
+}
+
+const closeDispute = () => {
+  disconnectDisputeSocket()
+  activeDispute.value = null
+  activeDisputeMessages.value = []
+  activeOrderMessages.value = []
+  newDisputeMessage.value = ''
+  disputeView.value = 'list'
+}
+
+const sendDisputeMessage = () => {
+  const text = newDisputeMessage.value.trim()
+
+  if (
+    !text ||
+    !disputeSocket ||
+    disputeSocket.readyState !== WebSocket.OPEN
+  ) {
+    return
   }
+
+  disputeSocket.send(text)
+  newDisputeMessage.value = ''
 }
 
 watch(activeTab, (newTab) => {
@@ -502,6 +736,10 @@ watch(activeTab, (newTab) => {
 onMounted(() => {
   fetchCategories()
   fetchDisputes()
+})
+
+onBeforeUnmount(() => {
+  disconnectDisputeSocket()
 })
 
 useHead({ title: 'Админ Панель | myMarket' })
