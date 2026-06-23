@@ -4,9 +4,9 @@ from typing import Any
 from fastapi import APIRouter, Request
 
 from adapters.deps import UowDep
-from api.schemas import ProductCatalogListOut, ProductDetailOut
-from domain import Product, ProductItem
-from services.product import search_and_filter_products
+from api.schemas import ProductCatalogListOut, ProductDetailOut, ProductWithStatsOut, ReviewRead
+from domain import Product, Review
+from services.product import search_and_filter_products, get_products_stats
 
 log = logging.getLogger(__name__)
 
@@ -43,11 +43,22 @@ async def get_products(
         offset=offset,
         **filters
     )
-    return {"items": products, "total": count}
+    stats = await get_products_stats(uow=uow, products=products)
+    products_schemas = []
+    for product in products:
+        product_schema = ProductWithStatsOut(product=product, **stats.get(product.id, {}))
+        products_schemas.append(product_schema)
+    return {"items": products_schemas, "total": count}
+
+
+@router.get("/{slug}/{product_id}/reviews", response_model=list[ReviewRead])
+async def get_products_reviews(uow: UowDep, product_id: int, slug: str, limit: int = 10, offset: int = 0):
+    async with uow:
+        return await uow.db.read(Review, product_id=product_id, limit=limit, offset=offset )
 
 
 @router.get("/{slug}/{product_id}", response_model=ProductDetailOut)
-async def get_catalog(uow: UowDep, product_id: int, slug: str):
+async def get_product(uow: UowDep, product_id: int, slug: str):
     async with uow:
         product = await uow.db.read_one(
             Product, id=product_id, loaded=["variants", "seller"], with_raise=True

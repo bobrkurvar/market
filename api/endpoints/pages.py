@@ -1,10 +1,11 @@
 import logging
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter
 
 from adapters.deps import UowDep
-from api.schemas import HomePageOut, CategoryShortOut
+from api.schemas import HomePageOut, ProductWithStatsOut
 from domain import Category, Product
+from services.product import get_products_stats
 
 log = logging.getLogger(__name__)
 
@@ -14,12 +15,14 @@ router = APIRouter()
 @router.get("/home", response_model=HomePageOut)
 async def get_home_page(uow: UowDep, limit: int = 8):
     async with uow:
-        # categories = await uow.category.get_popular_categories_by_orders(6)
-        # products = await uow.product.get_popular_products_by_orders(8)
-        # categories, products = await asyncio.gather(*(categories_cor, products_cor))
         products = await uow.db.read(Product, limit=limit, loaded="variants")
         categories = await uow.db.read(Category, limit=limit, loaded="parent")
-    return {"products": products, "categories": categories}
+    stats = await get_products_stats(uow=uow, products=products)
+    products_schemas = []
+    for product in products:
+        product_schema = ProductWithStatsOut(product=product, **stats.get(product.id, {}))
+        products_schemas.append(product_schema)
+    return {"products": products_schemas, "categories": categories}
 
 
 

@@ -33,6 +33,7 @@ class OrderRepository:
         self,
         order_id: int,
         user_id: int,
+        with_raise=True
     ):
         query = select(Order).where(
             Order.id == order_id,
@@ -42,7 +43,7 @@ class OrderRepository:
             )
         ).options(selectinload(Order.items))
         orm_obj = await self.session.scalar(query)
-        if not orm_obj:
+        if with_raise and not orm_obj:
             raise NotFoundError(Order.__name__, id=order_id, user_id=user_id)
         return self._registry.to_domain(orm_obj)
 

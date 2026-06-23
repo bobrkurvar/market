@@ -3,7 +3,7 @@ import logging
 from fastapi import APIRouter
 
 from adapters.deps import UowDep
-from api.schemas import CategoryOut, FilterRule, FilterType
+from api.schemas import CategoryShortOut, CategoryOut, FilterRule, FilterType
 from domain import Category
 
 log = logging.getLogger(__name__)
@@ -11,18 +11,12 @@ log = logging.getLogger(__name__)
 router = APIRouter(prefix="/categories")
 
 
-@router.get("", response_model=list[CategoryOut])
+@router.get("", response_model=list[CategoryShortOut])
 async def get_categories(uow: UowDep, limit: int = 8, offset: int = 0):
     async with uow:
         return await uow.db.read(Category, limit=limit, offset=offset)
 
 
-# @router.get("/{slug}/{category_id}", response_model=CategoryOut)
-# async def get_category(uow: UowDep, slug: str, category_id: int):
-#     async with uow:
-#         category = await uow.db.read_one(Category, id=category_id)
-#         log.debug("Category: %s", category)
-#         return category
 
 
 @router.get("/{slug}/{category_id}", response_model=CategoryOut)

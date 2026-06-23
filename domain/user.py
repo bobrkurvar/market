@@ -45,6 +45,8 @@ class Seller(User):
         seller_id: int | None = None,
         rating: Decimal | None = None,
         is_active: bool = True,
+        reviews_count: int = 0,
+        sales_count: int = 0
     ):
         super().__init__(
             user_id=seller_id,
@@ -54,6 +56,8 @@ class Seller(User):
         )
         self.rating = rating
         self.is_active = is_active
+        self.reviews_count = reviews_count
+        self.sales_count = sales_count
         self._validate()
 
     def _validate(self):

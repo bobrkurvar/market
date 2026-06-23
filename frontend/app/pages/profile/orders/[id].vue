@@ -84,6 +84,119 @@
             </div>
           </UCard>
 
+
+          <UCard
+            v-if="!order.review"
+            class="ring-amber-200 dark:ring-amber-800"
+          >
+            <template #header>
+              <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <UIcon name="i-heroicons-star" class="w-5 h-5 text-amber-500" />
+                Оценить покупку
+              </h3>
+            </template>
+
+            <div class="space-y-4">
+              <p class="text-sm text-gray-600 dark:text-gray-300">
+                Ваша оценка и отзыв будут показаны у купленного варианта товара.
+              </p>
+
+              <div>
+                <p class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+                  Оценка
+                </p>
+
+                <div class="flex items-center gap-1">
+                  <button
+                    v-for="star in 5"
+                    :key="star"
+                    type="button"
+                    class="rounded-md p-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                    :aria-label="`Поставить ${star} из 5`"
+                    :disabled="isSubmittingReview"
+                    @click="reviewRating = star"
+                  >
+                    <UIcon
+                      name="i-heroicons-star-solid"
+                      class="h-7 w-7"
+                      :class="star <= reviewRating
+                        ? 'text-amber-400'
+                        : 'text-gray-300 dark:text-gray-600'"
+                    />
+                  </button>
+
+                  <span
+                    v-if="reviewRating"
+                    class="ml-2 text-sm text-gray-500"
+                  >
+                    {{ reviewRating }} из 5
+                  </span>
+                </div>
+              </div>
+
+              <UTextarea
+                v-model="reviewComment"
+                :rows="3"
+                :maxlength="2000"
+                placeholder="Расскажите о товаре: активации, качестве, скорости выдачи..."
+                :disabled="isSubmittingReview"
+              />
+
+              <UButton
+                color="primary"
+                icon="i-heroicons-paper-airplane"
+                :loading="isSubmittingReview"
+                :disabled="!reviewRating"
+                @click="submitReview"
+              >
+                Опубликовать отзыв
+              </UButton>
+            </div>
+          </UCard>
+
+          <UCard
+            v-else
+            class="bg-green-50 dark:bg-green-900/20 ring-green-200 dark:ring-green-800"
+          >
+            <template #header>
+              <h3 class="text-sm font-bold text-green-900 dark:text-green-100 flex items-center gap-2">
+                <UIcon name="i-heroicons-check-circle" class="w-5 h-5" />
+                Ваш отзыв
+              </h3>
+            </template>
+
+            <div class="space-y-3">
+              <div class="flex items-center gap-1">
+                <UIcon
+                  v-for="star in 5"
+                  :key="star"
+                  name="i-heroicons-star-solid"
+                  class="h-6 w-6"
+                  :class="star <= order.review.rating
+                    ? 'text-amber-400'
+                    : 'text-gray-300 dark:text-gray-600'"
+                />
+                <span class="ml-2 text-sm font-medium text-green-900 dark:text-green-100">
+                  {{ order.review.rating }} из 5
+                </span>
+              </div>
+
+              <p
+                v-if="order.review.comment"
+                class="text-sm text-green-800 dark:text-green-200 whitespace-pre-line leading-relaxed"
+              >
+                {{ order.review.comment }}
+              </p>
+
+              <p
+                v-else
+                class="text-sm text-green-800 dark:text-green-200"
+              >
+                Вы оставили оценку без комментария.
+              </p>
+            </div>
+          </UCard>
+
           <UCard
             v-if="isDisputeFormOpen"
             class="ring-red-200 dark:ring-red-800"
@@ -321,6 +434,10 @@ const isDisputing = ref(false)
 const isDisputeFormOpen = ref(false)
 const disputeReason = ref('')
 
+const reviewRating = ref(0)
+const reviewComment = ref('')
+const isSubmittingReview = ref(false)
+
 const disputePagePath = computed(() => `/profile/orders/${orderId}/dispute`)
 
 const scrollToBottom = async () => {
@@ -345,6 +462,50 @@ const copyToClipboard = async (text) => {
       description: 'Не удалось скопировать текст',
       color: 'red'
     })
+  }
+}
+
+const submitReview = async () => {
+  if (!reviewRating.value) {
+    toast.add({
+      title: 'Выберите оценку',
+      description: 'Поставьте от одной до пяти звёзд.',
+      color: 'red'
+    })
+    return
+  }
+
+  isSubmittingReview.value = true
+
+  try {
+    const createdReview = await $api(`/api/client/orders/${orderId}/review`, {
+      method: 'POST',
+      body: {
+        rating: reviewRating.value,
+        comment: reviewComment.value.trim() || null
+      }
+    })
+
+    order.value.review = createdReview
+
+    toast.add({
+      title: 'Отзыв опубликован',
+      description: 'Спасибо, ваша оценка поможет другим покупателям.',
+      color: 'green'
+    })
+  } catch (error) {
+    const errorMsg =
+      error.data?.detail ||
+      error.response?._data?.detail ||
+      'Не удалось опубликовать отзыв'
+
+    toast.add({
+      title: 'Ошибка',
+      description: errorMsg,
+      color: 'red'
+    })
+  } finally {
+    isSubmittingReview.value = false
   }
 }
 

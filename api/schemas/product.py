@@ -3,8 +3,13 @@ from slugify import slugify
 
 from adapters.images import ProductImagesManager
 from domain import Product, ProductItem, ProductVariant, Seller
+from .review import ReviewRead
 
 from .base import BaseInput
+
+class ProductItemRead(BaseModel):
+    id: int
+    content: str
 
 
 class ProductItemCreate(BaseInput):
@@ -107,9 +112,26 @@ class ProductOut(ProductImage):
         return None
 
 
+class ProductWithStatsOut(BaseModel):
+    product: ProductOut
+    rating: float | None = None
+    review_count: int = 0
+
+
 class ProductCatalogListOut(BaseModel):
     total: int | None = None
-    items: list[ProductOut]
+    items: list[ProductWithStatsOut]
+
+
+class SellerOut(BaseModel):
+    id: int
+    username: str
+    rating: float | None = None
+    sales_count: int = 0
+    reviews_count: int = 0
+
+    class Config:
+        from_attributes = True
 
 
 class ProductVariantDetailOut(BaseModel):
@@ -124,25 +146,16 @@ class ProductVariantDetailOut(BaseModel):
         from_attributes = True
 
 
-class SellerShortOut(BaseModel):
-    id: int
-    username: str
-    rating: float | None = None
-
-    class Config:
-        from_attributes = True
-
 class ProductDetailOut(ProductImage):
     id: int
     title: str
     description: str
-    seller: SellerShortOut
+    seller: SellerOut
     variants: list[ProductVariantDetailOut]
-
-    # @computed_field
-    # @property
-    # def seller_username(self) -> str:
-    #     return self.seller.username if self.seller else None
 
     class Config:
         from_attributes = True
+
+
+
+

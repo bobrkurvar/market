@@ -3,11 +3,24 @@ import asyncio
 from fastapi import APIRouter, Depends, HTTPException
 
 from adapters.deps import EventBusDep, UowDep, GetUserDep, RedisDep, get_user
-from domain import Order, OrderMessage
+from domain import Order, Review
 from services.order import make_order
-from api.schemas import OrderRead
+from api.schemas import OrderListRead, ReviewCreate, ReviewRead
 
 router = APIRouter(prefix="/client", dependencies=[Depends(get_user)])
+
+
+@router.get("/orders", response_model=list[OrderListRead])
+async def get_client_orders(user: GetUserDep, uow: UowDep):
+    async with uow:
+        return await uow.db.read(Order, buyer_id=user.id)
+
+
+
+@router.get("/disputes")
+async def get_client_disputes(user: GetUserDep, uow: UowDep):
+    async with uow:
+        return await uow.dispute.get_buyer_disputes(buyer_id=user.id)
 
 
 @router.post("/orders")
@@ -21,10 +34,7 @@ async def checkout(
         event_bus=event_bus,
     )
 
-# @router.get("/orders/{order_id}", response_model=OrderRead)
-# async def get_buyer_order_details(user: GetUserDep, order_id: int, uow: UowDep):
-#     async with uow:
-#         return await uow.db.read_one(Order, buyer_id=user.id, id=order_id, loaded=["items"])
+
 
 
 @router.get("/orders/{order_id}/wait-payment")
@@ -55,3 +65,23 @@ async def wait_order_payment_link(
         await pubsub.unsubscribe(channel_name)
         await pubsub.close()
 
+
+@router.post("/orders/{order_id}/review", response_model=ReviewRead)
+async def client_post_review(uow: UowDep, user: GetUserDep, order_id: int, data: ReviewCreate):
+    async with uow:
+        order: Order = await uow.db.read_one(
+            Order,
+            id=order_id,
+            buyer_id=user.id,
+            with_for_update=True,
+            with_raise=True,
+            loaded=["product_variant", "seller"]
+        )
+        review = Review.from_order(order, author_id=user.id, **data.model_dump())
+        old_count = order.seller.reviews_count
+        old_rating = float(order.seller.rating) if order.seller.rating is not None else 0.0
+        new_rating = ((old_rating * old_count) + data.rating) / (old_count + 1)
+        order.seller.rating = round(new_rating, 1)
+        order.seller.reviews_count += 1
+        await uow.db.save(order.seller)
+        return await uow.db.create(review)

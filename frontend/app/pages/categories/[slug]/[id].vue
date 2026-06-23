@@ -74,8 +74,26 @@
                       <UIcon v-else name="i-heroicons-photo" class="w-12 h-12 text-gray-300 dark:text-gray-600" />
                     </div>
                   </template>
+
                   <div class="font-bold text-lg truncate" :title="product.title">{{ product.title }}</div>
+
+                  <!-- БЛОК РЕЙТИНГА -->
+                  <div class="mt-1 flex items-center gap-1.5 text-sm">
+                    <UIcon
+                      name="i-heroicons-star-20-solid"
+                      class="h-4 w-4"
+                      :class="product.rating ? 'text-amber-400' : 'text-gray-300 dark:text-gray-600'"
+                    />
+                    <span class="font-bold text-gray-700 dark:text-gray-300">
+                      {{ product.rating ? product.rating : 'Нет оценок' }}
+                    </span>
+                    <span v-if="product.review_count" class="text-gray-400 dark:text-gray-500">
+                      ({{ product.review_count }})
+                    </span>
+                  </div>
+
                   <p class="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mt-2 flex-grow">{{ product.description }}</p>
+
                   <template #footer>
                     <div class="flex items-center justify-between">
                       <span class="text-xl font-bold text-green-600 dark:text-green-400">{{ product.price }} ₽</span>
@@ -128,6 +146,18 @@ const itemsPerPage = 12
 const isInitialLoad = ref(false)
 const isLoadingMore = ref(false)
 
+// --- Утилита для распаковки ProductWithStatsOut ---
+const flattenProduct = (item) => {
+  if (item.product) {
+    return {
+      ...item.product,
+      rating: item.rating,
+      review_count: item.review_count
+    }
+  }
+  return item
+}
+
 // --- 1. Загрузка категории ---
 const { data: category, pending: categoryPending } = await useFetch(`/api/categories/${categorySlug}/${categoryId}`, {
   $fetch: $api
@@ -154,8 +184,6 @@ const fetchProducts = async (isLoadMore = false) => {
   }
 
   try {
-    // Вся магия фильтров теперь происходит здесь:
-    // Мы просто берем параметры из URL (route.query) и отправляем их на бэкенд
     const params = {
       category_id: categoryId,
       limit: itemsPerPage,
@@ -165,10 +193,13 @@ const fetchProducts = async (isLoadMore = false) => {
 
     const res = await $api('/api/products', { query: params })
 
+    // Распаковываем товары перед добавлением в список
+    const flattenedItems = (res.items || []).map(flattenProduct)
+
     if (isLoadMore) {
-      products.value.push(...(res.items || []))
+      products.value.push(...flattenedItems)
     } else {
-      products.value = res.items || []
+      products.value = flattenedItems
     }
     productsTotal.value = res.total || 0
 

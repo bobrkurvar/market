@@ -73,6 +73,17 @@
 
         <div class="flex flex-shrink-0 items-center gap-2 sm:gap-3">
           <UButton
+            v-if="currentUser"
+            color="gray"
+            variant="soft"
+            icon="i-heroicons-shopping-bag"
+            class="hidden rounded-xl font-semibold md:inline-flex"
+            @click="goOrders"
+          >
+            Мои заказы
+          </UButton>
+
+          <UButton
             :icon="colorMode.value === 'dark' ? 'i-heroicons-sun-20-solid' : 'i-heroicons-moon-20-solid'"
             color="gray"
             variant="soft"
@@ -153,6 +164,18 @@ const currentUser = useState('user')
 const colorMode = useColorMode()
 const { $api } = useNuxtApp()
 
+const homeSection = useState('home-section', () => 'catalog')
+const ordersSection = useState('orders-section', () => 'orders')
+
+const goOrders = async () => {
+  homeSection.value = 'orders'
+  ordersSection.value = 'orders'
+
+  if (route.path !== '/' || Object.keys(route.query).length > 0) {
+    await router.push('/')
+  }
+}
+
 // Скрываем поиск на странице логина и во всей админке
 const showSearch = computed(() => {
   return route.path !== '/login' && !route.path.startsWith('/admin')
@@ -160,25 +183,37 @@ const showSearch = computed(() => {
 
 // --- МЕНЮ ПРОФИЛЯ ---
 const dropdownItems = [
-  [{
-    label: 'Панель управления',
-    icon: 'i-heroicons-cog-8-tooth',
-    onSelect: () => {
-      const path = currentUser.value.role === 'admin' ? '/admin' : (currentUser.value.role === 'seller' ? '/seller' : '/profile')
-      router.push(path)
-    }
-  }],
-  [{
-    label: 'Выйти',
-    icon: 'i-heroicons-arrow-right-on-rectangle',
-    onSelect: async () => {
-      try {
-        await $api('/api/logout', { method: 'POST' })
-      } catch (e) {}
-      currentUser.value = null
-      router.push('/')
-    }
-  }]
+  [
+    {
+      label: 'Мои заказы',
+      icon: 'i-heroicons-shopping-bag',
+      onSelect: goOrders,
+    },
+    {
+      label: 'Панель управления',
+      icon: 'i-heroicons-cog-8-tooth',
+      onSelect: () => {
+        const path = currentUser.value.role === 'admin'
+          ? '/admin'
+          : (currentUser.value.role === 'seller' ? '/seller' : '/profile')
+
+        router.push(path)
+      },
+    },
+  ],
+  [
+    {
+      label: 'Выйти',
+      icon: 'i-heroicons-arrow-right-on-rectangle',
+      onSelect: async () => {
+        try {
+          await $api('/api/logout', { method: 'POST' })
+        } catch (e) {}
+        currentUser.value = null
+        router.push('/')
+      },
+    },
+  ],
 ]
 
 // --- ЛОГИКА ПОИСКА ---
@@ -189,6 +224,7 @@ let idleTimeout = null
 const IDLE_TIME_MS = 30000
 
 const goHome = () => {
+  homeSection.value = 'catalog'
   clearSearch()
 }
 

@@ -1,6 +1,6 @@
 import logging
 
-from domain import User, Order, OrderCreatedEvent, ProductVariant
+from domain import User, Order, OrderCreatedEvent, ProductVariant, OrderAlreadyPaidError
 from infra.event_bus import EventBus
 
 log = logging.getLogger(__name__)
@@ -93,12 +93,12 @@ async def cancel_unpaid_order(uow, order_id: int):
 async def confirm_order_payment(uow, order_id: int):
     async with uow:
         order = await uow.db.read_one(
-            Order, loaded="items", with_raise=True, id=order_id, with_for_update=True
+            Order, loaded=["items", "seller"], with_raise=True, id=order_id, with_for_update=True
         )
         try:
             order.pay()
-            # нужно доменное исключение повторной оплаты
-        except ValueError as e:
+            order.seller.sales_count += 1
+        except OrderAlreadyPaidError as e:
             log.critical(str(e))
             raise
         await uow.db.save(order)

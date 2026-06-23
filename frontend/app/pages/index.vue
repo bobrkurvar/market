@@ -1,11 +1,11 @@
 <template>
   <UContainer class="relative py-8 min-h-screen flex flex-col">
     <div v-if="!isSearchActive" class="flex-grow flex flex-col gap-12">
-      <div v-if="homePending" class="flex justify-center py-20">
+      <div v-if="activeHomeTab === 'catalog' && homePending" class="flex justify-center py-20">
         <UIcon name="i-heroicons-arrow-path" class="animate-spin w-10 h-10 text-primary-500" />
       </div>
 
-      <template v-else>
+      <template v-else-if="activeHomeTab === 'catalog'">
         <section v-if="homeCategories.length > 0" class="space-y-6">
           <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -128,6 +128,21 @@
                 <h3 class="text-lg font-black leading-snug text-gray-950 line-clamp-2 dark:text-white" :title="product.title">
                   {{ product.title }}
                 </h3>
+
+                <div class="mt-1.5 flex items-center gap-1.5 text-sm">
+                  <UIcon
+                    name="i-heroicons-star-20-solid"
+                    class="h-4 w-4"
+                    :class="product.rating ? 'text-amber-400' : 'text-gray-300 dark:text-gray-600'"
+                  />
+                  <span class="font-bold text-gray-700 dark:text-gray-300">
+                    {{ product.rating ? product.rating : 'Нет оценок' }}
+                  </span>
+                  <span v-if="product.review_count" class="text-gray-400 dark:text-gray-500">
+                    ({{ product.review_count }})
+                  </span>
+                </div>
+
                 <p class="mt-2 flex-grow text-sm leading-6 text-gray-500 line-clamp-3 dark:text-gray-400">
                   {{ product.description }}
                 </p>
@@ -164,7 +179,159 @@
         </section>
       </template>
 
-      <section class="grid grid-cols-1 gap-5 border-t border-gray-200 pt-12 dark:border-gray-800 md:grid-cols-3">
+      <section v-else class="space-y-6">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p class="text-sm font-semibold uppercase tracking-[0.2em] text-primary-500">Личный кабинет</p>
+            <h2 class="mt-2 text-3xl font-black tracking-tight text-gray-950 dark:text-white">Мои сделки</h2>
+            <p class="mt-2 text-gray-500 dark:text-gray-400">
+              Здесь собраны покупки и обращения по ним.
+            </p>
+          </div>
+        </div>
+
+        <div class="inline-flex w-full rounded-2xl bg-gray-100 p-1 dark:bg-gray-900 sm:w-auto">
+          <button
+            type="button"
+            class="flex-1 rounded-xl px-4 py-2.5 text-sm font-bold transition-colors sm:flex-none"
+            :class="activeOrdersTab === 'orders'
+              ? 'bg-white text-gray-950 shadow-sm dark:bg-gray-800 dark:text-white'
+              : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'"
+            @click="selectOrdersSection('orders')"
+          >
+            Заказы
+          </button>
+
+          <button
+            type="button"
+            class="flex-1 rounded-xl px-4 py-2.5 text-sm font-bold transition-colors sm:flex-none"
+            :class="activeOrdersTab === 'disputes'
+              ? 'bg-white text-gray-950 shadow-sm dark:bg-gray-800 dark:text-white'
+              : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'"
+            @click="selectOrdersSection('disputes')"
+          >
+            Споры
+          </button>
+        </div>
+
+        <div v-if="ordersPending" class="flex justify-center py-20">
+          <UIcon name="i-heroicons-arrow-path" class="h-10 w-10 animate-spin text-primary-500" />
+        </div>
+
+        <template v-else-if="activeOrdersTab === 'orders'">
+          <div v-if="buyerOrders.length" class="grid gap-4">
+            <NuxtLink
+              v-for="order in buyerOrders"
+              :key="order.id"
+              :to="`/profile/orders/${order.id}`"
+              class="group block outline-none"
+            >
+              <UCard
+                class="border border-gray-200/70 bg-white/90 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:ring-2 hover:ring-primary-500/40 dark:border-gray-800 dark:bg-gray-900/80"
+                :ui="{ body: { padding: 'p-4 sm:p-5' } }"
+              >
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div class="min-w-0">
+                    <div class="mb-2 flex flex-wrap items-center gap-2">
+                      <span class="text-sm font-bold text-gray-500 dark:text-gray-400">Заказ #{{ order.id }}</span>
+                      <span
+                        class="rounded-full px-2.5 py-1 text-xs font-bold"
+                        :class="orderStatusMeta(order).className"
+                      >
+                        {{ orderStatusMeta(order).label }}
+                      </span>
+                    </div>
+                    <h3 class="truncate text-lg font-black text-gray-950 dark:text-white">
+                      {{ orderTitle(order) }}
+                    </h3>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                      {{ formatDate(order.created_at) }}
+                    </p>
+                  </div>
+
+                  <div class="flex shrink-0 items-center justify-between gap-4 sm:justify-end">
+                    <span class="text-lg font-black text-green-600 dark:text-green-400">
+                      {{ formatPrice(order.price) }} ₽
+                    </span>
+                    <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-50 text-primary-500 transition-colors group-hover:bg-primary-500 group-hover:text-white dark:bg-primary-950/40">
+                      <UIcon name="i-heroicons-arrow-right" class="h-5 w-5" />
+                    </span>
+                  </div>
+                </div>
+              </UCard>
+            </NuxtLink>
+          </div>
+
+          <div
+            v-else
+            class="rounded-3xl border border-dashed border-gray-300 bg-gray-50 px-6 py-16 text-center dark:border-gray-700 dark:bg-gray-900/60"
+          >
+            <UIcon name="i-heroicons-shopping-bag" class="mx-auto mb-4 h-14 w-14 text-gray-400" />
+            <h3 class="text-xl font-black text-gray-950 dark:text-white">Заказов пока нет</h3>
+            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              После первой покупки она появится здесь.
+            </p>
+            <UButton to="/" color="primary" variant="soft" class="mt-5 rounded-xl">
+              Перейти в каталог
+            </UButton>
+          </div>
+        </template>
+
+        <template v-else>
+          <div v-if="buyerDisputes.length" class="grid gap-4">
+            <NuxtLink
+              v-for="dispute in buyerDisputes"
+              :key="dispute.id"
+              :to="`/profile/orders/${dispute.order_id}/dispute`"
+              class="group block outline-none"
+            >
+              <UCard
+                class="border border-gray-200/70 bg-white/90 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:ring-2 hover:ring-primary-500/40 dark:border-gray-800 dark:bg-gray-900/80"
+                :ui="{ body: { padding: 'p-4 sm:p-5' } }"
+              >
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div class="min-w-0">
+                    <div class="mb-2 flex flex-wrap items-center gap-2">
+                      <span class="text-sm font-bold text-gray-500 dark:text-gray-400">
+                        Спор по заказу #{{ dispute.order_id }}
+                      </span>
+                      <span
+                        class="rounded-full px-2.5 py-1 text-xs font-bold"
+                        :class="disputeStatusMeta(dispute).className"
+                      >
+                        {{ disputeStatusMeta(dispute).label }}
+                      </span>
+                    </div>
+                    <h3 class="truncate text-lg font-black text-gray-950 dark:text-white">
+                      {{ dispute.reason || 'Причина не указана' }}
+                    </h3>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                      Открыт {{ formatDate(dispute.created_at) }}
+                    </p>
+                  </div>
+
+                  <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-500 transition-colors group-hover:bg-primary-500 group-hover:text-white dark:bg-primary-950/40">
+                    <UIcon name="i-heroicons-chat-bubble-left-right" class="h-5 w-5" />
+                  </span>
+                </div>
+              </UCard>
+            </NuxtLink>
+          </div>
+
+          <div
+            v-else
+            class="rounded-3xl border border-dashed border-gray-300 bg-gray-50 px-6 py-16 text-center dark:border-gray-700 dark:bg-gray-900/60"
+          >
+            <UIcon name="i-heroicons-shield-check" class="mx-auto mb-4 h-14 w-14 text-gray-400" />
+            <h3 class="text-xl font-black text-gray-950 dark:text-white">Открытых споров нет</h3>
+            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              Здесь будут обращения по вашим покупкам.
+            </p>
+          </div>
+        </template>
+      </section>
+
+      <section v-if="activeHomeTab === 'catalog'" class="grid grid-cols-1 gap-5 border-t border-gray-200 pt-12 dark:border-gray-800 md:grid-cols-3">
         <div class="rounded-3xl border border-gray-200/70 bg-white p-6 text-center shadow-sm dark:border-gray-800 dark:bg-gray-900/80">
           <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-50 text-primary-500 dark:bg-primary-950/40">
             <UIcon name="i-heroicons-bolt" class="h-8 w-8" />
@@ -261,6 +428,21 @@
                   <h3 class="text-lg font-black leading-snug text-gray-950 line-clamp-2 dark:text-white" :title="product.title">
                     {{ product.title }}
                   </h3>
+
+                  <div class="mt-1.5 flex items-center gap-1.5 text-sm">
+                    <UIcon
+                      name="i-heroicons-star-20-solid"
+                      class="h-4 w-4"
+                      :class="product.rating ? 'text-amber-400' : 'text-gray-300 dark:text-gray-600'"
+                    />
+                    <span class="font-bold text-gray-700 dark:text-gray-300">
+                      {{ product.rating ? product.rating : 'Нет оценок' }}
+                    </span>
+                    <span v-if="product.review_count" class="text-gray-400 dark:text-gray-500">
+                      ({{ product.review_count }})
+                    </span>
+                  </div>
+
                   <p class="mt-2 flex-grow text-sm leading-6 text-gray-500 line-clamp-3 dark:text-gray-400">
                     {{ product.description }}
                   </p>
@@ -299,7 +481,7 @@
 
 <script setup>
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
-import { useRoute, useRouter, useNuxtApp, useHead, useFetch } from '#imports'
+import { useRoute, useRouter, useNuxtApp, useHead, useFetch, useState } from '#imports'
 
 const route = useRoute()
 const router = useRouter()
@@ -325,6 +507,179 @@ const formatPrice = (price) => {
   return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(Number(price || 0))
 }
 
+// --- Утилита для распаковки ProductWithStatsOut ---
+const flattenProduct = (item) => {
+  if (item.product) {
+    return {
+      ...item.product,
+      rating: item.rating,
+      review_count: item.review_count
+    }
+  }
+  return item
+}
+
+const currentUser = useState('user')
+const activeHomeTab = useState('home-section', () => 'catalog')
+const activeOrdersTab = useState('orders-section', () => 'orders')
+
+const buyerOrders = ref([])
+const buyerDisputes = ref([])
+const ordersPending = ref(false)
+
+const ordersLoaded = ref(false)
+const disputesLoaded = ref(false)
+
+const formatDate = (value) => {
+  if (!value) return 'Дата не указана'
+
+  return new Intl.DateTimeFormat('ru-RU', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value))
+}
+
+const orderTitle = (order) => (
+  order.product_snapshot?.title
+  || order.product_snapshot?.product_title
+  || order.product_snapshot?.name
+  || `Заказ #${order.id}`
+)
+
+const orderStatusMeta = (order) => {
+  const status = order.status || order.status_name
+
+  const statuses = {
+    pending_payments: {
+      label: 'Ожидает оплаты',
+      className: 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300',
+    },
+    paid: {
+      label: 'Оплачен',
+      className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300',
+    },
+    canceled: {
+      label: 'Отменён',
+      className: 'bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+    },
+    cancelled: {
+      label: 'Отменён',
+      className: 'bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+    },
+    dispute: {
+      label: 'Спор открыт',
+      className: 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300',
+    },
+  }
+
+  return statuses[status] || {
+    label: status || 'Неизвестный статус',
+    className: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300',
+  }
+}
+
+const disputeStatusMeta = (dispute) => {
+  const status = dispute.status || dispute.status_name
+
+  if (status === 'resolved') {
+    return {
+      label: 'Решён',
+      className: 'bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+    }
+  }
+
+  return {
+    label: 'На рассмотрении',
+    className: 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300',
+  }
+}
+
+const ensureCurrentUser = async () => {
+  if (currentUser.value) {
+    return true
+  }
+
+  try {
+    const response = await $api('/api/me')
+    currentUser.value = response?.user || response
+    return Boolean(currentUser.value)
+  } catch {
+    return false
+  }
+}
+
+const loadBuyerOrders = async () => {
+  if (ordersLoaded.value) {
+    return
+  }
+
+  ordersPending.value = true
+
+  try {
+    buyerOrders.value = await $api('/api/client/orders')
+    ordersLoaded.value = true
+  } catch (error) {
+    console.error('Не удалось загрузить заказы:', error)
+    buyerOrders.value = []
+  } finally {
+    ordersPending.value = false
+  }
+}
+
+const loadBuyerDisputes = async () => {
+  if (disputesLoaded.value) {
+    return
+  }
+
+  ordersPending.value = true
+
+  try {
+    buyerDisputes.value = await $api('/api/client/disputes')
+    disputesLoaded.value = true
+  } catch (error) {
+    console.error('Не удалось загрузить споры:', error)
+    buyerDisputes.value = []
+  } finally {
+    ordersPending.value = false
+  }
+}
+
+const selectOrdersSection = async (section) => {
+  activeOrdersTab.value = section
+
+  if (section === 'orders') {
+    await loadBuyerOrders()
+    return
+  }
+
+  await loadBuyerDisputes()
+}
+
+
+watch(activeHomeTab, async (section) => {
+  if (section !== 'orders') {
+    return
+  }
+
+  const isAuthenticated = await ensureCurrentUser()
+
+  if (!isAuthenticated) {
+    activeHomeTab.value = 'catalog'
+    await router.push('/login')
+    return
+  }
+
+  if (activeOrdersTab.value === 'disputes') {
+    await loadBuyerDisputes()
+    return
+  }
+
+  await loadBuyerOrders()
+}, { immediate: true })
+
 // --- 1. ЗАГРУЗКА ДАННЫХ: Витрина (Главная страница) ---
 const homeCategories = ref([])
 const homeProducts = ref([])
@@ -345,7 +700,8 @@ const { data: homeData, pending: homePending } = await useFetch('/api/home', {
 
 if (homeData.value) {
   homeCategories.value = homeData.value.categories || []
-  homeProducts.value = homeData.value.products || []
+  // Применяем flattenProduct, чтобы вытащить данные на верхний уровень
+  homeProducts.value = (homeData.value.products || []).map(flattenProduct)
 
   if (homeCategories.value.length < homeLimit) hasMoreCategories.value = false
   if (homeProducts.value.length < homeLimit) hasMoreProducts.value = false
@@ -381,9 +737,10 @@ const loadMoreProducts = async () => {
       query: { limit: homeLimit, offset: prodOffset.value }
     })
 
-    const newProducts = res.items
+    // Применяем flattenProduct
+    const newProducts = (res.items || []).map(flattenProduct)
 
-    if (newProducts && newProducts.length > 0) {
+    if (newProducts.length > 0) {
       homeProducts.value.push(...newProducts)
       prodOffset.value += homeLimit
       if (newProducts.length < homeLimit) hasMoreProducts.value = false
@@ -425,10 +782,13 @@ const fetchSearchData = async (isLoadMore = false) => {
 
     const res = await $api('/api/products', { query: params })
 
+    // Применяем flattenProduct
+    const flattenedItems = (res.items || []).map(flattenProduct)
+
     if (isLoadMore) {
-      searchResults.value.push(...res.items)
+      searchResults.value.push(...flattenedItems)
     } else {
-      searchResults.value = res.items
+      searchResults.value = flattenedItems
     }
     searchTotal.value = res.total
   } catch (error) {

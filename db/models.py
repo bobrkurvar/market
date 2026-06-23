@@ -25,6 +25,9 @@ class Product(Base):
     suggested_category: Mapped[str] = mapped_column(String(100), nullable=True)
     category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"))
     buyer_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_archived: Mapped[bool] = mapped_column(
+        default=False, server_default="false"
+    )
     category: Mapped["Category"] = relationship("Category", back_populates="products")
     variants: Mapped[list["ProductVariant"]] = relationship(
         "ProductVariant",
@@ -123,6 +126,8 @@ class Seller(User):
     rating: Mapped[Decimal | None] = mapped_column(
         DECIMAL(2, 1), server_default=None, default=None, nullable=True
     )
+    reviews_count: Mapped[int] = mapped_column(default=0)
+    sales_count: Mapped[int] = mapped_column(default=0)
     products: Mapped[list["Product"]] = relationship("Product", back_populates="seller")
     __mapper_args__ = {
         "polymorphic_identity": "seller",  # Значение для колонки users.type
@@ -135,7 +140,9 @@ class Order(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     buyer_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    seller_id: Mapped[int] = mapped_column(ForeignKey("sellers.id"))
+    seller_id: Mapped[int | None] = mapped_column(
+        ForeignKey("sellers.id", ondelete="SET NULL"), nullable=True
+    )
     product_variant_id: Mapped[int | None] = mapped_column(
         ForeignKey("product_variants.id", ondelete="SET NULL")
     )
@@ -148,7 +155,11 @@ class Order(Base):
     items: Mapped[list["ProductItem"]] = relationship("ProductItem")
     product_variant: Mapped["ProductVariant"] = relationship("ProductVariant")
     buyer: Mapped["User"] = relationship("User", foreign_keys=[buyer_id])
-    seller: Mapped["Seller"] = relationship("Seller", foreign_keys=[seller_id])
+    seller: Mapped["Seller"] = relationship(
+        "Seller",
+        foreign_keys=[seller_id],
+        cascade="save-update, merge"
+    )
     price: Mapped[float]
     amount: Mapped[int]
     product_snapshot: Mapped[dict] = mapped_column(
@@ -274,4 +285,35 @@ class DisputeMessage(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
+    )
+
+
+class Review(Base):
+    __tablename__ = "reviews"
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    order_id: Mapped[int] = mapped_column(ForeignKey("orders.id"), unique=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"))
+    product_variant_id: Mapped[int | None] = mapped_column(
+        ForeignKey("product_variants.id", ondelete="SET NULL"), nullable=True
+    )
+    author_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+
+    rating: Mapped[int] = mapped_column(Integer)
+    comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+    )
+
+    order: Mapped["Order"] = relationship("Order")
+    product: Mapped["Product"] = relationship("Product")
+    author: Mapped["User"] = relationship("User")
+    product_variant: Mapped["ProductVariant"] = relationship("ProductVariant")
+
+    __table_args__ = (
+        CheckConstraint(
+            "rating >= 1 AND rating <= 5",
+            name="check_rating_range",
+        ),
     )

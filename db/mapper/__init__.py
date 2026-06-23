@@ -3,5 +3,6 @@ import db.mapper.order
 import db.mapper.product
 import db.mapper.user
 import db.mapper.dispute
+import db.mapper.review
 
 from .registry import registry

@@ -27,16 +27,30 @@
             </h1>
 
             <div class="mt-4 space-y-3 text-sm text-gray-500 dark:text-gray-400">
-
-              <div class="flex items-center gap-3">
-                <p class="flex items-center gap-2">
-                  <UIcon name="i-heroicons-user-circle" class="w-5 h-5 text-gray-400" />
-                  Продавец: <span class="font-bold text-gray-900 dark:text-gray-200">{{ product.seller?.username || 'Неизвестно' }}</span>
+              <div class="flex flex-wrap items-center gap-3">
+                <p class="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                  <UIcon name="i-heroicons-user-circle" class="w-5 h-5" />
+                  Продавец:
+                  <span class="font-bold text-gray-900 dark:text-gray-200">
+                    {{ product.seller?.username || 'Неизвестно' }}
+                  </span>
                 </p>
 
-                <UBadge v-if="product.seller?.rating" color="amber" variant="subtle" size="sm" class="flex items-center gap-1">
-                  <UIcon name="i-heroicons-star-solid" class="w-3 h-3" />
+                <UBadge v-if="product.seller?.rating" color="amber" variant="subtle" size="sm" class="flex items-center gap-1 font-bold">
+                  <UIcon name="i-heroicons-star-solid" class="w-3.5 h-3.5" />
                   {{ product.seller.rating }}
+                  <span v-if="product.seller?.reviews_count" class="text-amber-700/60 dark:text-amber-400/60 text-xs font-normal ml-0.5">
+                    ({{ product.seller.reviews_count }})
+                  </span>
+                </UBadge>
+                <UBadge v-else color="gray" variant="subtle" size="sm" class="flex items-center gap-1 font-medium text-gray-500">
+                  <UIcon name="i-heroicons-star" class="w-3.5 h-3.5" />
+                  Нет оценок
+                </UBadge>
+
+                <UBadge color="emerald" variant="subtle" size="sm" class="flex items-center gap-1 font-medium">
+                  <UIcon name="i-heroicons-check-badge" class="w-3.5 h-3.5" />
+                  {{ product.seller?.sales_count || 0 }} продаж
                 </UBadge>
               </div>
 
@@ -61,6 +75,42 @@
             {{ product.description }}
           </p>
         </div>
+
+        <div class="bg-white dark:bg-gray-900 p-6 sm:p-8 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
+          <h3 class="text-xl font-bold mb-6 flex items-center gap-2">
+            Отзывы покупателей
+            <span v-if="reviews.length" class="text-sm font-normal text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
+              {{ reviews.length }} {{ hasMoreReviews ? '+' : '' }}
+            </span>
+          </h3>
+
+          <div v-if="reviews.length === 0 && !isLoadingReviews" class="text-center py-10">
+            <UIcon name="i-heroicons-chat-bubble-left-ellipsis" class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-700 mb-3" />
+            <p class="text-gray-500 dark:text-gray-400">У этого товара пока нет отзывов. Станьте первым!</p>
+          </div>
+
+          <div v-else class="space-y-6">
+            <div v-for="(review, index) in reviews" :key="index" class="border-b border-gray-100 dark:border-gray-800 last:border-0 pb-6 last:pb-0">
+              <div class="flex items-center gap-1 mb-2">
+                <UIcon
+                  v-for="i in 5"
+                  :key="i"
+                  name="i-heroicons-star-20-solid"
+                  class="w-5 h-5"
+                  :class="i <= review.rating ? 'text-amber-400' : 'text-gray-200 dark:text-gray-700'"
+                />
+              </div>
+              <p class="text-gray-700 dark:text-gray-300 leading-relaxed">
+                {{ review.comment || 'Покупатель не оставил текстовый комментарий.' }}
+              </p>
+            </div>
+          </div>
+
+          <div v-if="isLoadingReviews" class="flex justify-center mt-6">
+            <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-primary-500" />
+          </div>
+        </div>
+
       </div>
 
       <div class="lg:col-span-5">
@@ -234,7 +284,7 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useNuxtApp, useToast, useHead, useFetch } from '#imports'
 
@@ -245,17 +295,69 @@ const toast = useToast()
 const productId = route.params.id
 const slug = route.params.slug
 
-// Загружаем данные конкретного товара
+// Загружаем данные конкретного товара (SEO-дружелюбно)
 const { data: product, pending } = await useFetch(`/api/products/${slug}/${productId}`, {
   $fetch: $api
 })
 
 const selectedVariant = ref(null)
 
+// --- ОТЗЫВЫ И ПАГИНАЦИЯ ---
+const reviews = ref([])
+const reviewsLimit = 10
+const reviewsOffset = ref(0)
+const hasMoreReviews = ref(true)
+const isLoadingReviews = ref(false)
+
+const loadReviews = async () => {
+  if (isLoadingReviews.value || !hasMoreReviews.value) return
+
+  isLoadingReviews.value = true
+  try {
+    const fetched = await $api(`/api/products/${slug}/${productId}/reviews`, {
+      query: { limit: reviewsLimit, offset: reviewsOffset.value }
+    })
+
+    if (fetched && fetched.length > 0) {
+      reviews.value.push(...fetched)
+      reviewsOffset.value += reviewsLimit
+      // Если пришло меньше чем мы просили, значит это конец
+      if (fetched.length < reviewsLimit) {
+        hasMoreReviews.value = false
+      }
+    } else {
+      hasMoreReviews.value = false
+    }
+  } catch (error) {
+    console.error('Ошибка при загрузке отзывов:', error)
+  } finally {
+    isLoadingReviews.value = false
+  }
+}
+
+// Обработчик скролла для подгрузки отзывов
+const handleScroll = () => {
+  const bottomOfWindow = window.innerHeight + window.scrollY >= document.documentElement.offsetHeight - 300
+  if (bottomOfWindow) {
+    loadReviews()
+  }
+}
+
+onMounted(() => {
+  // Стартуем загрузку первой порции отзывов сразу после отрисовки
+  loadReviews()
+  window.addEventListener('scroll', handleScroll)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll)
+})
+
+
 // --- СОСТОЯНИЕ ОПЛАТЫ И МОДАЛКИ ---
-const createdOrderId = ref(null) // Храним ID созданного заказа для перехода в чат
+const createdOrderId = ref(null)
 const isPaymentModalOpen = ref(false)
-const paymentStep = ref('creating') // 'creating' | 'waiting' | 'payment_ready' | 'processing_payment' | 'success' | 'error'
+const paymentStep = ref('creating')
 const paymentErrorMsg = ref('')
 
 const getStockStatus = (count) => {
@@ -274,12 +376,10 @@ const getStockStatus = (count) => {
 // Магия реактивности: проверяем URL и выбираем нужный вариант, игнорируя пустые/скрытые
 watch(product, (newProduct) => {
   if (newProduct && newProduct.variants?.length > 0) {
-    // Отсекаем неактивные и распроданные варианты для автовыбора
     const availableVariants = newProduct.variants.filter(
       v => v.is_active !== false && v.items_count !== 0
     )
 
-    // Если всё раскупили, ничего не выбираем
     if (availableVariants.length === 0) {
       selectedVariant.value = null
       return
@@ -294,7 +394,6 @@ watch(product, (newProduct) => {
       }
     }
 
-    // Иначе берем самый дешевый из ДОСТУПНЫХ
     const sortedVariants = [...availableVariants].sort((a, b) => Number(a.price) - Number(b.price))
     selectedVariant.value = sortedVariants[0]
   }
@@ -304,25 +403,18 @@ watch(product, (newProduct) => {
 const buyProduct = async () => {
   if (!selectedVariant.value) return
 
-  // Открываем оверлей, блокируем экран
   isPaymentModalOpen.value = true
   paymentStep.value = 'creating'
   paymentErrorMsg.value = ''
 
   try {
-    // Вызываем POST для создания заказа
     const order = await $api('/api/client/orders', {
       method: 'POST',
       query: { product_variant_id: selectedVariant.value.id }
     })
 
-    // Сохраняем ID заказа
     createdOrderId.value = order.id
-
-    // Переводим интерфейс в режим ожидания ответа банка
     paymentStep.value = 'waiting'
-
-    // Запускаем второй шаг (Long Polling / WebSockets)
     await waitForPaymentLink(order.id)
 
   } catch (error) {
@@ -348,7 +440,6 @@ const waitForPaymentLink = async (orderId) => {
     })
 
     if (response) {
-      // Ссылка пришла! Вместо перехода в чат, показываем кнопку оплаты
       paymentStep.value = 'payment_ready'
     }
 
@@ -366,16 +457,12 @@ const simulatePayment = async () => {
   paymentStep.value = 'processing_payment'
 
   try {
-    // Дергаем наш вебхук. Передаем ключ "id", так как этого ждет OrderPaymentPayload
     await $api('/api/webhooks/payment', {
       method: 'POST',
       body: { id: createdOrderId.value }
     })
 
-    // Искусственная задержка для красоты интерфейса
     await new Promise(resolve => setTimeout(resolve, 800))
-
-    // Успех! Теперь статус в базе точно 'paid'
     paymentStep.value = 'success'
 
   } catch (error) {

@@ -94,9 +94,7 @@ class CategoryShortOut(CategoryImageOut):
         from_attributes = True
 
 
-class CategoryOut(CategoryImageOut):
-    id: int
-    name: str
+class CategoryOut(CategoryShortOut):
     parent_name: str | None = None
     children: list[CategoryShortOut] | None = None
     filter_config: list[FilterRule] | None = None

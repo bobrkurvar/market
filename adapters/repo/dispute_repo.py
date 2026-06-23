@@ -13,6 +13,20 @@ class DisputeRepository:
         self.session = session
         self._registry = registry
 
+    async def get_buyer_disputes(self, buyer_id: int):
+        query = (
+            select(DisputeOrm)
+            .join(Order, DisputeOrm.order_id == Order.id)
+            .where(Order.buyer_id == buyer_id)
+            .order_by(DisputeOrm.created_at.desc())
+        )
+
+        orm_objs = await self.session.scalars(query)
+
+        return tuple(
+            self._registry.to_domain(dispute)
+            for dispute in orm_objs
+        )
 
     async def get_user_dispute(
         self,

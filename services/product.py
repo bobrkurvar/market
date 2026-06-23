@@ -1,5 +1,6 @@
 import logging
 from typing import Awaitable, Callable
+from collections.abc import Collection
 
 from domain import Product, ProductVariant, ProductItem, Operation, Operations
 from infra.matcher import normalize_category_name
@@ -103,8 +104,17 @@ async def search_and_filter_products(
         ))
     return products, count
 
+
+async def get_products_stats(uow, products: Collection[Product] | Product):
+    product_ids = list(product.id for product in products)
+    async with uow:
+        return await uow.review.get_products_stats(product_ids)
+
+
+
 async def delete_product_variant(uow, product_variant_id: int):
     async with uow:
         await uow.db.delete(ProductVariant, id=product_variant_id)
         # Некоторые ключи, которые привязаны к успешным заказам нужно сохранить поэтому такие сложности, а не простое удаление по графу
         await uow.db.delete(ProductItem, product_variant_id=product_variant_id, order_id=Operation(value=None, op=Operations.is_))
+

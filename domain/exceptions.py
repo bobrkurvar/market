@@ -1,5 +1,9 @@
 from .user import User
 
+class OrderAlreadyPaidError(ValueError):
+    """Исключение: заказ уже был успешно оплачен ранее."""
+    pass
+
 
 class RepositoryError(Exception):
     """Базовое исключение репозитория"""

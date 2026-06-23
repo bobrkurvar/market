@@ -3,9 +3,9 @@ from sqlalchemy import inspect
 import domain
 from db import models
 
-from .product import map_product_item_to_domain, map_product_item_to_orm
+from .product import map_product_item_to_domain, map_product_item_to_orm, map_product_variant_to_domain
 from .registry import registry
-from .user import map_user_to_domain, map_seller_to_domain
+from .user import map_user_to_domain, map_seller_to_domain, map_seller_to_orm
 
 
 def map_order_to_domain(orm_obj: models.Order) -> domain.Order:
@@ -19,6 +19,9 @@ def map_order_to_domain(orm_obj: models.Order) -> domain.Order:
     seller = None
     if "seller" not in insp.unloaded:
         seller = map_seller_to_domain(orm_obj.seller)
+    product_variant = None
+    if "product_variant" not in insp.unloaded:
+        product_variant = map_product_variant_to_domain(orm_obj.product_variant)
 
     return domain.Order(
         created_at=orm_obj.created_at,
@@ -34,6 +37,7 @@ def map_order_to_domain(orm_obj: models.Order) -> domain.Order:
         price=orm_obj.price,
         amount=orm_obj.amount,
         product_snapshot=orm_obj.product_snapshot,
+        product_variant=product_variant
     )
 
 
@@ -55,7 +59,10 @@ def map_order_to_orm(d_obj: domain.Order) -> models.Order:
             map_product_item_to_orm(item)
             for item in d_obj._items
         ]
+    if d_obj.seller is not None:
+        orm_obj.seller = map_seller_to_orm(d_obj.seller)
     return orm_obj
+
 
 def map_order_message_to_domain(orm_obj) -> domain.OrderMessage:
     return domain.OrderMessage(

@@ -4,6 +4,7 @@ from enum import StrEnum
 
 from .product import ProductItem, ProductVariant
 from .user import User, Seller
+from .exceptions import OrderAlreadyPaidError
 
 class DisputeStatuses(StrEnum):
     open = "open"
@@ -155,7 +156,7 @@ class Order:
 
     def pay(self):
         if self.is_paid():
-            raise ValueError("Нельзя оплатить уже оплаченный заказ")
+            raise OrderAlreadyPaidError(f"Заказ {self.id} уже оплачен")
 
         if self.is_cancelled():
             raise ValueError("Попытка оплатить отменённый заказ")

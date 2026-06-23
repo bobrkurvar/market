@@ -1,4 +1,5 @@
 from sqlalchemy import inspect
+from sqlalchemy.util.preloaded import orm_base
 
 import domain
 from db import models
@@ -33,19 +34,25 @@ def map_admin_to_orm(d_obj: domain.Admin) -> models.AdminOrm:
 
 
 def map_seller_to_domain(orm_obj: models.Seller) -> domain.Seller:
-    rating = None
-    if "rating" not in inspect(orm_obj).unloaded:
-        rating = orm_obj.rating
     return domain.Seller(
         seller_id=orm_obj.id,
         username=orm_obj.username,
-        rating=rating,
+        rating=orm_obj.rating,
         password=orm_obj.password,
+        reviews_count=orm_obj.reviews_count,
+        sales_count=orm_obj.sales_count
     )
 
 
 def map_seller_to_orm(d_obj: domain.Seller) -> models.Seller:
-    return models.Seller(id=d_obj.id, username=d_obj.username, password=d_obj.password)
+    return models.Seller(
+        id=d_obj.id,
+        username=d_obj.username,
+        password=d_obj.password,
+        rating=d_obj.rating,
+        reviews_count=d_obj.reviews_count,
+        sales_count=d_obj.sales_count
+    )
 
 
 registry.register(

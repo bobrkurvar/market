@@ -1,19 +1,24 @@
 from fastapi import APIRouter
 
 from adapters.deps import UowDep, GetUserDep
-from domain import Order
-from api.schemas import OrderRead, DisputeCreate
+from domain import Order, Review
+from api.schemas import OrderDetailRead, DisputeCreate, ReviewRead
 
 router = APIRouter(prefix="/orders")
 
 
-@router.get("/{order_id}", response_model=OrderRead)
+
+@router.get("/{order_id}", response_model=OrderDetailRead)
 async def get_order_details(user: GetUserDep, order_id: int, uow: UowDep):
     async with uow:
-        return await uow.order.get_users_order(
+        order = await uow.order.get_users_order(
             order_id=order_id,
             user_id=user.id
         )
+        review = await uow.db.read_one(Review, order_id=order.id)
+        result = OrderDetailRead.model_validate(order)
+        result.review=review
+        return result
 
 
 @router.get("/{order_id}/messages")
@@ -41,3 +46,4 @@ async def get_order_dispute(user: GetUserDep, order_id: int, uow: UowDep):
 async def get_disputes_messages(user: GetUserDep, order_id: int, uow: UowDep):
     async with uow:
         return await uow.dispute.get_user_dispute_messages(order_id=order_id, user_id=user.id)
+
