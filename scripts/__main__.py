@@ -3,16 +3,18 @@ import sys
 
 from scripts.create_admins import main as create_admins_main
 from scripts.seed_data import main as seed_data_main
+from scripts.seed_presentation import main as seed_presentation_main
 
 async def interactive_menu():
     while True:
         print("\n=== Менеджер скриптов myMarket ===")
         print("1. Создать администратора (create_admins.py)")
         print("2. Сгенерировать тестовые данные (seed_data.py)")
+        print("3. Сгенерировать презентабельные данные данные (seed_presentation_old.py)")
         print("0. Выход")
         print("==================================\n")
 
-        choice = input("Выберите скрипт для запуска (1, 2 или 0): ").strip()
+        choice = input("Выберите скрипт для запуска (1, 2, 3 или 0): ").strip()
 
         if choice == "1":
             print("\n⏳ Запуск create_admins...")
@@ -21,6 +23,10 @@ async def interactive_menu():
         elif choice == "2":
             print("\n⏳ Запуск seed_data (это может занять время)...")
             await seed_data_main()
+            print("✅ Готово!")
+        elif choice == "3":
+            print("\n⏳ Запуск seed_presentation (это может занять время)...")
+            await seed_presentation_main()
             print("✅ Готово!")
         elif choice == "0":
             print("Выход.")

@@ -87,6 +87,26 @@ LEAF_FILTERS_POOL = [
 ]
 
 
+# Цена фильтруется отдельными параметрами min_price / max_price,
+# поэтому ей не требуются дискретные варианты.
+PRICE_FILTER_KEYS = {"price", "min_price", "max_price"}
+
+
+def validate_filter_options(filter_config: list[CategoryAttr]) -> list[CategoryAttr]:
+    """Проверяет, что каждый дискретный фильтр категории имеет варианты."""
+    for attr in filter_config:
+        if attr.key in PRICE_FILTER_KEYS:
+            continue
+
+        if not attr.options:
+            raise ValueError(
+                f"У фильтра '{attr.key}' должны быть options. "
+                "Свободный ввод в seed-данных не используется."
+            )
+
+    return filter_config
+
+
 def get_files_from_dir(directory: str) -> list[str]:
     """Безопасно получает список файлов из папки"""
     if os.path.exists(directory):
@@ -129,7 +149,9 @@ async def seed_data(uow, product_file_manager, category_file_manager, img_genera
         with open(os.path.join(SOURCE_CAT_DIR, img_filename), "rb") as f:
             img_bytes = f.read()
 
-        filter_config = random.choice(FOLDER_FILTERS_POOL)
+        filter_config = validate_filter_options(
+            random.choice(FOLDER_FILTERS_POOL)
+        )
 
         saved_folder = await create_category(
             uow=uow,
@@ -154,7 +176,9 @@ async def seed_data(uow, product_file_manager, category_file_manager, img_genera
         with open(os.path.join(SOURCE_CAT_DIR, img_filename), "rb") as f:
             img_bytes = f.read()
 
-        filter_config = random.choice(LEAF_FILTERS_POOL)
+        filter_config = validate_filter_options(
+            random.choice(LEAF_FILTERS_POOL)
+        )
 
         saved_leaf = await create_category(
             uow=uow,
@@ -293,12 +317,11 @@ async def seed_data(uow, product_file_manager, category_file_manager, img_genera
                 # Сценарий 3: Ручная выдача (Бесконечная услуга)
                 stock_value = None
 
-            variant_attributes = {}
-            for attr in expected_attrs:
-                if attr.options:
-                    variant_attributes[attr.key] = random.choice(attr.options)
-                else:
-                    variant_attributes[attr.key] = fake.word().capitalize()
+            variant_attributes = {
+                attr.key: random.choice(attr.options)
+                for attr in expected_attrs
+                if attr.key not in PRICE_FILTER_KEYS
+            }
 
             # Добавим логику и в атрибуты: автовыдача - моментальная, ручная - в течение часа
             variant_attributes["Доставка"] = "Моментальная" if delivery_type == "auto" else "В течение 1-2 часов"

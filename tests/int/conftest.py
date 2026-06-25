@@ -34,7 +34,6 @@ async def uow(request, db_provider):
                     product_items,
                     products,
                     orders,
-                    clients,
                     sellers,
                     users,
                     categories,
@@ -99,9 +98,9 @@ async def saved_category_with_strict_attrs(uow):
 
 
 @pytest.fixture
-async def saved_client(uow):
+async def saved_user(uow):
     async with uow:
-        return await uow.db.create(Client(username="test_client", password="password"))
+        return await uow.db.create(User(username="test_client", password="password"))
 
 
 @pytest.fixture

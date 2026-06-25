@@ -64,7 +64,7 @@ class ProductVariant:
         items: Collection[ProductItem] | ProductItem = None,
         attributes: dict | None = None,
         buyer_message: str | None = None,
-        stock: int | None = -1
+        stock: int = -1
     ):
         self.product = product
         self.product_id = product.id if product else product_id
@@ -85,7 +85,7 @@ class ProductVariant:
     def increase(self, amount: int):
         if amount < 0:
             raise ValueError("amount должен быть больше 0")
-        if self.stock is not None:
+        if self.stock != -1:
             self.stock += amount
 
     @property

@@ -95,7 +95,7 @@ class Order:
         self.buyer_id = buyer.id if buyer else buyer_id
         self.seller = seller
         self.seller_id = seller.id if seller else seller_id
-        self.product_variant = product_variant
+        self._product_variant = product_variant
         self.product_variant_id = (
             product_variant.id if product_variant else product_variant_id
         )
@@ -123,15 +123,31 @@ class Order:
             raise ValueError(
                 "Нельзя передавать товарные позиции при инициализации нового заказа"
             )
+        if self.amount <= 0:
+            raise ValueError("Нельзя оформить заказ меньше чем с 1 товаром")
+
+    @property
+    def product_variant(self):
+        if self._product_variant is None:
+            raise ValueError("Нужен вариант товара (product_variant)")
+        return self._product_variant
 
 
     @property
-    def items(self):
+    def product_items(self) -> list[ProductItem]:
         if self._items is None:
-            raise ValueError("Заказ не может быть без товарных позиций")
-        if not self.is_paid():
-            raise ValueError("Ключи можно прочитать только у оплаченного твоара")
+            raise ValueError(
+                "Нужен состав товара"
+            )
         return self._items
+
+
+    @property
+    def items(self) -> list[ProductItem]:
+        if not self.is_paid():
+            raise ValueError("Ключи можно прочитать только у оплаченного товара")
+        return self.product_items
+
 
     def cancel(self):
         if self.is_paid():
@@ -146,17 +162,18 @@ class Order:
         if not self.is_pending():
             raise ValueError("Заказ нельзя отменить в текущем статусе")
 
-        if self._items is None:
+        items = self.product_items
+        if not items:
             self.product_variant.increase(self.amount)
         else:
-            for item in self._items:
+            for item in items:
                 item.release()
 
         self.status = OrderStatuses.cancelled
 
     def pay(self):
         if self.is_paid():
-            raise OrderAlreadyPaidError(f"Заказ {self.id} уже оплачен")
+            raise OrderAlreadyPaidError(order_id=self.id)
 
         if self.is_cancelled():
             raise ValueError("Попытка оплатить отменённый заказ")
@@ -167,9 +184,8 @@ class Order:
         if not self.is_pending():
             raise ValueError("Заказ нельзя оплатить в текущем статусе")
 
-        if self._items:
-            for item in self._items:
-                item.confirm_purchase()
+        for item in self.product_items:
+            item.confirm_purchase()
 
         self.status = OrderStatuses.paid
 

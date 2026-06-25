@@ -28,7 +28,7 @@ def setup_logging():
         # console_handler.addFilter(IgnoreFilter())
         logger.addHandler(console_handler)
     logging.getLogger("asyncio").setLevel(logging.WARNING)
-
+    logging.getLogger("faker").setLevel(logging.WARNING)
     logger.addFilter(IgnoreFilter())
 
 
@@ -37,4 +37,5 @@ def setup_test_logging():
     logger.setLevel(logging.DEBUG)
     # Не добавляем StreamHandler
     logging.getLogger("asyncio").setLevel(logging.WARNING)
+    logging.getLogger("faker").setLevel(logging.WARNING)
     logger.addFilter(IgnoreFilter())

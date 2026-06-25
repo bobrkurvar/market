@@ -2,7 +2,10 @@ from .user import User
 
 class OrderAlreadyPaidError(ValueError):
     """Исключение: заказ уже был успешно оплачен ранее."""
-    pass
+    def __init__(self, order_id: int):
+        self.id = order_id
+        super().__init__(f"Заказ {self.id} уже оплачен")
+
 
 
 class RepositoryError(Exception):

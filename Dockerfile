@@ -41,7 +41,6 @@ WORKDIR /app
 COPY frontend/package*.json .
 RUN npm install
 COPY frontend .
-#ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npx nuxt generate
 
 FROM nginx:1.27-alpine AS frontend

@@ -100,6 +100,8 @@ services:
     volumes:
       - ./scripts/seed_categories:/app/scripts/seed_categories
       - ./scripts/seed_products:/app/scripts/seed_products
+      - ./scripts/categories_images:/app/scripts/categories_images
+      - ./scripts/products_images:/app/scripts/products_images
       - ./media:/app/media
     restart: "no"
     stdin_open: true # Эквивалент флага -i в docker run

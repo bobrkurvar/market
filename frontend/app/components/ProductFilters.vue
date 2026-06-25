@@ -15,7 +15,7 @@
 
             <div v-if="filter.type === 'checkbox'" class="space-y-2">
               <UCheckbox
-                v-for="option in filter.options"
+                v-for="option in getOptions(filter)"
                 :key="option"
                 :label="option"
                 :model-value="draftFilters[filter.key]?.includes(option)"
@@ -25,7 +25,7 @@
 
             <div v-else-if="filter.type === 'radio'" class="space-y-2">
               <URadio
-                v-for="option in filter.options"
+                v-for="option in getOptions(filter)"
                 :key="option"
                 v-model="draftFilters[filter.key]"
                 :value="option"
@@ -36,9 +36,9 @@
             <div v-else-if="filter.type === 'select'">
               <USelectMenu
                 v-model="draftFilters[filter.key]"
-                :options="filter.options"
+                :items="getOptions(filter)"
                 placeholder="Выберите..."
-                clearable
+                clear
               />
             </div>
 
@@ -83,6 +83,10 @@ const props = defineProps({
 const route = useRoute()
 const router = useRouter()
 const draftFilters = ref({})
+
+const getOptions = (filter) => {
+  return Array.isArray(filter?.options) ? filter.options : []
+}
 
 const syncFromUrl = () => {
   const q = route.query

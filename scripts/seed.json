@@ -1,0 +1,727 @@
+{
+  "users": [
+    {
+      "username": "demo_buyer",
+      "password": "demo12345"
+    },
+    {
+      "username": "demo_customer",
+      "password": "demo12345"
+    },
+    {
+      "username": "anna_k",
+      "password": "demo12345"
+    },
+    {
+      "username": "mikhail_dev",
+      "password": "demo12345"
+    },
+    {
+      "username": "elena_play",
+      "password": "demo12345"
+    },
+    {
+      "username": "sergey_v",
+      "password": "demo12345"
+    }
+  ],
+  "sellers": [
+    {
+      "username": "pixel_port",
+      "password": "demo12345"
+    },
+    {
+      "username": "soft_hub",
+      "password": "demo12345"
+    },
+    {
+      "username": "digital_care",
+      "password": "demo12345"
+    }
+  ],
+  "categories": [
+    {
+      "name": "Игры и дополнения",
+      "is_folder": true,
+      "image": "games.png",
+      "filter_config": [
+        {
+          "key": "platform",
+          "label": "Платформа",
+          "type": "checkbox",
+          "options": [
+            "Steam",
+            "Epic Games",
+            "EA app"
+          ],
+          "strict_options": true
+        },
+        {
+          "key": "region",
+          "label": "Регион активации",
+          "type": "select",
+          "options": [
+            "Global",
+            "СНГ",
+            "Турция"
+          ],
+          "strict_options": true
+        }
+      ]
+    },
+    {
+      "name": "Steam-ключи",
+      "parent": "Игры и дополнения",
+      "is_folder": false,
+      "image": "steam-keys.png",
+      "filter_config": [
+        {
+          "key": "edition",
+          "label": "Издание",
+          "type": "checkbox",
+          "options": [
+            "Standard",
+            "Deluxe",
+            "Ultimate"
+          ],
+          "strict_options": true
+        },
+        {
+          "key": "language",
+          "label": "Язык",
+          "type": "select",
+          "options": [
+            "Русский",
+            "English",
+            "Multilanguage"
+          ],
+          "strict_options": true
+        }
+      ]
+    },
+    {
+      "name": "Игровые подписки",
+      "parent": "Игры и дополнения",
+      "is_folder": false,
+      "image": "game-subscriptions.png",
+      "filter_config": [
+        {
+          "key": "duration",
+          "label": "Срок действия",
+          "type": "select",
+          "options": [
+            "1 месяц",
+            "3 месяца",
+            "12 месяцев"
+          ],
+          "strict_options": true
+        },
+        {
+          "key": "activation",
+          "label": "Способ активации",
+          "type": "radio",
+          "options": [
+            "Код активации",
+            "Подарочная ссылка"
+          ],
+          "strict_options": true
+        }
+      ]
+    },
+    {
+      "name": "Программное обеспечение",
+      "is_folder": true,
+      "image": "software.png",
+      "filter_config": [
+        {
+          "key": "os",
+          "label": "Операционная система",
+          "type": "radio",
+          "options": [
+            "Windows 11",
+            "Windows 10",
+            "macOS"
+          ],
+          "strict_options": true
+        },
+        {
+          "key": "region",
+          "label": "Регион активации",
+          "type": "select",
+          "options": [
+            "Global",
+            "Россия"
+          ],
+          "strict_options": true
+        }
+      ]
+    },
+    {
+      "name": "Лицензии и подписки",
+      "parent": "Программное обеспечение",
+      "is_folder": false,
+      "image": "licenses.png",
+      "filter_config": [
+        {
+          "key": "license_type",
+          "label": "Тип лицензии",
+          "type": "radio",
+          "options": [
+            "Retail",
+            "OEM",
+            "Subscription"
+          ],
+          "strict_options": true
+        },
+        {
+          "key": "duration",
+          "label": "Срок действия",
+          "type": "select",
+          "options": [
+            "1 месяц",
+            "12 месяцев",
+            "Навсегда"
+          ],
+          "strict_options": true
+        }
+      ]
+    },
+    {
+      "name": "Цифровые услуги",
+      "is_folder": true,
+      "image": "services.png",
+      "filter_config": [
+        {
+          "key": "delivery_format",
+          "label": "Формат выполнения",
+          "type": "radio",
+          "options": [
+            "Автоматическая",
+            "Ручная"
+          ],
+          "strict_options": true
+        }
+      ]
+    },
+    {
+      "name": "Настройка и сопровождение",
+      "parent": "Цифровые услуги",
+      "is_folder": false,
+      "image": "device-setup.png",
+      "filter_config": [
+        {
+          "key": "service_level",
+          "label": "Уровень услуги",
+          "type": "select",
+          "options": [
+            "Базовый",
+            "Стандарт",
+            "Премиум"
+          ],
+          "strict_options": true
+        },
+        {
+          "key": "execution_time",
+          "label": "Срок выполнения",
+          "type": "radio",
+          "options": [
+            "В течение часа",
+            "В течение дня"
+          ],
+          "strict_options": true
+        }
+      ]
+    }
+  ],
+  "products": [
+    {
+      "title": "Neon Frontier",
+      "description": "Научно-фантастический экшен в открытом мегаполисе. Исследуйте районы города, собирайте снаряжение и проходите сюжетную кампанию в одиночку или вместе с друзьями.",
+      "seller": "pixel_port",
+      "category": "Steam-ключи",
+      "image": "neon-frontier.png",
+      "buyer_message": "Ключ активируется в Steam. После активации игра остаётся в вашей библиотеке навсегда.",
+      "variants": [
+        {
+          "price": 1299,
+          "attributes": {
+            "platform": "Steam",
+            "region": "Global",
+            "edition": "Standard",
+            "language": "Multilanguage",
+            "Доставка": "Моментальная"
+          },
+          "items": [
+            "DEMO-NF-SG-0001",
+            "DEMO-NF-SG-0002",
+            "DEMO-NF-SG-0003",
+            "DEMO-NF-SG-0004",
+            "DEMO-NF-SG-0005"
+          ]
+        },
+        {
+          "price": 1799,
+          "buyer_message": "Deluxe-издание включает цифровой артбук и набор внутриигровых предметов.",
+          "attributes": {
+            "platform": "Steam",
+            "region": "Global",
+            "edition": "Deluxe",
+            "language": "Multilanguage",
+            "Доставка": "Моментальная"
+          },
+          "items": [
+            "DEMO-NF-DG-0001",
+            "DEMO-NF-DG-0002",
+            "DEMO-NF-DG-0003"
+          ]
+        }
+      ],
+      "reviews": [
+        {
+          "author": "demo_buyer",
+          "rating": 5,
+          "comment": "Ключ пришёл сразу, активировался без проблем. Игра выглядит очень атмосферно."
+        },
+        {
+          "author": "anna_k",
+          "rating": 4,
+          "comment": "Всё работает, покупкой довольна. Deluxe-издание тоже активировалось без задержек.",
+          "variant_index": 1
+        }
+      ]
+    },
+    {
+      "title": "Kingdoms of Ash",
+      "description": "Фэнтезийская RPG с тактическими боями, исследованием древних руин и решениями, которые влияют на судьбу королевства.",
+      "seller": "pixel_port",
+      "category": "Steam-ключи",
+      "image": "kingdoms-of-ash.png",
+      "variants": [
+        {
+          "price": 999,
+          "attributes": {
+            "platform": "Steam",
+            "region": "СНГ",
+            "edition": "Standard",
+            "language": "Русский",
+            "Доставка": "Моментальная"
+          },
+          "items": [
+            "DEMO-KA-SC-0001",
+            "DEMO-KA-SC-0002",
+            "DEMO-KA-SC-0003",
+            "DEMO-KA-SC-0004"
+          ]
+        },
+        {
+          "price": 1699,
+          "attributes": {
+            "platform": "Steam",
+            "region": "Global",
+            "edition": "Ultimate",
+            "language": "Multilanguage",
+            "Доставка": "Моментальная"
+          },
+          "items": [
+            "DEMO-KA-UG-0001",
+            "DEMO-KA-UG-0002"
+          ]
+        }
+      ],
+      "reviews": [
+        {
+          "author": "demo_customer",
+          "rating": 5,
+          "comment": "Отличная RPG, русский язык на месте. Код получил моментально."
+        },
+        {
+          "author": "mikhail_dev",
+          "rating": 4,
+          "comment": "Ключ рабочий, активация прошла быстро. Сама игра понравилась."
+        }
+      ]
+    },
+    {
+      "title": "Rally Fusion",
+      "description": "Аркадный автосимулятор с карьерой, сезонными турнирами, динамической погодой и поддержкой контроллера.",
+      "seller": "pixel_port",
+      "category": "Steam-ключи",
+      "image": "rally-fusion.png",
+      "variants": [
+        {
+          "price": 799,
+          "attributes": {
+            "platform": "Steam",
+            "region": "Global",
+            "edition": "Standard",
+            "language": "English",
+            "Доставка": "Моментальная"
+          },
+          "items": [
+            "DEMO-RF-SG-0001",
+            "DEMO-RF-SG-0002",
+            "DEMO-RF-SG-0003"
+          ]
+        }
+      ],
+      "reviews": [
+        {
+          "author": "elena_play",
+          "rating": 4,
+          "comment": "Хорошая аркадная гонка для вечера. Ключ активировался сразу."
+        }
+      ]
+    },
+    {
+      "title": "Citadel Keepers",
+      "description": "Кооперативная стратегия о защите крепости: стройте оборону, управляйте ресурсами и отражайте волны противников.",
+      "seller": "pixel_port",
+      "category": "Steam-ключи",
+      "image": "citadel-keepers.png",
+      "variants": [
+        {
+          "price": 649,
+          "attributes": {
+            "platform": "Steam",
+            "region": "Турция",
+            "edition": "Standard",
+            "language": "English",
+            "Доставка": "Моментальная"
+          },
+          "items": [
+            "DEMO-CK-ST-0001",
+            "DEMO-CK-ST-0002",
+            "DEMO-CK-ST-0003"
+          ]
+        }
+      ],
+      "reviews": [
+        {
+          "author": "sergey_v",
+          "rating": 5,
+          "comment": "Брал для кооператива с друзьями. Код пришёл мгновенно, всё отлично."
+        }
+      ]
+    },
+    {
+      "title": "Arcade Pass Ultimate",
+      "description": "Подписка на каталог игр с облачным запуском, ежемесячными бонусами и доступом к сетевым функциям.",
+      "seller": "pixel_port",
+      "category": "Игровые подписки",
+      "image": "arcade-pass.png",
+      "buyer_message": "Код вводится в личном кабинете сервиса. Аккаунт не передаётся.",
+      "variants": [
+        {
+          "price": 449,
+          "attributes": {
+            "platform": "Steam",
+            "region": "Global",
+            "duration": "1 месяц",
+            "activation": "Код активации",
+            "Доставка": "Моментальная"
+          },
+          "items": [
+            "DEMO-AP-1M-0001",
+            "DEMO-AP-1M-0002",
+            "DEMO-AP-1M-0003",
+            "DEMO-AP-1M-0004"
+          ]
+        },
+        {
+          "price": 3299,
+          "attributes": {
+            "platform": "Steam",
+            "region": "Global",
+            "duration": "12 месяцев",
+            "activation": "Код активации",
+            "Доставка": "Моментальная"
+          },
+          "items": [
+            "DEMO-AP-12M-0001",
+            "DEMO-AP-12M-0002"
+          ]
+        }
+      ],
+      "reviews": [
+        {
+          "author": "anna_k",
+          "rating": 5,
+          "comment": "Подписка активировалась сразу. Удобно, что код пришёл автоматически."
+        },
+        {
+          "author": "demo_buyer",
+          "rating": 4,
+          "comment": "Всё работает. Хорошая цена за годовой вариант.",
+          "variant_index": 1
+        }
+      ]
+    },
+    {
+      "title": "CloudPlay Plus",
+      "description": "Подписка на облачный игровой сервис. Подходит для игры на слабом ПК, ноутбуке и планшете.",
+      "seller": "pixel_port",
+      "category": "Игровые подписки",
+      "image": "cloudplay-plus.png",
+      "variants": [
+        {
+          "price": 399,
+          "stock": 20,
+          "buyer_message": "После оплаты продавец отправит персональную ссылку в чат заказа.",
+          "attributes": {
+            "platform": "Epic Games",
+            "region": "СНГ",
+            "duration": "1 месяц",
+            "activation": "Подарочная ссылка",
+            "Доставка": "В течение 1-2 часов"
+          }
+        },
+        {
+          "price": 2999,
+          "stock": 8,
+          "attributes": {
+            "platform": "Epic Games",
+            "region": "СНГ",
+            "duration": "12 месяцев",
+            "activation": "Подарочная ссылка",
+            "Доставка": "В течение 1-2 часов"
+          }
+        }
+      ],
+      "reviews": [
+        {
+          "author": "mikhail_dev",
+          "rating": 4,
+          "comment": "Ссылку прислали в чат примерно через час. На ноутбуке сервис работает стабильно."
+        }
+      ]
+    },
+    {
+      "title": "SystemCore 11 Pro",
+      "description": "Цифровая лицензия для настольной операционной системы. Подходит для чистой установки и активации существующей системы.",
+      "seller": "soft_hub",
+      "category": "Лицензии и подписки",
+      "image": "systemcore-11.png",
+      "buyer_message": "Перед покупкой убедитесь, что выбран правильный выпуск системы.",
+      "variants": [
+        {
+          "price": 1199,
+          "attributes": {
+            "os": "Windows 11",
+            "region": "Global",
+            "license_type": "Retail",
+            "duration": "Навсегда",
+            "Доставка": "Моментальная"
+          },
+          "items": [
+            "DEMO-SC-RG-0001",
+            "DEMO-SC-RG-0002",
+            "DEMO-SC-RG-0003",
+            "DEMO-SC-RG-0004"
+          ]
+        },
+        {
+          "price": 699,
+          "attributes": {
+            "os": "Windows 11",
+            "region": "Россия",
+            "license_type": "OEM",
+            "duration": "Навсегда",
+            "Доставка": "Моментальная"
+          },
+          "items": [
+            "DEMO-SC-OR-0001",
+            "DEMO-SC-OR-0002",
+            "DEMO-SC-OR-0003"
+          ]
+        }
+      ],
+      "reviews": [
+        {
+          "author": "demo_customer",
+          "rating": 5,
+          "comment": "Лицензия подошла для чистой установки, активация прошла успешно."
+        },
+        {
+          "author": "sergey_v",
+          "rating": 4,
+          "comment": "Ключ рабочий, инструкция понятная. Всё установилось без сложностей.",
+          "variant_index": 1
+        }
+      ]
+    },
+    {
+      "title": "OfficeFlow 365 Personal",
+      "description": "Набор офисных приложений с облачным хранилищем и синхронизацией документов между устройствами.",
+      "seller": "soft_hub",
+      "category": "Лицензии и подписки",
+      "image": "officeflow-365.png",
+      "variants": [
+        {
+          "price": 2399,
+          "attributes": {
+            "os": "Windows 11",
+            "region": "Global",
+            "license_type": "Subscription",
+            "duration": "12 месяцев",
+            "Доставка": "Моментальная"
+          },
+          "items": [
+            "DEMO-OF-WG-0001",
+            "DEMO-OF-WG-0002",
+            "DEMO-OF-WG-0003"
+          ]
+        },
+        {
+          "price": 2399,
+          "attributes": {
+            "os": "macOS",
+            "region": "Global",
+            "license_type": "Subscription",
+            "duration": "12 месяцев",
+            "Доставка": "Моментальная"
+          },
+          "items": [
+            "DEMO-OF-MG-0001",
+            "DEMO-OF-MG-0002"
+          ]
+        }
+      ],
+      "reviews": [
+        {
+          "author": "elena_play",
+          "rating": 5,
+          "comment": "Подписка активировалась без проблем, удобно использовать на нескольких устройствах."
+        },
+        {
+          "author": "anna_k",
+          "rating": 4,
+          "comment": "Всё хорошо, приложения работают как ожидалось.",
+          "variant_index": 1
+        }
+      ]
+    },
+    {
+      "title": "SecureShield Total",
+      "description": "Антивирусная защита для одного устройства: защита браузера, менеджер паролей и мониторинг утечек.",
+      "seller": "soft_hub",
+      "category": "Лицензии и подписки",
+      "image": "secure-shield.png",
+      "variants": [
+        {
+          "price": 899,
+          "attributes": {
+            "os": "Windows 10",
+            "region": "Россия",
+            "license_type": "Subscription",
+            "duration": "12 месяцев",
+            "Доставка": "Моментальная"
+          },
+          "items": [
+            "DEMO-SS-WR-0001",
+            "DEMO-SS-WR-0002",
+            "DEMO-SS-WR-0003",
+            "DEMO-SS-WR-0004"
+          ]
+        }
+      ],
+      "reviews": [
+        {
+          "author": "demo_buyer",
+          "rating": 5,
+          "comment": "Ключ пришёл сразу, защита активировалась на первом запуске."
+        }
+      ]
+    },
+    {
+      "title": "DesignCanvas Pro",
+      "description": "Инструмент для создания презентаций, баннеров и публикаций для социальных сетей с библиотекой готовых шаблонов.",
+      "seller": "soft_hub",
+      "category": "Лицензии и подписки",
+      "image": "design-canvas.png",
+      "variants": [
+        {
+          "price": 349,
+          "stock": null,
+          "buyer_message": "Продавец подключит подписку к указанному в чате адресу электронной почты.",
+          "attributes": {
+            "os": "macOS",
+            "region": "Global",
+            "license_type": "Subscription",
+            "duration": "1 месяц",
+            "Доставка": "В течение 1-2 часов"
+          }
+        }
+      ],
+      "reviews": [
+        {
+          "author": "mikhail_dev",
+          "rating": 4,
+          "comment": "Подписку подключили в тот же день. Подходит для быстрых макетов и презентаций."
+        }
+      ]
+    },
+    {
+      "title": "Настройка защищённого VPN на 1 устройство",
+      "description": "Настройка защищённого подключения на Windows, macOS или смартфоне. Включает проверку подключения и краткую инструкцию.",
+      "seller": "digital_care",
+      "category": "Настройка и сопровождение",
+      "image": "vpn-setup.png",
+      "buyer_message": "После оплаты напишите в чат модель устройства и удобное время для связи.",
+      "variants": [
+        {
+          "price": 590,
+          "stock": 12,
+          "attributes": {
+            "delivery_format": "Ручная",
+            "service_level": "Базовый",
+            "execution_time": "В течение часа",
+            "Доставка": "В течение 1-2 часов"
+          }
+        },
+        {
+          "price": 1290,
+          "stock": 6,
+          "attributes": {
+            "delivery_format": "Ручная",
+            "service_level": "Премиум",
+            "execution_time": "В течение дня",
+            "Доставка": "В течение 1-2 часов"
+          }
+        }
+      ],
+      "reviews": [
+        {
+          "author": "sergey_v",
+          "rating": 5,
+          "comment": "Специалист быстро настроил подключение и объяснил, как пользоваться. Рекомендую."
+        }
+      ]
+    },
+    {
+      "title": "Консультация по настройке игрового аккаунта",
+      "description": "Индивидуальная консультация по безопасности аккаунта, двухфакторной защите и настройке семейного доступа.",
+      "seller": "digital_care",
+      "category": "Настройка и сопровождение",
+      "image": "account-consultation.png",
+      "variants": [
+        {
+          "price": 790,
+          "stock": null,
+          "attributes": {
+            "delivery_format": "Ручная",
+            "service_level": "Стандарт",
+            "execution_time": "В течение дня",
+            "Доставка": "В течение 1-2 часов"
+          }
+        }
+      ],
+      "reviews": [
+        {
+          "author": "demo_customer",
+          "rating": 5,
+          "comment": "Получил понятную консультацию по защите аккаунта и двухфакторной авторизации."
+        }
+      ]
+    }
+  ]
+}
