@@ -22,6 +22,7 @@ class OrderDetailRead(OrderListRead):
     items: list[ProductItemRead]
     review: ReviewRead | None = None
 
+
     class Config:
         from_attributes = True
 

@@ -9,7 +9,7 @@ from PIL import Image, ImageOps
 from pydantic import BaseModel
 
 from core.logger import setup_logging
-from shared import CATEGORY_CATALOG, CATEGORY_SEARCH, DETAILS, PRODUCTS
+from shared import CATEGORY_CATALOG, CATEGORY_SEARCH, DETAILS, PRODUCTS, LAYERS_IMAGE_FORMAT
 
 setup_logging()
 
@@ -55,13 +55,13 @@ def resize_image(
 
 def image_to_bytes(
     img: Image.Image,
-    img_format: str = "WEBP",
+    #img_format: str = LAYERS_IMAGE_FORMAT,
     quality: int = 82,
 ) -> bytes:
     buf = BytesIO()
     img.save(
         buf,
-        format=img_format,
+        format=LAYERS_IMAGE_FORMAT,
         method=4,
         quality=quality,
     )

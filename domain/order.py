@@ -184,9 +184,14 @@ class Order:
         if not self.is_pending():
             raise ValueError("Заказ нельзя оплатить в текущем статусе")
 
+        if self.seller is None:
+            raise ValueError(
+                "Для подтверждения оплаты нужен продавец (передайте seller)"
+            )
+
         for item in self.product_items:
             item.confirm_purchase()
-
+        self.seller.sales_count += 1
         self.status = OrderStatuses.paid
 
     def reserve_items(self, items: Collection[ProductItem] | ProductItem):

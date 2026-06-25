@@ -2,7 +2,8 @@ from fastapi import APIRouter
 
 from adapters.deps import UowDep, GetUserDep
 from domain import Order, Review
-from api.schemas import OrderDetailRead, DisputeCreate, ReviewRead
+from api.schemas import OrderDetailRead, DisputeCreate
+
 
 router = APIRouter(prefix="/orders")
 

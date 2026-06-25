@@ -11,6 +11,7 @@ log = logging.getLogger(__name__)
 async def create_product(
     uow,
     img: bytes,
+    extension: str,
     file_manager,
     img_generator,
     product: Product,
@@ -39,7 +40,8 @@ async def create_product(
                     raise ValueError(f"Значение '{val}' недопустимо для '{rule['label']}'. Доступные: {', '.join(rule['options'])}")
 
     async with file_manager.session() as files:
-        file_name = await hash_calculator(img)
+        file_name = await hash_calculator(img)+extension
+        #file_name = await hash_calculator(img)
         image_path = file_manager.base_product_path(file_name)
         log.debug("save file by path: %s", str(image_path))
         try:

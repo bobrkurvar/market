@@ -66,15 +66,20 @@ class ProductImagesManager(FileManager):
     def base_product_path(self, file_name: str) -> Path:
         return self.resolve_path(file_name, ORIGINAL_PRODUCT)
 
+    # def get_product_catalog_image_path(self, base_path: str) -> str:
+    #     base_path = Path(base_path)
+    #     name = base_path.name
+    #     return str(self.resolve_path(name, PRODUCTS))
+    #
+    # def get_product_details_image_path(self, base_path: str) -> str:
+    #     base_path = Path(base_path)
+    #     name = base_path.name
+    #     return str(self.resolve_path(name, DETAILS))
     def get_product_catalog_image_path(self, base_path: str) -> str:
-        base_path = Path(base_path)
-        name = base_path.name
-        return str(self.resolve_path(name, PRODUCTS))
+        return self.get_layer_path(base_path=base_path, layer=PRODUCTS)
 
     def get_product_details_image_path(self, base_path: str) -> str:
-        base_path = Path(base_path)
-        name = base_path.name
-        return str(self.resolve_path(name, DETAILS))
+        return self.get_layer_path(base_path=base_path, layer=DETAILS)
 
 
 class CategoryImagesManager(FileManager):
@@ -89,13 +94,19 @@ class CategoryImagesManager(FileManager):
 
     def base_category_path(self, file_name: str) -> Path:
         return self.resolve_path(file_name, ORIGINAL_CATEGORY)
+    #
+    # def get_category_catalog_image_path(self, base_path: str) -> str:
+    #     base_path = Path(base_path)
+    #     name = base_path.name
+    #     return str(self.resolve_path(name, CATEGORY_CATALOG))
+    #
+    # def get_category_search_image_path(self, base_path: str) -> str:
+    #     base_path = Path(base_path)
+    #     name = base_path.name
+    #     return str(self.resolve_path(name, CATEGORY_SEARCH))
 
     def get_category_catalog_image_path(self, base_path: str) -> str:
-        base_path = Path(base_path)
-        name = base_path.name
-        return str(self.resolve_path(name, CATEGORY_CATALOG))
+        return self.get_layer_path(base_path=base_path, layer=CATEGORY_CATALOG)
 
     def get_category_search_image_path(self, base_path: str) -> str:
-        base_path = Path(base_path)
-        name = base_path.name
-        return str(self.resolve_path(name, CATEGORY_SEARCH))
+        return self.get_layer_path(base_path=base_path, layer=CATEGORY_SEARCH)

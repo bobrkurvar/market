@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -20,13 +21,16 @@ from domain import (
     CategoryAttr,
     Product,
     ProductItem,
+    ProductItemStatuses,
     ProductVariant,
+    Order,
     UserRole,
 )
 from infra.security import async_hash_calculate
 from services.auth import create_user
 from services.category import create_category
 from services.product import create_product
+from services.order import create_order_review
 
 
 setup_logging()
@@ -209,6 +213,33 @@ def preflight_validate(seed: dict[str, Any]) -> None:
                 f"«{product_data['category']}»."
             )
 
+        variants = product_data.get("variants", [])
+        for review_data in product_data.get("reviews", []):
+            author = review_data.get("author")
+            rating = review_data.get("rating")
+            variant_index = review_data.get("variant_index", 0)
+
+            if author not in set(user_names):
+                raise ValueError(
+                    f"У отзыва товара «{product_data['title']}» не найден "
+                    f"пользователь «{author}»."
+                )
+
+            if not isinstance(rating, int) or not 1 <= rating <= 5:
+                raise ValueError(
+                    f"У отзыва товара «{product_data['title']}» rating "
+                    "должен быть целым числом от 1 до 5."
+                )
+
+            if (
+                not isinstance(variant_index, int)
+                or not 0 <= variant_index < len(variants)
+            ):
+                raise ValueError(
+                    f"У отзыва товара «{product_data['title']}» указан "
+                    f"некорректный variant_index: {variant_index}."
+                )
+
 
 async def create_demo_users(
     seed: dict[str, Any],
@@ -337,8 +368,9 @@ async def create_demo_products(
     categories_by_name: dict[str, Category],
     product_file_manager: ProductImagesManager,
     img_generator: ImageGenerator,
-) -> None:
+) -> dict[str, Product]:
     log.info("Создаём demo-товары...")
+    products_by_title: dict[str, Product] = {}
 
     for product_data in seed.get("products", []):
         title = product_data["title"]
@@ -372,14 +404,11 @@ async def create_demo_products(
                 attributes=attributes,
             )
 
-            # Всегда передаём список: [] для ручной выдачи, список ключей для авто.
-            items = build_product_items(variant_data.get("items"))
-
             variants.append(
                 ProductVariant(
                     price=float(variant_data["price"]),
                     attributes=attributes,
-                    items=items,
+                    items=build_product_items(variant_data.get("items")),
                     stock=variant_data.get("stock", -1),
                     buyer_message=variant_data.get("buyer_message"),
                 )
@@ -388,16 +417,7 @@ async def create_demo_products(
         if not variants:
             raise ValueError(f"У товара «{title}» должен быть хотя бы один вариант.")
 
-        product = Product(
-            title=title,
-            description=product_data.get("description", ""),
-            seller_id=seller.id,
-            category_id=category.id,
-            variants=variants,
-            buyer_message=product_data.get("buyer_message"),
-        )
-
-        await create_product(
+        saved_product = await create_product(
             uow=uow,
             img=read_image(
                 PRODUCT_IMAGES_DIR,
@@ -406,9 +426,158 @@ async def create_demo_products(
             ),
             file_manager=product_file_manager,
             img_generator=img_generator,
-            product=product,
+            product=Product(
+                title=title,
+                description=product_data.get("description", ""),
+                seller_id=seller.id,
+                category_id=category.id,
+                variants=variants,
+                buyer_message=product_data.get("buyer_message"),
+            ),
             hash_calculator=async_hash_calculate,
         )
+        products_by_title[title] = saved_product
+
+    return products_by_title
+
+
+def build_product_snapshot(product: Product, variant: ProductVariant) -> dict[str, Any]:
+    return {
+        "title": product.title,
+        "description": product.description,
+        "attributes": variant.attributes or {},
+    }
+
+
+async def create_paid_order_for_review(
+    *,
+    uow: UnitOfWork,
+    buyer,
+    product: Product,
+    variant: ProductVariant,
+) -> Order:
+    """
+    Создаёт настоящий оплаченный заказ для отзыва.
+
+    Автовыдача: резервирует один свободный ключ и переводит его в sold.
+    Ручная ограниченная выдача: уменьшает stock на один.
+    Ручная бесконечная услуга: stock остаётся None.
+    """
+    order = await uow.db.create(
+        Order(
+            buyer_id=buyer.id,
+            seller_id=product.seller_id,
+            product_variant=variant,
+            price=variant.price,
+            amount=1,
+            items=[],
+            product_snapshot=build_product_snapshot(product, variant),
+        )
+    )
+
+    # После сохранения relation product_variant может быть не загружен mapper-ом.
+    # Он нужен ниже только для Review.from_order().
+    order._product_variant = variant
+    order._items = []
+
+    if variant.stock == -1:
+        available_item = next(
+            (
+                item
+                for item in variant.items
+                if item.status == ProductItemStatuses.available
+            ),
+            None,
+        )
+
+        if available_item is None:
+            raise ValueError(
+                f"Недостаточно свободных ключей у варианта #{variant.id} "
+                "для demo-отзывов."
+            )
+
+        order.reserve_items(available_item)
+
+    elif variant.stock is not None:
+        if variant.stock <= 0:
+            raise ValueError(
+                f"Недостаточно остатка у варианта #{variant.id} "
+                "для demo-отзывов."
+            )
+
+        variant.stock -= 1
+        await uow.db.save(variant)
+
+    order.pay()
+    saved_order = await uow.db.save(order)
+
+    # Контекст нужен Review.from_order() после mapper/save.
+    saved_order._product_variant = variant
+    return saved_order
+
+
+async def create_demo_reviews(
+    seed: dict[str, Any],
+    uow: UnitOfWork,
+    users_by_username: dict[str, Any],
+    products_by_title: dict[str, Product],
+) -> int:
+    log.info("Создаём demo-отзывы...")
+    reviews_created = 0
+
+    for product_data in seed.get("products", []):
+        review_specs = product_data.get("reviews", [])
+        if not review_specs:
+            continue
+
+        created_product = products_by_title[product_data["title"]]
+
+        # Получаем товар и варианты один раз. Это доменные объекты, поэтому
+        # дальше нужны только их id для создания отдельных demo-заказов.
+        async with uow:
+            product = await uow.db.read_one(
+                Product,
+                id=created_product.id,
+                loaded="variants",
+                with_raise=True,
+            )
+
+        for review_spec in review_specs:
+            author = users_by_username[review_spec["author"]]
+            variant_index = review_spec.get("variant_index", 0)
+            variant_stub = product.variants[variant_index]
+
+            # Сначала создаём и фиксируем настоящий оплаченный заказ.
+            # create_order_review открывает собственный UnitOfWork, поэтому
+            # вызывать сервис нужно после завершения этой транзакции.
+            async with uow:
+                variant = await uow.db.read_one(
+                    ProductVariant,
+                    id=variant_stub.id,
+                    loaded="items",
+                    with_raise=True,
+                )
+
+                order = await create_paid_order_for_review(
+                    uow=uow,
+                    buyer=author,
+                    product=product,
+                    variant=variant,
+                )
+
+            # Отзыв создаётся тем же сервисом, что используется в HTTP endpoint:
+            # сервис проверит оплаченный заказ, заблокирует заказ и продавца,
+            # создаст Review и пересчитает рейтинг / количество отзывов продавца.
+            await create_order_review(
+                uow=uow,
+                order_id=order.id,
+                author_id=author.id,
+                rating=Decimal(str(review_spec["rating"])),
+                comment=review_spec.get("comment"),
+            )
+            reviews_created += 1
+
+    return reviews_created
 
 
 async def main() -> None:
@@ -420,7 +589,7 @@ async def main() -> None:
     img_generator = ImageGenerator(HttpClient(conf.image_api_url))
 
     try:
-        _, sellers_by_username = await create_demo_users(seed, uow)
+        users_by_username, sellers_by_username = await create_demo_users(seed, uow)
 
         categories_by_name = await create_demo_categories(
             seed=seed,
@@ -429,7 +598,7 @@ async def main() -> None:
             img_generator=img_generator,
         )
 
-        await create_demo_products(
+        products_by_title = await create_demo_products(
             seed=seed,
             uow=uow,
             sellers_by_username=sellers_by_username,
@@ -438,13 +607,21 @@ async def main() -> None:
             img_generator=img_generator,
         )
 
+        reviews_created = await create_demo_reviews(
+            seed=seed,
+            uow=uow,
+            users_by_username=users_by_username,
+            products_by_title=products_by_title,
+        )
+
         log.info(
             "✅ Demo seed завершён: пользователей=%s, продавцов=%s, "
-            "категорий=%s, товаров=%s",
+            "категорий=%s, товаров=%s, отзывов=%s",
             len(seed.get("users", [])),
             len(seed.get("sellers", [])),
             len(seed.get("categories", [])),
             len(seed.get("products", [])),
+            reviews_created,
         )
     finally:
         await db_provider.close()

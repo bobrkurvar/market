@@ -4,8 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from adapters.deps import EventBusDep, UowDep, GetUserDep, RedisDep, get_user
 from domain import Order, Review
-from services.order import make_order
+from services.order import make_order, create_order_review
 from api.schemas import OrderListRead, ReviewCreate, ReviewRead
+from decimal import Decimal
 
 router = APIRouter(prefix="/client", dependencies=[Depends(get_user)])
 
@@ -68,20 +69,27 @@ async def wait_order_payment_link(
 
 @router.post("/orders/{order_id}/review", response_model=ReviewRead)
 async def client_post_review(uow: UowDep, user: GetUserDep, order_id: int, data: ReviewCreate):
-    async with uow:
-        order: Order = await uow.db.read_one(
-            Order,
-            id=order_id,
-            buyer_id=user.id,
-            with_for_update=True,
-            with_raise=True,
-            loaded=["product_variant", "seller"]
-        )
-        review = Review.from_order(order, author_id=user.id, **data.model_dump())
-        old_count = order.seller.reviews_count
-        old_rating = float(order.seller.rating) if order.seller.rating is not None else 0.0
-        new_rating = ((old_rating * old_count) + data.rating) / (old_count + 1)
-        order.seller.rating = round(new_rating, 1)
-        order.seller.reviews_count += 1
-        await uow.db.save(order.seller)
-        return await uow.db.create(review)
+    # async with uow:
+    #     order: Order = await uow.db.read_one(
+    #         Order,
+    #         id=order_id,
+    #         buyer_id=user.id,
+    #         with_for_update=True,
+    #         with_raise=True,
+    #         loaded=["product_variant", "seller"]
+    #     )
+    #     review = Review.from_order(order, author_id=user.id, **data.model_dump())
+    #     old_count = order.seller.reviews_count
+    #     old_rating = float(order.seller.rating) if order.seller.rating is not None else 0.0
+    #     new_rating = ((old_rating * old_count) + data.rating) / (old_count + 1)
+    #     order.seller.rating = round(new_rating, 1)
+    #     order.seller.reviews_count += 1
+    #     await uow.db.save(order.seller)
+    #     return await uow.db.create(review)
+    return await create_order_review(
+        uow,
+        order_id=order_id,
+        author_id=user.id,
+        rating=Decimal(str(data.rating)),
+        comment=data.comment,
+    )

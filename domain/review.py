@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from decimal import Decimal
 from .order import Order
 from .product import Product, ProductVariant
 from .user import User
@@ -7,7 +8,7 @@ from .user import User
 class Review:
     def __init__(
         self,
-        rating: int,
+        rating: Decimal,
         order: Order | None = None,
         order_id: int | None = None,
         product: Product | None = None,
@@ -73,7 +74,7 @@ class Review:
         cls,
         order: Order,
         author_id: int,
-        rating: int,
+        rating: Decimal,
         comment: str | None = None,
     ) -> "Review":
         if order.id is None:

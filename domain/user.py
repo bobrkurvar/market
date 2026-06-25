@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from enum import StrEnum
 
 
@@ -67,22 +67,19 @@ class Seller(User):
     def __repr__(self):
         return f"<Salesperson(username={self.username}, rating={self.rating})>"
 
+    def add_review(self, rating: Decimal) -> None:
+        """Добавляет новую оценку и пересчитывает средний рейтинг продавца."""
 
-# class Client(User):
-#     def __init__(
-#         self,
-#         username: str,
-#         password: str,
-#         client_id: int | None = None,
-#         is_blocked: bool = False,
-#     ):
-#         super().__init__(
-#             user_id=client_id,
-#             username=username,
-#             password=password,
-#             role=UserRole.client,
-#         )
-#         self.is_blocked = is_blocked
-#
-#     def __repr__(self):
-#         return f"<Client(username={self.username})>"
+        if not 0 <= rating <= 5:
+            raise ValueError("Оценка должна быть в диапазоне от 0 до 5")
+
+        old_rating = self.rating or Decimal("0")
+        old_count = self.reviews_count
+        new_rating = ((old_rating * old_count) + rating) / Decimal(old_count + 1)
+        self.rating = new_rating.quantize(
+            Decimal("0.1"),
+            rounding=ROUND_HALF_UP,
+        )
+        self.reviews_count = old_count + 1
+
+

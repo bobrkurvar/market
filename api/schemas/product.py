@@ -3,14 +3,15 @@ from slugify import slugify
 
 from adapters.images import ProductImagesManager
 from domain import Product, ProductItem, ProductVariant, Seller
-from .review import ReviewRead
+from pathlib import Path
 
 from .base import BaseInput
 
 class ProductItemRead(BaseModel):
     id: int
     content: str
-
+    class Config:
+        from_attributes = True
 
 class ProductItemCreate(BaseInput):
     content: str

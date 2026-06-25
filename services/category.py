@@ -11,6 +11,7 @@ log = logging.getLogger(__name__)
 async def create_category(
     uow,
     img: bytes,
+    extension: str,
     file_manager,
     img_generator,
     category: Category,
@@ -23,7 +24,8 @@ async def create_category(
             )
             category.validate_parent(parent_category)
     async with file_manager.session() as files:
-        file_name = await hash_calculator(img)
+        #file_name = await hash_calculator(img)
+        file_name = await hash_calculator(img)+extension
         image_path = file_manager.base_category_path(file_name)
         log.debug("save file by path: %s", str(image_path))
         try:

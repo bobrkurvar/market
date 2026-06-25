@@ -1,6 +1,7 @@
 import logging
 
-from domain import User, Order, OrderCreatedEvent, ProductVariant, OrderAlreadyPaidError
+from domain import User, Order, OrderCreatedEvent, ProductVariant, OrderAlreadyPaidError, Seller, Review
+from decimal import Decimal
 from infra.event_bus import EventBus
 
 log = logging.getLogger(__name__)
@@ -92,14 +93,59 @@ async def cancel_unpaid_order(uow, order_id: int):
 
 async def confirm_order_payment(uow, order_id: int):
     async with uow:
+        # order = await uow.db.read_one(
+        #     Order, loaded=["items", "seller"], with_raise=True, id=order_id, with_for_update=True
+        # )
         order = await uow.db.read_one(
-            Order, loaded=["items", "seller"], with_raise=True, id=order_id, with_for_update=True
+            Order, loaded="items", with_raise=True, id=order_id, with_for_update=True
         )
+        # Для блокировки строки продавца
+        order.seller = await uow.db.read_one(Seller, id=order.seller_id, with_for_update=True, with_raise=True)
         try:
             order.pay()
-            order.seller.sales_count += 1
+            #order.seller.sales_count += 1
         except OrderAlreadyPaidError as e:
             log.critical(str(e))
             raise
         await uow.db.save(order)
     return order
+
+
+async def create_order_review(
+    uow,
+    order_id: int,
+    author_id: int,
+    rating: Decimal,
+    comment: str | None = None,
+) -> Review:
+    async with uow:
+        order: Order = await uow.db.read_one(
+            Order,
+            id=order_id,
+            buyer_id=author_id,
+            with_for_update=True,
+            with_raise=True,
+            loaded=["product_variant"],
+        )
+
+        # Отдельный запрос к seller что бы заблокировать именно его строку в базе
+        seller: Seller = await uow.db.read_one(
+            Seller,
+            id=order.seller_id,
+            with_for_update=True,
+            with_raise=True,
+        )
+
+        review = Review.from_order(
+            order,
+            author_id=author_id,
+            rating=rating,
+            comment=comment,
+        )
+
+        seller.add_review(rating)
+
+        await uow.db.create(review)
+        await uow.db.save(seller)
+
+        return review

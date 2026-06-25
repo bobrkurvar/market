@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from pathlib import Path
+from shared import LAYERS_IMAGE_EXTENSION
 
 import aiofiles  # type: ignore
 
@@ -21,6 +22,7 @@ class FileSystemStorage:
     async def delete(path: Path | str):
         path = Path(path)
         await asyncio.to_thread(path.unlink, missing_ok=True)
+
 
     @staticmethod
     async def get_directory(main_path: str | Path, other_path: str | Path) -> str:
@@ -50,15 +52,20 @@ class FileManager:
         return image_path
 
     async def save_by_layer(self, file_name: str, img: bytes, layer: str):
+        file_name = Path(file_name).with_suffix(LAYERS_IMAGE_EXTENSION).name
         path = self.resolve_path(file_name, layer)
         await self.save(path, img)
         return path
 
     async def delete_by_layers(self, base_path: str | Path, layers: list[str]) -> int:
         log.debug("deleted by layers: %s", layers)
-        file_name = Path(base_path).name
-        paths = [self.resolve_path(file_name, layer) for layer in layers]
-        paths.append(base_path)  # type: ignore
+        base_path = Path(base_path)
+        layer_file_name = base_path.with_suffix(LAYERS_IMAGE_EXTENSION).name
+        paths = [
+            self.resolve_path(layer_file_name, layer)
+            for layer in layers
+        ]
+        paths.append(base_path)
         return await self.delete(paths)
 
     async def delete(self, paths: list[Path]) -> int:
@@ -69,6 +76,14 @@ class FileManager:
             await self._storage.delete(path)
             deleted += 1
         return deleted
+
+    def get_layer_path(
+        self,
+        base_path: str | Path,
+        layer: str,
+    ) -> str:
+        layer_file_name = Path(base_path).with_suffix(LAYERS_IMAGE_EXTENSION).name
+        return str(self.resolve_path(file_name=layer_file_name, layer=layer))
 
 
 class FileSession:

@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -23,13 +24,13 @@ from domain import (
     ProductItemStatuses,
     ProductVariant,
     Order,
-    Review,
     UserRole,
 )
 from infra.security import async_hash_calculate
 from services.auth import create_user
 from services.category import create_category
 from services.product import create_product
+from services.order import confirm_order_payment, create_order_review
 
 
 setup_logging()
@@ -329,13 +330,16 @@ async def create_demo_categories(
                 ),
             )
 
+            image_name = category_data["image"]
+
             saved_category = await create_category(
                 uow=uow,
                 img=read_image(
                     CATEGORY_IMAGES_DIR,
-                    category_data["image"],
+                    image_name,
                     name,
                 ),
+                extension=Path(image_name).suffix.lower(),
                 file_manager=category_file_manager,
                 img_generator=img_generator,
                 category=category,
@@ -415,14 +419,15 @@ async def create_demo_products(
 
         if not variants:
             raise ValueError(f"У товара «{title}» должен быть хотя бы один вариант.")
-
+        image_name = product_data["image"]
         saved_product = await create_product(
             uow=uow,
             img=read_image(
                 PRODUCT_IMAGES_DIR,
-                product_data["image"],
+                image_name,
                 title,
             ),
+            extension=Path(image_name).suffix.lower(),
             file_manager=product_file_manager,
             img_generator=img_generator,
             product=Product(
@@ -448,7 +453,7 @@ def build_product_snapshot(product: Product, variant: ProductVariant) -> dict[st
     }
 
 
-async def create_paid_order_for_review(
+async def create_order_for_review(
     *,
     uow: UnitOfWork,
     buyer,
@@ -456,11 +461,14 @@ async def create_paid_order_for_review(
     variant: ProductVariant,
 ) -> Order:
     """
-    Создаёт настоящий оплаченный заказ для отзыва.
+    Создаёт pending-заказ для demo-отзыва и резервирует товар.
 
-    Автовыдача: резервирует один свободный ключ и переводит его в sold.
+    Автовыдача: резервирует один свободный ключ.
     Ручная ограниченная выдача: уменьшает stock на один.
     Ручная бесконечная услуга: stock остаётся None.
+
+    Подтверждение оплаты выполняется отдельно через
+    confirm_order_payment().
     """
     order = await uow.db.create(
         Order(
@@ -474,9 +482,8 @@ async def create_paid_order_for_review(
         )
     )
 
-    # После сохранения relation product_variant может быть не загружен mapper-ом.
-    # Он нужен ниже только для Review.from_order().
-    order._product_variant = variant
+    # После create mapper может не восстановить коллекцию позиций
+    # в доменном объекте, а она нужна reserve_items().
     order._items = []
 
     if variant.stock == -1:
@@ -507,12 +514,7 @@ async def create_paid_order_for_review(
         variant.stock -= 1
         await uow.db.save(variant)
 
-    order.pay()
-    saved_order = await uow.db.save(order)
-
-    # Контекст нужен Review.from_order() после mapper/save.
-    saved_order._product_variant = variant
-    return saved_order
+    return await uow.db.save(order)
 
 
 async def create_demo_reviews(
@@ -531,6 +533,8 @@ async def create_demo_reviews(
 
         created_product = products_by_title[product_data["title"]]
 
+        # Получаем товар и варианты один раз. Это доменные объекты, поэтому
+        # дальше нужны только их id для создания отдельных demo-заказов.
         async with uow:
             product = await uow.db.read_one(
                 Product,
@@ -539,11 +543,15 @@ async def create_demo_reviews(
                 with_raise=True,
             )
 
-            for review_spec in review_specs:
-                author = users_by_username[review_spec["author"]]
-                variant_index = review_spec.get("variant_index", 0)
-                variant_stub = product.variants[variant_index]
+        for review_spec in review_specs:
+            author = users_by_username[review_spec["author"]]
+            variant_index = review_spec.get("variant_index", 0)
+            variant_stub = product.variants[variant_index]
 
+            # Сначала создаём и фиксируем pending-заказ с резервом.
+            # Сервисы оплаты и отзыва открывают собственные транзакции,
+            # поэтому вызывать их нужно после завершения этой транзакции.
+            async with uow:
                 variant = await uow.db.read_one(
                     ProductVariant,
                     id=variant_stub.id,
@@ -551,21 +559,31 @@ async def create_demo_reviews(
                     with_raise=True,
                 )
 
-                order = await create_paid_order_for_review(
+                order = await create_order_for_review(
                     uow=uow,
                     buyer=author,
                     product=product,
                     variant=variant,
                 )
 
-                review = Review.from_order(
-                    order=order,
-                    author_id=author.id,
-                    rating=review_spec["rating"],
-                    comment=review_spec.get("comment"),
-                )
-                await uow.db.create(review)
-                reviews_created += 1
+            # Оплата должна пройти тем же сценарием, что и webhook / endpoint:
+            # Order.pay() подтвердит покупку и увеличит seller.sales_count.
+            await confirm_order_payment(
+                uow=uow,
+                order_id=order.id,
+            )
+
+            # Отзыв создаётся тем же сервисом, что используется в HTTP endpoint:
+            # сервис проверит оплаченный заказ, заблокирует заказ и продавца,
+            # создаст Review и пересчитает рейтинг / количество отзывов продавца.
+            await create_order_review(
+                uow=uow,
+                order_id=order.id,
+                author_id=author.id,
+                rating=Decimal(str(review_spec["rating"])),
+                comment=review_spec.get("comment"),
+            )
+            reviews_created += 1
 
     return reviews_created
 

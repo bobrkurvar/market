@@ -9,6 +9,7 @@ from domain import Category, OrderMessage, Dispute, DisputeMessage
 from infra.security import async_hash_calculate
 from services.category import create_category
 from adapters.deps import get_admin
+from pathlib import Path
 
 router = APIRouter(prefix="/admin", dependencies=[Depends(get_admin)])
 
@@ -24,12 +25,15 @@ async def admin_create_category(
     http_client: HttpClientDep,
     file: Annotated[UploadFile, File()],
 ):
+    extension = Path(file.filename or "").suffix.lower()
+    img = await file.read()
     category = await create_category(
         uow=uow,
         category=category_dto.to_domain(),
         file_manager=CategoryImagesManager(),
         img_generator=ImageGenerator(http_client),
-        img=await file.read(),
+        img=img,
+        extension=extension,
         hash_calculator=async_hash_calculate,
     )
     return {"category": category}

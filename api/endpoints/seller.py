@@ -8,6 +8,7 @@ from api.schemas import ProductCreate, ProductSellerListOut
 from domain import Category, Order
 from infra.security import async_hash_calculate
 from services.product import create_product
+from pathlib import Path
 
 router = APIRouter(prefix="/seller", dependencies=[Depends(get_seller)])
 
@@ -25,10 +26,12 @@ async def seller_create_product(
     http_client: HttpClientDep,
 ):
     product = product_dto.to_domain(seller)
+    extension = Path(file.filename or "").suffix.lower()
     img = await file.read()
     return await create_product(
         product=product,
         img=img,
+        extension=extension,
         file_manager=ProductImagesManager(),
         img_generator=ImageGenerator(http_client),
         uow=uow,
